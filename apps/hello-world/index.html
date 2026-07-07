@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hello World</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { font-size: 2.5rem; margin-bottom: 12px; }
+    p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 32px; }
+    button {
+      font-size: 1.1rem;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 30px;
+      background: white;
+      color: #667eea;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.1s;
+    }
+    button:hover { transform: scale(1.05); }
+    #count { font-size: 3rem; font-weight: 700; margin-bottom: 24px; }
+    a.back { margin-top: 40px; color: white; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <h1>&#127881; It works!</h1>
+  <p>This app is live on GitHub Pages.</p>
+  <div id="count">0</div>
+  <button onclick="document.getElementById('count').textContent = +document.getElementById('count').textContent + 1">
+    Click me
+  </button>
+  <a class="back" href="../../">&larr; Back to all apps</a>
+</body>
+</html>

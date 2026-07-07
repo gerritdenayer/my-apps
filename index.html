@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerrit's Apps</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f8;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 32px; }
+    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .app-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .app-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .app-card .icon { font-size: 2rem; margin-bottom: 12px; }
+    .app-card h2 { font-size: 1.1rem; margin-bottom: 6px; }
+    .app-card p { font-size: 0.9rem; color: #666; }
+    footer { margin-top: 48px; color: #999; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gerrit's Apps</h1>
+    <p class="subtitle">My collection of HTML apps, hosted on GitHub Pages.</p>
+    <div class="app-grid">
+      <!-- Add a new card here for each new app -->
+      <a class="app-card" href="apps/golf-scoring-v2/">
+        <div class="icon">&#9971;</div>
+        <h2>Golf MPL Scoring v2</h2>
+        <p>Live scoring with multiple concurrent competitions.</p>
+      </a>
+      <a class="app-card" href="apps/golf-scoring/">
+        <div class="icon">&#9971;</div>
+        <h2>Golf MPL Scoring (single)</h2>
+        <p>Original version: one competition at a time.</p>
+      </a>
+      <a class="app-card" href="apps/hello-world/">
+        <div class="icon">&#128075;</div>
+        <h2>Hello World</h2>
+        <p>A first test app to confirm everything works.</p>
+      </a>
+    </div>
+    <footer>Built and hosted with GitHub Pages</footer>
+  </div>
+</body>
+</html>

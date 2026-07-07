@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Band Setlist Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<style>
+  :root{
+    --orange:#ff7900; --orange-dark:#e56e00; --ink:#1a1a1a; --muted:#6b7280;
+    --bg:#f5f6f8; --card:#ffffff; --line:#e5e7eb; --good:#16a34a; --bad:#dc2626;
+    --star:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:15px}
+  header{background:var(--ink);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header .logo{font-weight:700;font-size:18px;color:var(--orange);white-space:nowrap}
+  header .logo span{color:#fff}
+  .spacer{flex:1}
+  .who{display:flex;align-items:center;gap:8px;font-size:13px}
+  .who b{color:var(--orange)}
+  .sync{font-size:12px;color:#cbd5e1;min-width:90px;text-align:right}
+  .sync.saving{color:#fbbf24}.sync.ok{color:#86efac}.sync.err{color:#fca5a5}
+  nav{background:var(--card);border-bottom:1px solid var(--line);padding:0 12px;display:flex;gap:4px;position:sticky;top:0;z-index:20}
+  nav button{background:none;border:none;padding:12px 16px;font-size:14px;cursor:pointer;color:var(--muted);
+    border-bottom:3px solid transparent;font-weight:600}
+  nav button.active{color:var(--orange);border-bottom-color:var(--orange)}
+  main{max-width:1100px;margin:0 auto;padding:18px}
+  .btn{background:var(--orange);color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px}
+  .btn:hover{background:var(--orange-dark)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:#f3f4f6}
+  .btn.sm{padding:5px 10px;font-size:13px;border-radius:6px}
+  .btn.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}
+  .btn.danger:hover{background:#fef2f2}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  input[type=text],input[type=search]{min-width:200px}
+  .grow{flex:1}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+  th:hover{color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fafafa}
+  .title-cell{font-weight:600}
+  .sub{color:var(--muted);font-size:13px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#f3f4f6;color:#374151}
+  .pill.on{background:#fff3e6;color:var(--orange-dark)}
+  .pill.trumpet{background:#fef9c3;color:#854d0e}
+  .pill.new{background:#dcfce7;color:#15803d}
+  .pill.unsaved{background:#fef3c7;color:#92400e;margin-left:8px;align-self:center}
+  .ver{font-size:11px;color:#9ca3af;font-weight:600;margin-left:6px}
+  .last-update{font-size:12px;color:#cbd5e1;text-align:right;line-height:1.3}
+  .last-update b{color:#e5e7eb;font-weight:600}
+  a.spotify{display:inline-flex;align-items:center;gap:4px;color:#1DB954;font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap}
+  a.spotify:hover{text-decoration:underline}
+  a.spotify .dot{width:9px;height:9px;border-radius:50%;background:#1DB954;display:inline-block}
+  a.spotify.search{color:#6b7280}
+  a.spotify.search .dot{background:#9ca3af}
+  .find-row{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  .find-row label{width:100%}
+  .stars{display:inline-flex;gap:2px;font-size:16px;cursor:pointer}
+  .stars .s{color:#d1d5db;line-height:1}
+  .stars .s.on{color:var(--star)}
+  .stars.ro{cursor:default}
+  .avg{font-size:12px;color:var(--muted);margin-left:6px}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end}
+  .muted{color:var(--muted)}
+  .empty{text-align:center;padding:50px 20px;color:var(--muted)}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;
+    padding:40px 16px;z-index:50;overflow:auto}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:560px;padding:22px}
+  .modal h3{margin:0 0 16px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-grid label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:#374151}
+  .form-grid label.full{grid-column:1/3}
+  .form-grid input,.form-grid select,.form-grid textarea{font-weight:400}
+  .checks{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .checks label{flex-direction:row;align-items:center;gap:6px;font-weight:500}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+  /* setlist */
+  .setlist-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
+  .sl-list .sl-item{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .sl-list .sl-item:hover{background:#fafafa}
+  .sl-list .sl-item.active{background:#fff3e6;border-left:3px solid var(--orange)}
+  .sl-item .nm{font-weight:600}
+  .sl-songs li{list-style:none}
+  .sl-song{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:#fff}
+  .sl-song .handle{cursor:grab;color:#9ca3af;font-size:18px;padding:0 4px}
+  .sl-song .pos{width:24px;text-align:center;font-weight:700;color:var(--muted)}
+  .sl-song .info{flex:1}
+  .sl-song .info .t{font-weight:600}
+  .sortable-ghost{opacity:.4}
+  .sortable-chosen{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  .addbar{display:flex;gap:8px;margin-bottom:12px}
+  .add-picker{margin-bottom:12px}
+  .add-results{border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;max-height:260px;overflow:auto;display:none}
+  .add-row{padding:8px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .add-row:last-child{border-bottom:none}
+  .add-row:hover:not(.added){background:#fff3e6}
+  .add-row.added{color:var(--muted)}
+  .add-tag{font-size:12px;color:var(--muted)}
+  .add-empty{padding:10px 12px;color:var(--muted)}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat .n{font-size:26px;font-weight:700;color:var(--orange)}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:2px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+  .bar-row .lab{width:140px;color:#374151}
+  .bar{height:14px;background:var(--orange);border-radius:4px;min-width:2px}
+  .bar-row .v{color:var(--muted)}
+  .notice{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:14px}
+  @media(max-width:760px){.setlist-layout{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.form-grid label.full{grid-column:1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Orange Band <span>Setlist</span><span class="ver" id="appVersion"></span></div>
+  <div class="spacer"></div>
+  <div class="last-update" id="lastUpdate"></div>
+  <button class="btn sm" id="saveAllBtn">Save</button>
+  <button class="btn ghost sm" id="exportBtn">Export</button>
+  <div class="who" id="whoBox"></div>
+  <div class="sync" id="syncStatus">offline</div>
+</header>
+<nav>
+  <button data-tab="library" class="active">Library</button>
+  <button data-tab="setlists">Setlists</button>
+  <button data-tab="stats">Stats</button>
+</nav>
+<main id="view"><div class="empty">Loading…</div></main>
+
+<script>
+/* ============================================================
+   CONFIG  --  EDIT THESE TWO LINES BEFORE DEPLOYING
+   ------------------------------------------------------------
+   BIN_ID     : your JSONBin bin id (already filled in)
+   ACCESS_KEY : a JSONBin *Access Key* scoped to this bin with
+                Read + Update permission. Do NOT put your Master
+                Key here, this file is public on GitHub Pages.
+   ============================================================ */
+const CONFIG = {
+  BIN_ID: "6a39660eda38895dfeec9f11",
+  ACCESS_KEY: "$2a$10$y5hm.jQGN.1Uyqfaur2eXuC2X3H7v71pX5BSH8kJKibLBHJyiY/k."
+};
+const API = "https://api.jsonbin.io/v3/b/" + CONFIG.BIN_ID;
+// App (code) version. Bump this whenever the app changes.
+const APP_VERSION = "1.7.0";
+
+/* ---------- state ---------- */
+let DATA = null;          // the whole record
+let currentUser = null;   // {id,name}
+let activeTab = "library";
+let librarySort = {key:"title", dir:1};
+let librarySearch = "";
+let activeSetlistId = null;
+let slAddFilter = "";        // text in the setlist "add song" filter box
+let drafts = loadDrafts();   // unsaved setlist edits, kept in the browser {id: setlist}
+
+/* ---------- setlist drafts (staged, not yet pushed to jsonbin) ---------- */
+function loadDrafts(){ try{return JSON.parse(localStorage.getItem("setlistDrafts"))||{};}catch(e){return {};} }
+function persistDrafts(){ try{localStorage.setItem("setlistDrafts", JSON.stringify(drafts));}catch(e){} }
+function hasDraft(id){ return Object.prototype.hasOwnProperty.call(drafts, id); }
+// Overlay any pending drafts onto a data object so the screen shows unsaved work.
+function applyDrafts(d){
+  if(!d || !d.setlists) return;
+  Object.values(drafts).forEach(draft=>{
+    const i=d.setlists.findIndex(s=>s.id===draft.id);
+    if(i>=0) d.setlists[i]=draft; else d.setlists.push(draft);
+  });
+}
+// Edit the active setlist locally (staged). Does NOT touch jsonbin until Save.
+function editDraft(id, fn){
+  let dr = drafts[id];
+  if(!dr){
+    const cur = DATA.setlists.find(s=>s.id===id);
+    dr = cur ? JSON.parse(JSON.stringify(cur)) : null;
+    if(!dr) return;
+    drafts[id]=dr;
+  }
+  fn(dr);
+  dr.updatedAt=new Date().toISOString();
+  const i=DATA.setlists.findIndex(s=>s.id===id);
+  if(i>=0) DATA.setlists[i]=dr; else DATA.setlists.push(dr);
+  persistDrafts();
+  render();
+}
+
+/* ---------- helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const slug = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+const uid = p => p+"-"+Math.random().toString(36).slice(2,8);
+function durStr(sec){if(sec==null||isNaN(sec))return "";const m=Math.floor(sec/60),s=sec%60;return m+":"+String(s).padStart(2,"0");}
+function parseDur(str){if(!str)return null;const m=String(str).match(/^(\d+):(\d{1,2})$/);if(!m)return null;return (+m[1])*60+(+m[2]);}
+function setSync(state,msg){const e=$("#syncStatus");e.className="sync "+(state||"");e.textContent=msg;}
+
+/* ---------- API: read-modify-write to reduce multi-user clobbering ---------- */
+function headers(){return {"Content-Type":"application/json","X-Access-Key":CONFIG.ACCESS_KEY,"X-Bin-Meta":"false"};}
+
+async function loadData(){
+  setSync("saving","loading…");
+  const r = await fetch(API+"/latest",{headers:headers()});
+  if(!r.ok) throw new Error("Load failed ("+r.status+"). Check your Access Key.");
+  const j = await r.json();
+  DATA = j.record !== undefined ? j.record : j;
+  migrate(DATA);
+  applyDrafts(DATA);
+  setSync("ok","up to date");
+  return DATA;
+}
+
+/* mutate(fn): fetch freshest copy, apply fn, push back. Keeps other people's
+   edits when two people save close together (last write still wins per field). */
+let saving = Promise.resolve();
+function mutate(fn, onDone){
+  saving = saving.then(async ()=>{
+    setSync("saving","saving…");
+    try{
+      const r = await fetch(API+"/latest",{headers:headers()});
+      if(!r.ok) throw new Error("read "+r.status);
+      const j = await r.json();
+      const fresh = j.record !== undefined ? j.record : j;
+      migrate(fresh);
+      fn(fresh);
+      fresh.meta = fresh.meta || {};
+      fresh.meta.revision = (fresh.meta.revision||0)+1;
+      fresh.meta.updatedAt = new Date().toISOString();
+      const pr = await fetch(API,{method:"PUT",headers:headers(),body:JSON.stringify(fresh)});
+      if(!pr.ok) throw new Error("write "+pr.status);
+      DATA = fresh;
+      if(onDone) onDone();      // e.g. clear a saved draft before re-overlaying
+      applyDrafts(DATA);        // keep any other unsaved setlist edits on screen
+      setSync("ok","saved");
+      render();
+    }catch(e){
+      console.error(e);
+      setSync("err","save failed");
+      alert("Could not save: "+e.message+"\nYour change was not stored. Check the Access Key has Update permission.");
+    }
+  });
+  return saving;
+}
+
+const MEMBER_NAMES = {nath:"Nathalie", syl:"Sylvie", mel:"Melanie"};
+function migrate(d){
+  d.meta = d.meta || {};
+  d.users = d.users || [];
+  d.members = d.members || [];
+  d.songs = d.songs || [];
+  d.setlists = d.setlists || [];
+  // Always show full singer names, even if the bin still has the short ones.
+  d.members.forEach(m=>{ if(MEMBER_NAMES[m.id]) m.name = MEMBER_NAMES[m.id]; });
+  d.songs.forEach(s=>{
+    if(!s.ratings) s.ratings = {};
+    if(s.votes) delete s.votes;
+    if("sound" in s) delete s.sound;
+    if(!Array.isArray(s.tags)) s.tags = [];
+    if(!Array.isArray(s.vocals)) s.vocals = [];
+    if(s.spotifyUrl===undefined) s.spotifyUrl = null;
+    if(!s.spotifySearchUrl) s.spotifySearchUrl = spotifySearch(s.title, s.artist);
+  });
+  d.setlists.forEach(sl=>{ (sl.items||[]).forEach(it=>{ if("sound" in it) delete it.sound; }); });
+}
+function spotifySearch(title,artist){
+  const q=[title,artist].filter(Boolean).join(" ");
+  return "https://open.spotify.com/search/"+encodeURIComponent(q);
+}
+// A song is "new" once a person adds it, until someone confirms (approves) it.
+// The bulk-imported library (addedBy "import"...) is never flagged.
+function isNew(s){
+  if(!s.addedBy || s.addedBy.indexOf("import")===0) return false;
+  return !s.approved;
+}
+// Display name for who added a song.
+function addedByName(s){
+  const id=s.addedBy;
+  if(!id) return "";
+  if(id.indexOf("import")===0) return "Import";
+  const u=(DATA.users||[]).find(x=>x.id===id)||DATA.members.find(x=>x.id===id);
+  return u?u.name:id;
+}
+function approveSong(id){
+  mutate(d=>{const s=d.songs.find(x=>x.id===id);if(s){s.approved=true;s.updatedAt=new Date().toISOString();}});
+}
+function spotifyLink(s){
+  if(s.spotifyUrl){
+    const a=el("a","spotify");a.href=s.spotifyUrl;a.target="_blank";a.rel="noopener";
+    a.innerHTML="<span class='dot'></span>Spotify";a.title="Open this track on Spotify";
+    a.onclick=e=>e.stopPropagation();return a;
+  }
+  const a=el("a","spotify search");a.href=s.spotifySearchUrl||spotifySearch(s.title,s.artist);
+  a.target="_blank";a.rel="noopener";a.innerHTML="<span class='dot'></span>Search";
+  a.title="Search this song on Spotify";a.onclick=e=>e.stopPropagation();return a;
+}
+
+/* ---------- identity ---------- */
+function loadUser(){
+  try{const u=JSON.parse(localStorage.getItem("bandUser"));if(u&&u.id)currentUser=u;}catch(e){}
+}
+function saveUser(u){currentUser=u;localStorage.setItem("bandUser",JSON.stringify(u));}
+function renderWho(){
+  const box=$("#whoBox");box.innerHTML="";
+  if(currentUser){
+    box.appendChild(el("span",null,"You: <b>"+esc(currentUser.name)+"</b>"));
+    const b=el("button","btn ghost sm","Switch");b.onclick=pickName;box.appendChild(b);
+  }else{
+    const b=el("button","btn sm","Who are you?");b.onclick=pickName;box.appendChild(b);
+  }
+}
+function pickName(){
+  const names = DATA ? DATA.users.map(u=>u.name) : [];
+  const memberNames = DATA ? DATA.members.map(m=>m.name) : [];
+  const all = Array.from(new Set([...memberNames,...names]));
+  const choice = prompt("Enter your name (so your votes are saved under it).\nKnown: "+(all.join(", ")||"none yet"), currentUser?currentUser.name:"");
+  if(!choice) return;
+  const name=choice.trim(); if(!name) return;
+  let u = DATA.users.find(x=>x.name.toLowerCase()===name.toLowerCase());
+  if(u){ saveUser(u); renderWho(); render(); return; }
+  const newU = {id:slug(name)||uid("user"), name};
+  saveUser(newU); renderWho();
+  mutate(d=>{ if(!d.users.find(x=>x.id===newU.id)) d.users.push(newU); });
+}
+
+/* ---------- star widget ---------- */
+function starsEl(song){
+  const wrap=el("span","stars"+(currentUser?"":" ro"));
+  const mine = currentUser ? song.ratings[currentUser.id] : 0;
+  for(let i=1;i<=5;i++){
+    const s=el("span","s"+(mine>=i?" on":""),"★");
+    if(currentUser){
+      s.title=i+" star"+(i>1?"s":"");
+      s.onclick=(ev)=>{ev.stopPropagation();rate(song.id,i);};
+    }
+    wrap.appendChild(s);
+  }
+  const vals=Object.values(song.ratings);
+  if(vals.length){
+    const avg=(vals.reduce((a,b)=>a+b,0)/vals.length);
+    wrap.appendChild(el("span","avg",avg.toFixed(1)+" ("+vals.length+")"));
+  }
+  return wrap;
+}
+function rate(songId,val){
+  if(!currentUser){pickName();return;}
+  mutate(d=>{
+    const s=d.songs.find(x=>x.id===songId); if(!s)return;
+    if(s.ratings[currentUser.id]===val) delete s.ratings[currentUser.id]; // click same star = clear
+    else s.ratings[currentUser.id]=val;
+    s.updatedAt=new Date().toISOString();
+  });
+}
+// Set (val 1-5) or clear (val 0) the current user's rating. Used by the edit modal.
+function setRating(songId,val){
+  if(!currentUser){pickName();return;}
+  mutate(d=>{
+    const s=d.songs.find(x=>x.id===songId); if(!s)return;
+    if(val) s.ratings[currentUser.id]=val; else delete s.ratings[currentUser.id];
+    s.updatedAt=new Date().toISOString();
+  });
+}
+// Editable star row for the modal (rating saves to jsonbin immediately).
+function modalStars(song){
+  const wrap=el("div","stars");
+  let mine = currentUser ? (song.ratings[currentUser.id]||0) : 0;
+  function paint(){
+    wrap.innerHTML="";
+    for(let i=1;i<=5;i++){
+      const st=el("span","s"+(mine>=i?" on":""),"★");st.style.cursor="pointer";st.title=i+" star"+(i>1?"s":"");
+      st.onclick=()=>{ if(!currentUser){pickName();return;} mine=(mine===i)?0:i; paint(); setRating(song.id,mine); };
+      wrap.appendChild(st);
+    }
+    if(!currentUser) wrap.appendChild(el("span","avg","pick your name first"));
+  }
+  paint();
+  return wrap;
+}
+
+/* ============================================================
+   LIBRARY
+   ============================================================ */
+function renderLibrary(){
+  const v=$("#view");v.innerHTML="";
+  const bar=el("div","toolbar");
+  const search=el("input");search.type="search";search.placeholder="Search title or artist…";search.value=librarySearch;
+  search.oninput=()=>{librarySearch=search.value;renderLibraryTable();};
+  bar.appendChild(search);
+  const sp=el("div","grow");bar.appendChild(sp);
+  const add=el("button","btn","+ Add song");add.onclick=()=>openSongModal(null);bar.appendChild(add);
+  v.appendChild(bar);
+  const card=el("div","card");card.id="libCard";v.appendChild(card);
+  renderLibraryTable();
+}
+function filteredSongs(){
+  let list=DATA.songs.slice();
+  const q=librarySearch.toLowerCase().trim();
+  if(q) list=list.filter(s=>(s.title||"").toLowerCase().includes(q)||(s.artist||"").toLowerCase().includes(q));
+  const k=librarySort.key,dir=librarySort.dir;
+  list.sort((a,b)=>{
+    let x,y;
+    if(k==="rating"){x=avgOf(a);y=avgOf(b);}
+    else if(k==="bpm"){x=a.bpm||0;y=b.bpm||0;}
+    else if(k==="duration"){x=a.durationSeconds||0;y=b.durationSeconds||0;}
+    else if(k==="vocals"){x=vocalsStr(a);y=vocalsStr(b);}
+    else if(k==="added"){x=a.createdAt?new Date(a.createdAt).getTime():0;y=b.createdAt?new Date(b.createdAt).getTime():0;}
+    else {x=(a[k]||"").toString().toLowerCase();y=(b[k]||"").toString().toLowerCase();}
+    if(x<y)return -1*dir; if(x>y)return 1*dir; return 0;
+  });
+  return list;
+}
+function avgOf(s){const v=Object.values(s.ratings||{});return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function renderLibraryTable(){
+  const card=$("#libCard");if(!card)return;card.innerHTML="";
+  const list=filteredSongs();
+  if(!list.length){card.appendChild(el("div","empty","No songs match."));return;}
+  const t=el("table");
+  const cols=[["title","Title"],["artist","Artist"],["vocals","Vocals"],["originalKey","Orig Key"],["obKey","OB Key"],["bpm","BPM"],["duration","Dur"],["added","Added"],["rating","Rating"],["","Spotify"],["",""]];
+  const thead=el("thead");const tr=el("tr");
+  cols.forEach(([k,lab])=>{
+    const th=el("th",null,esc(lab)+(librarySort.key===k&&k?(librarySort.dir>0?" ▲":" ▼"):""));
+    if(k) th.onclick=()=>{if(librarySort.key===k)librarySort.dir*=-1;else{librarySort.key=k;librarySort.dir=1;}renderLibraryTable();};
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);t.appendChild(thead);
+  const tb=el("tbody");
+  list.forEach(s=>{
+    const tr=el("tr");
+    const tdT=el("td","title-cell");
+    tdT.innerHTML=esc(s.title||"(untitled)")+
+      (isNew(s)?' <span class="pill new">new</span>':'')+
+      (s.selected?' <span class="pill on">set</span>':'')+
+      (s.trumpet?' <span class="pill trumpet">trumpet</span>':'');
+    tr.appendChild(tdT);
+    tr.appendChild(el("td","sub",esc(s.artist||"")));
+    const vocStr=(s.vocals&&s.vocals.length)?s.vocals.map(vid=>vocName(vid)).join(", "):"";
+    const tdV=el("td");if(vocStr){tdV.innerHTML="<span style='color:#ff7900;font-weight:600'>"+esc(vocStr)+"</span>";}
+    tr.appendChild(tdV);
+    tr.appendChild(el("td","sub",esc(s.originalKey||"")));
+    tr.appendChild(el("td",null,esc(s.obKey||"")));
+    tr.appendChild(el("td",null,s.bpm||""));
+    tr.appendChild(el("td",null,durStr(s.durationSeconds)));
+    const tdAdded=el("td","sub");
+    const dt=s.createdAt?new Date(s.createdAt):null;
+    tdAdded.innerHTML=(dt?esc(dt.toLocaleDateString()):"")+(s.addedBy?"<br>"+esc(addedByName(s)):"");
+    tr.appendChild(tdAdded);
+    const tdR=el("td");tdR.appendChild(starsEl(s));tr.appendChild(tdR);
+    const tdSp=el("td");tdSp.appendChild(spotifyLink(s));tr.appendChild(tdSp);
+    const tdA=el("td");const acts=el("div","row-actions");
+    const e=el("button","btn ghost sm","Edit");e.onclick=()=>openSongModal(s.id);
+    const dx=el("button","btn danger sm","Delete");
+    dx.onclick=()=>{ if(confirm("Delete \""+(s.title||"this song")+"\"? It will also be removed from any setlists.")) deleteSong(s.id); };
+    acts.appendChild(e);acts.appendChild(dx);tdA.appendChild(acts);tr.appendChild(tdA);
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);card.appendChild(t);
+}
+function vocName(id){const m=DATA.members.find(x=>x.id===id);return m?m.name:id;}
+function vocalsStr(s){return (s.vocals&&s.vocals.length)?s.vocals.map(vocName).join(", ").toLowerCase():"";}
+
+/* ---------- song add/edit modal ---------- */
+function openSongModal(id){
+  const s = id ? DATA.songs.find(x=>x.id===id) : {
+    title:"",artist:"",originalKey:"",obKey:"",transpose:"",bpm:"",durationSeconds:null,
+    trumpet:false,vocals:[],selected:false,tags:[],notes:""
+  };
+  const bg=el("div","modal-bg");
+  const m=el("div","modal");
+  m.innerHTML="<h3>"+(id?"Edit song":"Add song")+"</h3>";
+  const g=el("div","form-grid");
+  function field(label,key,type="text",val){
+    const l=el("label",null,esc(label));
+    const i=el(type==="textarea"?"textarea":"input");
+    if(type!=="textarea")i.type=type;
+    i.value=val!=null?val:"";i.dataset.k=key;l.appendChild(i);return {l,i};
+  }
+  const f_title=field("Title","title");f_title.l.classList.add("full");g.appendChild(f_title.l);f_title.i.value=s.title||"";
+  const f_artist=field("Artist","artist");f_artist.l.classList.add("full");g.appendChild(f_artist.l);f_artist.i.value=s.artist||"";
+  const f_ok=field("Original key","originalKey");f_ok.i.value=s.originalKey||"";g.appendChild(f_ok.l);
+  const f_obk=field("OB key","obKey");f_obk.i.value=s.obKey||"";g.appendChild(f_obk.l);
+  const f_tr=field("Transpose","transpose","number");f_tr.i.value=(s.transpose??"");g.appendChild(f_tr.l);
+  const f_bpm=field("BPM","bpm","number");f_bpm.i.value=(s.bpm??"");g.appendChild(f_bpm.l);
+  const f_dur=field("Duration (m:ss)","duration");f_dur.i.value=durStr(s.durationSeconds);g.appendChild(f_dur.l);
+  // Spotify link + Find button
+  const spWrap=el("div","full find-row");
+  const f_sp=field("Spotify link","spotifyUrl");f_sp.i.value=s.spotifyUrl||"";f_sp.i.placeholder="Paste a Spotify track link, or leave blank";
+  const findBtn=el("button","btn ghost","Find on Spotify");findBtn.type="button";
+  findBtn.onclick=()=>{
+    const t=m.querySelector('[data-k="title"]').value.trim();
+    const a=m.querySelector('[data-k="artist"]').value.trim();
+    if(!t){alert("Enter a title first.");return;}
+    window.open(spotifySearch(t,a),"_blank","noopener");
+  };
+  spWrap.appendChild(f_sp.l);spWrap.appendChild(findBtn);g.appendChild(spWrap);
+  // vocals + flags
+  const lv=el("label","full","Vocals");const checks=el("div","checks");
+  DATA.members.forEach(mem=>{
+    const lab=el("label");const cb=el("input");cb.type="checkbox";cb.value=mem.id;cb.checked=s.vocals.includes(mem.id);cb.dataset.voc="1";
+    lab.appendChild(cb);lab.appendChild(document.createTextNode(" "+mem.name));checks.appendChild(lab);
+  });
+  lv.appendChild(checks);g.appendChild(lv);
+  const lf=el("label","full","Flags");const fl=el("div","checks");
+  const cbTrumpet=el("input");cbTrumpet.type="checkbox";cbTrumpet.checked=!!s.trumpet;
+  const cbSel=el("input");cbSel.type="checkbox";cbSel.checked=!!s.selected;
+  const labTr=el("label");labTr.appendChild(cbTrumpet);labTr.appendChild(document.createTextNode(" Trumpet"));
+  const labSe=el("label");labSe.appendChild(cbSel);labSe.appendChild(document.createTextNode(" In active selection"));
+  fl.appendChild(labTr);fl.appendChild(labSe);lf.appendChild(fl);g.appendChild(lf);
+  const f_notes=field("Notes","notes","textarea");f_notes.l.classList.add("full");f_notes.i.value=s.notes||"";g.appendChild(f_notes.l);
+  // edit-only extras: who added it, new/approve, and your rating
+  let cbApprove=null;
+  if(id){
+    const info=el("div");
+    info.style.cssText="grid-column:1/3;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px;color:#374151";
+    const dt=s.createdAt?new Date(s.createdAt).toLocaleDateString():"";
+    info.innerHTML="Added by <b>"+esc(addedByName(s)||"unknown")+"</b>"+(dt?" · "+esc(dt):"")+
+      (isNew(s)?" · <span class='pill new'>new, not yet approved</span>":"");
+    g.insertBefore(info, g.firstChild);
+    if(s.addedBy && s.addedBy.indexOf("import")!==0){
+      const la=el("label","full");const inner=el("div","checks");
+      cbApprove=el("input");cbApprove.type="checkbox";cbApprove.checked=!!s.approved;
+      const lab=el("label");lab.appendChild(cbApprove);
+      lab.appendChild(document.createTextNode(" Approved for setlist (removes the “new” tag)"));
+      inner.appendChild(lab);la.appendChild(inner);g.appendChild(la);
+    }
+    const lr=el("label","full","Your rating");lr.appendChild(modalStars(s));g.appendChild(lr);
+  }
+  m.appendChild(g);
+
+  const acts=el("div","modal-actions");
+  if(id){const del=el("button","btn danger","Delete");del.onclick=()=>{
+    if(confirm("Delete \""+(s.title||"this song")+"\"? It will also be removed from any setlists."))
+    {deleteSong(id);document.body.removeChild(bg);}};acts.appendChild(del);}
+  const cancel=el("button","btn ghost","Cancel");cancel.onclick=()=>document.body.removeChild(bg);
+  const save=el("button","btn",id?"Save":"Add");
+  save.onclick=()=>{
+    const get=k=>{const i=m.querySelector('[data-k="'+k+'"]');return i?i.value.trim():"";};
+    const title=get("title");if(!title){alert("Title is required.");return;}
+    const vocals=Array.from(m.querySelectorAll('[data-voc]')).filter(c=>c.checked).map(c=>c.value);
+    const patch={
+      title, artist:get("artist"), originalKey:get("originalKey")||null, obKey:get("obKey")||null,
+      transpose: get("transpose")===""?null:parseInt(get("transpose")),
+      bpm: get("bpm")===""?null:parseInt(get("bpm")),
+      durationSeconds: parseDur(get("duration")),
+      trumpet:cbTrumpet.checked, selected:cbSel.checked, vocals, notes:get("notes")
+    };
+    patch.duration=durStr(patch.durationSeconds);
+    patch.spotifyUrl=get("spotifyUrl")||null;
+    patch.spotifySearchUrl=spotifySearch(title,patch.artist);
+    if(cbApprove) patch.approved=cbApprove.checked;
+    if(id) updateSong(id,patch); else addSong(patch);
+    document.body.removeChild(bg);
+  };
+  acts.appendChild(cancel);acts.appendChild(save);m.appendChild(acts);
+  bg.appendChild(m);bg.onclick=e=>{if(e.target===bg)document.body.removeChild(bg);};
+  document.body.appendChild(bg);f_title.i.focus();
+}
+function nextSongId(d){
+  let max=0;d.songs.forEach(s=>{const m=/^song-(\d+)$/.exec(s.id);if(m)max=Math.max(max,+m[1]);});
+  return "song-"+String(max+1).padStart(3,"0");
+}
+function addSong(patch){
+  mutate(d=>{
+    const now=new Date().toISOString();
+    d.songs.push(Object.assign({id:nextSongId(d),ratings:{},tags:[],addedBy:currentUser?currentUser.id:"unknown",createdAt:now,updatedAt:now},patch));
+  });
+}
+function updateSong(id,patch){
+  mutate(d=>{const s=d.songs.find(x=>x.id===id);if(!s)return;Object.assign(s,patch);s.updatedAt=new Date().toISOString();});
+}
+function deleteSong(id){
+  mutate(d=>{
+    d.songs=d.songs.filter(x=>x.id!==id);
+    d.setlists.forEach(sl=>{sl.items=sl.items.filter(it=>it.songId!==id);reindex(sl);});
+  });
+}
+
+/* ============================================================
+   SETLISTS
+   ============================================================ */
+function reindex(sl){sl.items.forEach((it,i)=>it.position=i+1);}
+function renderSetlists(){
+  const v=$("#view");v.innerHTML="";
+  if(!DATA.setlists.length) activeSetlistId=null;
+  else if(!activeSetlistId||!DATA.setlists.find(s=>s.id===activeSetlistId)) activeSetlistId=DATA.setlists[0].id;
+  const bar=el("div","toolbar");
+  const add=el("button","btn","+ New setlist");add.onclick=newSetlist;bar.appendChild(add);
+  v.appendChild(bar);
+  const layout=el("div","setlist-layout");
+  // left: list
+  const leftCard=el("div","card sl-list");
+  if(!DATA.setlists.length){leftCard.appendChild(el("div","empty","No setlists yet."));}
+  DATA.setlists.forEach(sl=>{
+    const item=el("div","sl-item"+(sl.id===activeSetlistId?" active":""));
+    const left=el("div");left.appendChild(el("div","nm",esc(sl.name)));
+    left.appendChild(el("div","sub",sl.items.length+" songs · "+durStr(setlistDuration(sl))));
+    item.appendChild(left);
+    item.onclick=()=>{activeSetlistId=sl.id;renderSetlists();};
+    leftCard.appendChild(item);
+  });
+  layout.appendChild(leftCard);
+  // right: detail
+  const right=el("div");right.id="slDetail";layout.appendChild(right);
+  v.appendChild(layout);
+  renderSetlistDetail();
+}
+function setlistDuration(sl){let t=0;sl.items.forEach(it=>{const s=DATA.songs.find(x=>x.id===it.songId);if(s&&s.durationSeconds)t+=s.durationSeconds;});return t;}
+function renderSetlistDetail(){
+  const wrap=$("#slDetail");if(!wrap)return;wrap.innerHTML="";
+  const sl=DATA.setlists.find(s=>s.id===activeSetlistId);
+  if(!sl){wrap.appendChild(el("div","card"));wrap.firstChild.appendChild(el("div","empty","Create a setlist to start."));return;}
+  // header
+  const dirty = hasDraft(sl.id);
+  const head=el("div","toolbar");
+  const h=el("h2",null,esc(sl.name));h.style.margin="0";head.appendChild(h);
+  if(dirty) head.appendChild(el("span","pill unsaved","unsaved"));
+  head.appendChild(el("div","grow"));
+  if(dirty){
+    const sv=el("button","btn sm","Save changes");sv.onclick=()=>saveSetlist(sl.id);head.appendChild(sv);
+    const dis=el("button","btn ghost sm","Discard");dis.onclick=()=>discardSetlist(sl.id);head.appendChild(dis);
+  }
+  const prn=el("button","btn ghost sm","Print");prn.onclick=()=>printSetlist(sl.id);head.appendChild(prn);
+  const dup=el("button","btn ghost sm","Duplicate");dup.onclick=()=>duplicateSetlist(sl.id);head.appendChild(dup);
+  const ren=el("button","btn ghost sm","Rename");ren.onclick=()=>renameSetlist(sl.id);head.appendChild(ren);
+  const del=el("button","btn danger sm","Delete");del.onclick=()=>deleteSetlist(sl.id);head.appendChild(del);
+  wrap.appendChild(head);
+  const meta=el("div","sub");meta.style.margin="-6px 0 12px";
+  meta.textContent=(sl.band||"")+" · "+sl.items.length+" songs · total "+durStr(setlistDuration(sl));
+  wrap.appendChild(meta);
+  // add song picker: type to filter on title or artist
+  const addWrap=el("div","add-picker");
+  const finp=el("input");finp.type="search";finp.placeholder="Type to add a song… filter by title or artist";finp.style.width="100%";
+  finp.value=slAddFilter;
+  addWrap.appendChild(finp);
+  const results=el("div","add-results");addWrap.appendChild(results);
+  wrap.appendChild(addWrap);
+  function renderResults(){
+    results.innerHTML="";
+    const q=finp.value.toLowerCase().trim();
+    if(!q){results.style.display="none";return;}
+    results.style.display="block";
+    const inSet=new Set(sl.items.map(it=>it.songId));
+    const matches=DATA.songs
+      .filter(s=>((s.title||"").toLowerCase().includes(q)||(s.artist||"").toLowerCase().includes(q)))
+      .sort((a,b)=>(a.title||"").localeCompare(b.title||"")).slice(0,30);
+    if(!matches.length){results.appendChild(el("div","add-empty","No songs match."));return;}
+    matches.forEach(s=>{
+      const r=el("div","add-row");
+      r.innerHTML="<span>"+esc(s.title)+(s.artist?" <span class='sub'>"+esc(s.artist)+"</span>":"")+"</span>";
+      if(inSet.has(s.id)){r.classList.add("added");r.appendChild(el("span","add-tag","in setlist"));}
+      else{r.style.cursor="pointer";r.onclick=()=>{addToSetlist(sl.id,s.id);};}
+      results.appendChild(r);
+    });
+  }
+  finp.oninput=()=>{slAddFilter=finp.value;renderResults();};
+  renderResults();
+  if(slAddFilter){ finp.focus(); finp.setSelectionRange(finp.value.length, finp.value.length); }
+  // song list (sortable)
+  if(!sl.items.length){const c=el("div","card");c.appendChild(el("div","empty","No songs yet. Add some above."));wrap.appendChild(c);return;}
+  const ul=el("ul","sl-songs");ul.style.padding="0";ul.style.margin="0";
+  sl.items.slice().sort((a,b)=>a.position-b.position).forEach(it=>{
+    const s=DATA.songs.find(x=>x.id===it.songId);
+    const li=el("li");li.dataset.songId=it.songId;
+    const row=el("div","sl-song");
+    row.appendChild(el("span","handle","☰"));
+    row.appendChild(el("span","pos",it.position));
+    const info=el("div","info");
+    const voc=(it.vocals&&it.vocals.length?it.vocals:(s?s.vocals:[]))||[];
+    const vocStr=voc.length?voc.map(vid=>vocName(vid)).join(", "):"";
+    info.innerHTML="<div class='t'>"+esc(s?s.title:"(missing song)")+"</div>"+
+      "<div class='sub'>"+esc(s?(s.artist||""):"")+(s&&s.obKey?" · "+esc(s.obKey):"")+(s&&s.bpm?" · "+s.bpm+" bpm":"")+(s?" · "+durStr(s.durationSeconds):"")+
+      (vocStr?" · <span style='color:#ff7900;font-weight:600'>"+esc(vocStr)+"</span>":"")+"</div>";
+    row.appendChild(info);
+    if(s){const st=starsEl(s);st.classList.add("ro2");row.appendChild(st);}
+    const rm=el("button","btn ghost sm","Remove");rm.onclick=()=>removeFromSetlist(sl.id,it.songId);row.appendChild(rm);
+    li.appendChild(row);ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  new Sortable(ul,{handle:".handle",animation:150,ghostClass:"sortable-ghost",chosenClass:"sortable-chosen",
+    onEnd:()=>{
+      const order=Array.from(ul.children).map(li=>li.dataset.songId);
+      reorderSetlist(sl.id,order);
+    }});
+}
+function printSetlist(id){
+  const sl=DATA.setlists.find(s=>s.id===id);if(!sl)return;
+  const items=sl.items.slice().sort((a,b)=>a.position-b.position);
+  const n=items.length||1;
+  // Auto-size so the whole list fills one A4 page. ~950px of usable height.
+  const rowH=Math.max(24, Math.min(72, Math.floor(950/n)));
+  const titleSize=Math.max(15, Math.min(42, Math.round(rowH*0.58)));
+  const metaSize=Math.max(12, Math.min(28, Math.round(titleSize*0.62)));
+  const rows=items.map(it=>{
+    const s=DATA.songs.find(x=>x.id===it.songId)||{};
+    const voc=(it.vocals&&it.vocals.length?it.vocals:(s.vocals||[]));
+    const vocStr=voc&&voc.length?voc.map(vid=>vocName(vid)).join(", "):"";
+    return "<tr style='height:"+rowH+"px'>"+
+      "<td class='n'>"+it.position+"</td>"+
+      "<td class='t'>"+esc(s.title||"(missing)")+"</td>"+
+      "<td class='m'>"+(s.artist?esc(s.artist):"")+(vocStr?"<span class='v'>"+esc(vocStr)+"</span>":"")+"</td>"+
+      "</tr>";
+  }).join("");
+  const html="<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+esc(sl.name)+"</title><style>"+
+    "@page{size:A4;margin:8mm}"+
+    "html,body{height:100%}"+
+    "body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111;margin:0;padding:0}"+
+    "h1{margin:0 0 4px;font-size:18px}"+
+    "table{width:100%;border-collapse:collapse;table-layout:auto}"+
+    "td{border-bottom:1px solid #e2e2e2;vertical-align:middle;padding:0 6px}"+
+    ".n{width:1.6em;text-align:right;font-weight:800;color:#ff7900;font-size:"+titleSize+"px;padding-right:12px}"+
+    ".t{font-weight:800;font-size:"+titleSize+"px;line-height:1.04}"+
+    ".m{text-align:right;font-size:"+metaSize+"px;color:#333;white-space:nowrap;font-weight:600}"+
+    ".v{color:#ff7900;font-weight:800;margin-left:14px}"+
+    "</style></head><body>"+
+    "<h1>"+esc(sl.name)+"</h1>"+
+    "<table>"+rows+"</table></body></html>";
+  const w=window.open("","_blank");
+  if(!w){alert("Allow pop-ups to print the setlist.");return;}
+  w.document.write(html);w.document.close();w.focus();
+  setTimeout(()=>w.print(),300);
+}
+// New setlists and edits below are staged locally (kept in the browser) until
+// the user clicks "Save changes", which pushes them to jsonbin.
+function newSetlist(){
+  const name=prompt("Name for the new setlist:","New setlist");if(!name)return;
+  const id="setlist-"+(slug(name)||uid("sl"));
+  const now=new Date().toISOString();
+  const sl={id, name:name.trim(), band:"Orange Band", date:null, venue:null, notes:"", items:[], createdAt:now, updatedAt:now};
+  drafts[id]=sl; DATA.setlists.push(sl); persistDrafts();
+  activeSetlistId=id; slAddFilter=""; render();
+}
+function renameSetlist(id){
+  const sl=DATA.setlists.find(s=>s.id===id);const name=prompt("Rename setlist:",sl.name);if(!name)return;
+  editDraft(id, x=>{x.name=name.trim();});
+}
+function duplicateSetlist(id){
+  const sl=DATA.setlists.find(s=>s.id===id);const name=prompt("Name for the copy:",sl.name+" (copy)");if(!name)return;
+  const nid="setlist-"+(slug(name)||uid("sl"));const now=new Date().toISOString();
+  const copy={id:nid,name:name.trim(),band:sl.band,date:null,venue:null,notes:sl.notes,
+    items:sl.items.map(it=>Object.assign({},it)),createdAt:now,updatedAt:now};
+  drafts[nid]=copy; DATA.setlists.push(copy); persistDrafts();
+  activeSetlistId=nid; slAddFilter=""; render();
+}
+function deleteSetlist(id){
+  const sl=DATA.setlists.find(s=>s.id===id);
+  if(!confirm("Delete setlist \""+sl.name+"\"? The songs stay in your library.\nThis is saved to the shared list right away."))return;
+  // Drop any local draft, then remove from jsonbin (delete is immediate).
+  if(hasDraft(id)){ delete drafts[id]; persistDrafts(); }
+  DATA.setlists=DATA.setlists.filter(s=>s.id!==id);
+  activeSetlistId=null;
+  mutate(d=>{d.setlists=d.setlists.filter(s=>s.id!==id);});
+}
+function addToSetlist(id,songId){
+  editDraft(id, sl=>{
+    sl.items.push({songId,position:sl.items.length+1,transpose:null,vocals:[],notes:""});
+    reindex(sl);
+  });
+}
+function removeFromSetlist(id,songId){
+  editDraft(id, sl=>{ sl.items=sl.items.filter(it=>it.songId!==songId); reindex(sl); });
+}
+function reorderSetlist(id,order){
+  editDraft(id, sl=>{ sl.items.sort((a,b)=>order.indexOf(a.songId)-order.indexOf(b.songId)); reindex(sl); });
+}
+// Push the staged setlist to jsonbin.
+function saveSetlist(id){
+  const dr=drafts[id]; if(!dr) return;
+  mutate(d=>{
+    const i=d.setlists.findIndex(s=>s.id===id);
+    if(i>=0) d.setlists[i]=JSON.parse(JSON.stringify(dr)); else d.setlists.push(JSON.parse(JSON.stringify(dr)));
+  }, ()=>{ delete drafts[id]; persistDrafts(); });
+}
+// Throw away staged edits and reload the saved version from jsonbin.
+function discardSetlist(id){
+  if(!confirm("Discard unsaved changes to this setlist?"))return;
+  const wasNew = !!drafts[id];
+  delete drafts[id]; persistDrafts();
+  loadData().then(()=>{
+    if(wasNew && !DATA.setlists.find(s=>s.id===id)) activeSetlistId = DATA.setlists[0]?DATA.setlists[0].id:null;
+    render();
+  }).catch(()=>render());
+}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+function renderStats(){
+  const v=$("#view");v.innerHTML="";
+  const songs=DATA.songs;
+  const totalSec=songs.reduce((a,s)=>a+(s.durationSeconds||0),0);
+  const selSongs=songs.filter(s=>s.selected);
+  const bpms=songs.map(s=>s.bpm).filter(Boolean);
+  const avgBpm=bpms.length?Math.round(bpms.reduce((a,b)=>a+b,0)/bpms.length):0;
+  const rated=songs.filter(s=>Object.keys(s.ratings).length);
+  const stats=[
+    [songs.length,"Songs in library"],
+    [selSongs.length,"In active selection"],
+    [DATA.setlists.length,"Setlists"],
+    [durStr(totalSec),"Total play time"],
+    [avgBpm||"–","Average BPM"],
+    [songs.filter(s=>s.trumpet).length,"With trumpet"],
+    [rated.length,"Songs rated"],
+    [DATA.users.length,"Voters"]
+  ];
+  const grid=el("div","stat-grid");
+  stats.forEach(([n,l])=>{const c=el("div","stat");c.appendChild(el("div","n",esc(n)));c.appendChild(el("div","l",esc(l)));grid.appendChild(c);});
+  v.appendChild(grid);
+
+  // top rated
+  const topCard=el("div","card");topCard.style.marginBottom="18px";
+  topCard.appendChild(headerRow("Top rated songs"));
+  const top=rated.map(s=>({s,avg:avgOf(s),n:Object.keys(s.ratings).length}))
+    .sort((a,b)=>b.avg-a.avg).slice(0,10);
+  if(!top.length){topCard.appendChild(el("div","empty","No ratings yet. Add some stars in the Library."));}
+  else{
+    const t=el("table");const tb=el("tbody");
+    top.forEach(({s,avg,n})=>{
+      const tr=el("tr");
+      tr.appendChild(el("td","title-cell",esc(s.title)));
+      tr.appendChild(el("td","sub",esc(s.artist||"")));
+      const td=el("td");td.appendChild(starsEl(s));tr.appendChild(td);
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);topCard.appendChild(t);
+  }
+  v.appendChild(topCard);
+
+  // vocals distribution
+  const vc=el("div","card");vc.style.padding="16px";
+  vc.appendChild(el("h3","",""));vc.firstChild.textContent="Songs per vocalist";vc.firstChild.style.margin="0 0 10px";
+  const counts=DATA.members.map(m=>({name:m.name,c:songs.filter(s=>s.vocals.includes(m.id)).length}));
+  const maxc=Math.max(1,...counts.map(c=>c.c));
+  counts.forEach(c=>{
+    const row=el("div","bar-row");
+    row.appendChild(el("div","lab",esc(c.name)));
+    const bar=el("div","bar");bar.style.width=(c.c/maxc*260)+"px";row.appendChild(bar);
+    row.appendChild(el("div","v",c.c));vc.appendChild(row);
+  });
+  v.appendChild(vc);
+}
+function headerRow(title){const d=el("div");d.style.padding="14px 14px 0";d.appendChild(el("h3",null,esc(title)));d.firstChild.style.margin="0 0 8px";return d;}
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+function render(){
+  if(!DATA)return;
+  if(activeTab==="library")renderLibrary();
+  else if(activeTab==="setlists")renderSetlists();
+  else if(activeTab==="stats")renderStats();
+  renderWho();
+  renderHeaderMeta();
+}
+function renderHeaderMeta(){
+  $("#appVersion").textContent="v"+APP_VERSION;
+  const lu=$("#lastUpdate");
+  if(DATA && DATA.meta && DATA.meta.updatedAt){
+    const d=new Date(DATA.meta.updatedAt);
+    const when=d.toLocaleDateString()+" "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+    lu.innerHTML="jsonbin updated<br><b>"+esc(when)+"</b> · rev "+(DATA.meta.revision||0);
+  } else { lu.textContent=""; }
+}
+// Save everything (library + any unsaved setlist edits) to jsonbin in one go.
+function saveAll(){
+  if(!DATA){alert("Nothing to save yet.");return;}
+  saving = saving.then(async ()=>{
+    setSync("saving","saving…");
+    try{
+      applyDrafts(DATA); // make sure staged setlist edits are in the data we push
+      DATA.meta = DATA.meta || {};
+      DATA.meta.revision = (DATA.meta.revision||0)+1;
+      DATA.meta.updatedAt = new Date().toISOString();
+      const pr = await fetch(API,{method:"PUT",headers:headers(),body:JSON.stringify(DATA)});
+      if(!pr.ok) throw new Error("write "+pr.status);
+      drafts={}; persistDrafts();   // everything is now saved
+      setSync("ok","saved");
+      render();
+    }catch(e){
+      console.error(e);
+      setSync("err","save failed");
+      alert("Could not save: "+e.message+"\nCheck the Access Key has Update permission.");
+    }
+  });
+  return saving;
+}
+function exportDataset(){
+  if(!DATA){alert("Nothing to export yet.");return;}
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+  const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="band-setlist-backup-"+stamp+".json";
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
+}
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");activeTab=b.dataset.tab;render();};
+});
+$("#exportBtn").onclick=exportDataset;
+$("#saveAllBtn").onclick=saveAll;
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+(async function(){
+  loadUser();renderWho();
+  $("#appVersion").textContent="v"+APP_VERSION;
+  if(CONFIG.ACCESS_KEY==="PASTE_YOUR_ACCESS_KEY_HERE"){
+    $("#view").innerHTML="<div class='notice'><b>Setup needed.</b> Open <code>index.html</code> and paste your JSONBin Access Key into the CONFIG block near the top, then reload. See the README for how to create one.</div>";
+    setSync("err","no key");
+    return;
+  }
+  try{
+    await loadData();
+    render();
+  }catch(e){
+    $("#view").innerHTML="<div class='notice'><b>Could not load data.</b> "+esc(e.message)+"</div>";
+    setSync("err","error");
+  }
+})();
+</script>
+</body>
+</html>

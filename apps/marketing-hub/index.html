@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketing Hub</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Login overlay -->
+  <div id="login-overlay" class="overlay">
+    <div class="login-card">
+      <h1>Marketing Hub <span class="appver" id="login-version"></span></h1>
+      <p class="muted">Pick your name to start. All data is stored on this computer.</p>
+      <div id="login-error" class="error hidden"></div>
+      <label for="login-user">User</label>
+      <select id="login-user"><option value="">Loading...</option></select>
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" autocomplete="off" placeholder="Default is 1234 for a new account" />
+      <button id="login-btn" class="primary">Continue</button>
+      <p class="muted small">First time? Pick "Add new user..." to create your profile. New accounts start with password 1234 and ask you to set your own.</p>
+      <p class="muted small" style="margin-top:14px; border-top:1px solid #e5e7eb; padding-top:10px;">
+        Locked out or restoring a backup? <a href="#" id="login-import">Load a data file...</a>
+      </p>
+      <input type="file" id="login-file" accept=".json,application/json" style="display:none" />
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <header id="app-header" class="hidden">
+    <div class="brand">Marketing Hub <span class="appver" id="app-version"></span></div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="budget">Budget</button>
+      <button class="tab" data-tab="timeline">Campaigns and events</button>
+      <button class="tab" data-tab="reporting">Reporting</button>
+      <button class="tab" data-tab="outcomes">Outcomes</button>
+      <button class="tab" data-tab="budget-structure">Budget Structure</button>
+      <button class="tab" data-tab="data">Data</button>
+      <button class="tab" data-tab="users">Users</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+    <div class="user-area">
+      <span id="last-updated" class="muted small"></span>
+      <span id="shared-updated" class="muted small" title="Date of the shared budget & events file the last time this browser synced with it"></span>
+      <span id="current-user" class="muted"></span>
+      <span id="role-badge" class="role-badge"></span>
+      <span id="sync-status" class="sync">Idle</span>
+      <button id="refresh-btn" class="link hidden" title="Check the shared folder for new budget & events">&#8635; Refresh</button>
+      <button id="lock-btn" class="link" title="Admin access">&#128274;</button>
+      <button id="logout-btn" class="link">Switch user</button>
+    </div>
+  </header>
+
+  <main id="app-main" class="hidden">
+    <section id="tab-budget" class="tab-panel active"></section>
+    <section id="tab-timeline" class="tab-panel"></section>
+    <section id="tab-reporting" class="tab-panel"></section>
+    <section id="tab-outcomes" class="tab-panel"></section>
+    <section id="tab-budget-structure" class="tab-panel"></section>
+    <section id="tab-data" class="tab-panel"></section>
+    <section id="tab-users" class="tab-panel"></section>
+    <section id="tab-settings" class="tab-panel"></section>
+  </main>
+
+  <!-- Modal mount -->
+  <div id="modal-root"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/budget.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/reporting.js"></script>
+  <script src="js/outcomes.js"></script>
+  <script src="js/structure.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/users.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/import.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

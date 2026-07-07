@@ -1,0 +1,14 @@
+# Mac system files
+.DS_Store
+
+# Personal Claude instructions (keep local only)
+CLAUDE.md
+
+# Cowork app data (local only)
+/Cowork/
+
+# Local scratch/artifacts
+/Artifacts/
+
+# Internal Orange Business material - sync via OneDrive, NOT GitHub
+/Projects/
