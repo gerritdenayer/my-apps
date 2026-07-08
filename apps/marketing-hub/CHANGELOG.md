@@ -1,5 +1,14 @@
 # Changelog
 
+## [v3.28] - 2026-07-03 - Fix: deleted rows reappearing after publish
+
+### Fixed
+- Deleting a budget line or event and publishing now actually removes it from the shared file,
+  instead of the merge pulling it back. The merge compares against your last-synced snapshot to
+  tell a real deletion from a row you simply never had. If a teammate changed that same row in
+  the meantime, their version is kept rather than deleted, so no one's edit is lost. The publish
+  message now also reports how many rows were removed.
+
 ## [v3.27] - 2026-07-03 - Privacy cleanup: remove real data and internal docs from the repo
 
 ### Removed

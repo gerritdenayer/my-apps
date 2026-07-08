@@ -318,8 +318,9 @@
   function mergeList(baseArr, localArr, remoteArr) {
     const B = Object.fromEntries((baseArr || []).map((x) => [x.id, x]));
     const Rmap = Object.fromEntries((remoteArr || []).map((x) => [x.id, x]));
+    const localIds = new Set((localArr || []).map((x) => x.id));
     const result = Object.fromEntries((remoteArr || []).map((x) => [x.id, x]));
-    let inserts = 0, updates = 0;
+    let inserts = 0, updates = 0, deletes = 0;
     (localArr || []).forEach((row) => {
       const b = B[row.id];
       if (!b) {
@@ -329,7 +330,16 @@
         result[row.id] = row; updates++;
       }
     });
-    return { list: Object.values(result), inserts, updates };
+    // Rows you deleted since the last sync: remove them from the shared file too, so they do not
+    // come back. Exception: if a teammate changed that same row in the meantime, keep their version
+    // rather than deleting, so their edit is not lost.
+    Object.keys(B).forEach((id) => {
+      if (localIds.has(id)) return;            // still present locally, not a deletion
+      const r = Rmap[id];
+      if (!r) return;                          // already gone from the shared file
+      if (rowSig(r) === rowSig(B[id])) { delete result[id]; deletes++; }
+    });
+    return { list: Object.values(result), inserts, updates, deletes };
   }
   // How many merged rows came from teammates (differ from the local copy before merge).
   function countFromRemote(localArr, mergedArr) {
@@ -343,17 +353,17 @@
     const dir = await shareDir();
     if (!dir) return false;
     try {
-      const ok = await S.confirmDialog("Publish your budget & events? Your new and changed rows are merged into the shared file, and any changes teammates already published are pulled into your copy. Nothing is deleted.");
+      const ok = await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
       if (!ok) return false;
       const remote = await SH.readJson(dir, DATA_FILE);
       let baseline = null;
       try { baseline = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { baseline = null; }
       const localA = S.state.data.activities || [], localE = S.state.data.events || [];
-      let stats = { insA: 0, updA: 0, insE: 0, updE: 0, fromRemote: 0 };
+      let stats = { insA: 0, updA: 0, delA: 0, insE: 0, updE: 0, delE: 0, fromRemote: 0 };
       if (remote && (Array.isArray(remote.activities) || Array.isArray(remote.events))) {
         const ma = mergeList(baseline ? baseline.a : [], localA, remote.activities || []);
         const me = mergeList(baseline ? baseline.e : [], localE, remote.events || []);
-        stats = { insA: ma.inserts, updA: ma.updates, insE: me.inserts, updE: me.updates,
+        stats = { insA: ma.inserts, updA: ma.updates, delA: ma.deletes, insE: me.inserts, updE: me.updates, delE: me.deletes,
           fromRemote: countFromRemote(localA, ma.list) + countFromRemote(localE, me.list) };
         S.state.data.activities = ma.list;
         S.state.data.events = me.list;
@@ -363,8 +373,8 @@
       localStorage.setItem(SEEN_KEY, obj.meta.exportedAt);
       markPublishBaseline(); updateSharedHeader();
       S.scheduleSave(); S.notify();
-      const mine = stats.insA + stats.insE, changed = stats.updA + stats.updE;
-      S.toast(`Published and merged. Your side: ${mine} new, ${changed} changed. Pulled in from teammates: ${stats.fromRemote}.`, "success");
+      const mine = stats.insA + stats.insE, changed = stats.updA + stats.updE, removed = stats.delA + stats.delE;
+      S.toast(`Published & merged. New: ${mine}, changed: ${changed}, removed: ${removed}. Pulled in from teammates: ${stats.fromRemote}.`, "success");
       return true;
     } catch (e) { S.toast("Could not publish budget & events: " + e.message, "error"); return false; }
   }
