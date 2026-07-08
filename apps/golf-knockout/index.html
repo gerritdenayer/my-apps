@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golf Knockout</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f8;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    a.back { color: #666; text-decoration: none; font-size: 0.9rem; }
+    a.back:hover { text-decoration: underline; }
+    h1 { font-size: 2rem; margin: 12px 0 8px; }
+    .subtitle { color: #666; margin-bottom: 32px; }
+    h2.section { font-size: 1rem; color: #888; margin: 28px 0 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .app-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .app-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .app-card .icon { font-size: 2rem; margin-bottom: 12px; }
+    .app-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+    .app-card p { font-size: 0.9rem; color: #666; }
+    footer { margin-top: 48px; color: #999; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="../../">&larr; All apps</a>
+    <h1>&#9971; Golf Knockout</h1>
+    <p class="subtitle">Matchplay bracket manager with live viewer and kiosk display screens.</p>
+
+    <h2 class="section">Manage</h2>
+    <div class="app-grid">
+      <a class="app-card" href="admin.html">
+        <div class="icon">&#128203;</div>
+        <h3>Admin / Setup</h3>
+        <p>Enter players, build the bracket, record scores, and publish.</p>
+      </a>
+    </div>
+
+    <h2 class="section">Viewer (for players)</h2>
+    <div class="app-grid">
+      <a class="app-card" href="viewer-men.html">
+        <div class="icon">&#128100;</div>
+        <h3>Viewer &mdash; Men</h3>
+        <p>Live bracket, read-only.</p>
+      </a>
+      <a class="app-card" href="viewer-ladies.html">
+        <div class="icon">&#128100;</div>
+        <h3>Viewer &mdash; Ladies</h3>
+        <p>Live bracket, read-only.</p>
+      </a>
+    </div>
+
+    <h2 class="section">Kiosk (for a screen at the club)</h2>
+    <div class="app-grid">
+      <a class="app-card" href="kiosk-men.html">
+        <div class="icon">&#128250;</div>
+        <h3>Kiosk &mdash; Men</h3>
+        <p>Full-screen auto-refreshing display.</p>
+      </a>
+      <a class="app-card" href="kiosk-ladies.html">
+        <div class="icon">&#128250;</div>
+        <h3>Kiosk &mdash; Ladies</h3>
+        <p>Full-screen auto-refreshing display.</p>
+      </a>
+    </div>
+
+    <h2 class="section">Documentation</h2>
+    <div class="app-grid">
+      <a class="app-card" href="docs/Gebruikershandleiding-Golf-Knockout.pdf">
+        <div class="icon">&#128196;</div>
+        <h3>Gebruikershandleiding (NL)</h3>
+        <p>User manual, Dutch.</p>
+      </a>
+    </div>
+
+    <footer>Data is stored and synced live via JSONBin.io &mdash; nothing is saved in this repo.</footer>
+  </div>
+</body>
+</html>

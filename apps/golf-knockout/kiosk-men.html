@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Knockout - Live Bracket</title>
+
+<!--
+  ===========================================================
+  GOLF KNOCKOUT PUBLIC VIEWER
+
+  Paste your JSONBin bin ID into BIN_ID below, then upload or
+  paste this file into your Wix Embed HTML element.
+
+  Optional: FORCE_LANG = "en", "nl" or "fr". Leave empty ("") to
+  follow the language saved with the published bracket.
+
+  REFRESH_SECONDS controls how often the viewer re-fetches the
+  bracket. Set to 0 to disable auto refresh.
+  ===========================================================
+-->
+
+<style>
+  :root{
+    --green:#1b7a43; --green-dark:#145c33; --green-light:#e8f3ec;
+    --ink:#1f2a24; --muted:#65726b; --line:#dfe6e1; --bg:#f5f7f5;
+    --card:#ffffff; --gold:#c9a227; --gold-light:#fdf6e0;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  header{background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;padding:18px 18px}
+  header .wrap{max-width:1300px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;font-weight:650}
+  header .version{font-size:10.5px;opacity:.75;margin-top:2px;letter-spacing:.04em;font-weight:500}
+  header .sub{margin-top:2px;font-size:12.5px;opacity:.85}
+  header button{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
+  header button:hover{background:rgba(255,255,255,.28)}
+  main{max-width:1300px;margin:0 auto;padding:14px 18px}
+  .tour-title{font-size:20px;font-weight:750;color:var(--green-dark);margin:0 0 10px}
+  .tour-title:empty{display:none}
+  .status{color:var(--muted);font-size:12.5px;margin:6px 0 12px}
+  .err{background:#fdeceb;color:#a4271a;border:1px solid #e7c3bf;padding:10px 12px;border-radius:9px;font-size:14px;margin-bottom:12px}
+  .empty{text-align:center;padding:34px 10px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .champ{background:linear-gradient(135deg,var(--gold),#b8901f);color:#fff;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .champ .cup{font-size:30px}
+  .champ .t{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;opacity:.9}
+  .champ .n{font-size:20px;font-weight:750}
+  .bracket-scroll{overflow-x:auto;padding:6px 2px 14px}
+  .bracket{display:flex;gap:22px;width:100%;align-items:stretch}
+  .round{display:flex;flex-direction:column;flex:1 1 0;min-width:150px;max-width:360px}
+  .round-head{text-align:center;font-weight:700;font-size:13px;color:var(--green-dark);background:var(--green-light);border:1px solid #cbe3d4;border-radius:9px;padding:8px;margin-bottom:8px}
+  .round-head small{display:block;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .round-head .deadline{display:block;font-weight:600;color:var(--gold);font-size:11px;margin-top:2px}
+  .matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:12px}
+  .match{border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .match-head{display:flex;justify-content:space-between;align-items:center;background:#f3f6f3;padding:5px 10px;font-size:11px;color:var(--muted);font-weight:600}
+  .match-head .str{color:var(--green-dark)}
+  .slot{display:flex;align-items:center;gap:8px;padding:10px 11px;border-top:1px solid var(--line)}
+  .slot:first-of-type{border-top:none}
+  .slot .pn{font-weight:600;font-size:14px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot .ph{font-size:11px;color:var(--muted);flex:0 0 auto}
+  .slot.winner{background:var(--green-light)}
+  .slot.winner .pn{color:var(--green-dark)}
+  .slot.winner .check{color:var(--green);font-weight:800}
+  .slot.loser .pn{color:#a9b3ad;text-decoration:line-through}
+  .slot.tbd,.slot.bye{color:#b6beb8;font-style:italic}
+  .slot .score{display:inline-block;font-size:10.5px;color:var(--green-dark);font-weight:700;background:#fff;border:1px solid var(--green);padding:1px 7px;border-radius:10px;margin:0 6px;flex:0 0 auto;line-height:1.4}
+  .slot.loser .score{color:#a9b3ad;border-color:#cfd6d1;background:#fff}
+  .champ .ws{font-size:13px;opacity:.95;margin-top:2px;font-weight:600}
+  .check{width:14px;flex:0 0 auto;text-align:right}
+  footer{text-align:center;padding:14px;color:var(--muted);font-size:11px}
+
+  /* --- compact / TV mode --- */
+  body.tv header{padding:8px 14px}
+  body.tv header h1{font-size:14px}
+  body.tv header .version{font-size:9.5px}
+  body.tv header button{padding:4px 8px;font-size:11px}
+  body.tv main{padding:6px 10px;max-width:none}
+  body.tv .tour-title{font-size:14px;margin-bottom:4px}
+  body.tv .status{display:none}
+  body.tv .bracket-scroll{overflow:hidden;padding:0}
+  body.tv .bracket{gap:var(--tv-gap, 6px)}
+  body.tv .round{min-width:var(--tv-column-min, 90px);max-width:none}
+  body.tv .round-head{font-size:10px;padding:3px 4px;margin-bottom:4px;border-radius:5px}
+  body.tv .round-head small{font-size:8.5px;letter-spacing:.02em}
+  body.tv .round-head .deadline{font-size:9px;margin-top:1px}
+  body.tv .matches{gap:4px}
+  body.tv .match{border-radius:6px;border:1px solid var(--line);background:#fff}
+  body.tv .match-head{font-size:9px;padding:2px 5px}
+  body.tv .slot{padding:var(--tv-slot-padding, 4px) 6px;gap:3px;border-top:1px solid var(--line)}
+  body.tv .slot:first-of-type{border-top:none}
+  body.tv .slot .pn{font-size:var(--tv-font-size, 11px);line-height:1.18;white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word}
+  body.tv .slot .ph{display:none}
+  body.tv .slot .score{font-size:9px;padding:0 4px;margin:0 3px}
+  body.tv .slot .check{width:9px}
+  body.tv .slot.winner{background:var(--green-light)}
+  body.tv .slot.winner .pn{color:var(--green-dark);font-weight:700}
+  body.tv .champ{padding:8px 12px;border-radius:8px;margin-bottom:6px;gap:10px}
+  body.tv .champ .cup{font-size:20px}
+  body.tv .champ .t{font-size:9px}
+  body.tv .champ .n{font-size:16px}
+  body.tv .champ .ws{font-size:11px}
+  body.tv footer{display:none}
+  /* user toggles */
+  body.tv.no-header header{display:none}
+  body.tv.no-match-info .match-head{display:none}
+  body.tv.no-match-info .match{border-color:var(--green);border-width:1.5px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+</style>
+</head>
+<body>
+
+<script>
+"use strict";
+
+/* ============== USER CONFIG (edit these) ============== */
+const BIN_ID = "6a27f62ada38895dfe9fb4cd";
+const FORCE_LANG = "nl";              // "" = follow published language; or "en" / "nl" / "fr"
+const REFRESH_SECONDS = 0;            // 0 = no auto refresh
+const SPLIT_DEFAULT = true;          // true = start in split (tree) view, false = linear
+const TV_MODE_DEFAULT = true;        // true = start in compact TV mode (no scroll, condensed)
+/* ====================================================== */
+
+const APP_VERSION = "1.2";
+const APP_BUILD = "2026-06-03";
+/* --- Kiosk display tuning (used when TV_MODE_DEFAULT or the Compact button is on) --- */
+const HIDE_HEADER = true;              // true = hide the top bar entirely (gives the bracket more room)
+const SHOW_MATCH_INFO = false;          // false = hide the small M1 / strokes label above each match (cleaner)
+const COMPACT_FONT_SIZE = 11;           // player name size in px (try 10 to 13)
+const COMPACT_SLOT_PADDING = 2;         // vertical padding per player row in px (smaller = tighter)
+const COMPACT_COLUMN_MIN = 90;          // min width of each bracket column in px (smaller = fits more rounds; names may wrap)
+const COMPACT_GAP = 3;                  // gap between columns in px
+
+const JSONBIN_BASE = "https://api.jsonbin.io/v3";
+
+/* ---------- themes ---------- */
+const THEMES={
+  green:{p:"#1b7a43",d:"#145c33",l:"#e8f3ec",a:"#c9a227",al:"#fdf6e0"},
+  blue:{p:"#1f6fb2",d:"#16527f",l:"#e7f1f9",a:"#e08a1e",al:"#fbeed7"},
+  slate:{p:"#475569",d:"#334155",l:"#eef1f5",a:"#2f7fbf",al:"#e4eef7"},
+  burgundy:{p:"#8e2b3f",d:"#6e2030",l:"#f6e8eb",a:"#c9a227",al:"#fdf6e0"},
+  purple:{p:"#6b4099",d:"#533078",l:"#efe9f6",a:"#d4a72c",al:"#faf2da"},
+  teal:{p:"#0f8a8a",d:"#0a6868",l:"#e2f3f3",a:"#ef6f53",al:"#fce8e2"}
+};
+function applyTheme(key){
+  const t=THEMES[key]||THEMES.green, r=document.documentElement.style;
+  r.setProperty("--green",t.p); r.setProperty("--green-dark",t.d); r.setProperty("--green-light",t.l);
+  r.setProperty("--gold",t.a); r.setProperty("--gold-light",t.al);
+}
+
+/* ---------- mini i18n ---------- */
+const I18N={
+  en:{appTitle:"Golf Knockout - Matchplay",refresh:"Refresh",champion:"Champion",final:"Final",semifinals:"Semifinals",quarterfinals:"Quarterfinals",roundOf:"Round of",round:"Round",strAbbr:"str",scratch:"scratch",bye:"Bye",tbd:"To be decided",finishBy:"finish by",empty:"No bracket published yet.",errFetch:"Could not load the bracket. Check the bin ID and your connection.",errNoBin:"Set BIN_ID at the top of this file to your JSONBin.io bin ID.",updatedAt:"Updated",wonFinal:"Won the final {s}",viewSplit:"Split",viewLinear:"Linear",viewCompact:"Compact",viewNormal:"Normal"},
+  nl:{appTitle:"Golf Knockout - Matchplay",refresh:"Vernieuwen",champion:"Kampioen",final:"Finale",semifinals:"Halve finale",quarterfinals:"Kwartfinale",roundOf:"Ronde van",round:"Ronde",strAbbr:"slagen",scratch:"scratch",bye:"Bye",tbd:"Nog te bepalen",finishBy:"klaar tegen",empty:"Nog geen schema gepubliceerd.",errFetch:"Kon het schema niet laden. Controleer de bin-ID en je verbinding.",errNoBin:"Stel BIN_ID bovenaan dit bestand in op je JSONBin.io bin-ID.",updatedAt:"Bijgewerkt",wonFinal:"Won de finale met {s}",viewSplit:"Gesplitst",viewLinear:"Lineair",viewCompact:"Compact",viewNormal:"Normaal"},
+  fr:{appTitle:"Golf Knockout - Matchplay",refresh:"Actualiser",champion:"Champion",final:"Finale",semifinals:"Demi-finales",quarterfinals:"Quarts de finale",roundOf:"Tour de",round:"Tour",strAbbr:"coups",scratch:"scratch",bye:"Exempt",tbd:"À déterminer",finishBy:"à terminer le",empty:"Aucun tableau publié pour le moment.",errFetch:"Impossible de charger le tableau. Vérifiez l'ID de bin et votre connexion.",errNoBin:"Définissez BIN_ID en haut de ce fichier avec votre ID de bin JSONBin.io.",updatedAt:"Mis à jour",wonFinal:"A gagné la finale {s}",viewSplit:"Divisée",viewLinear:"Linéaire",viewCompact:"Compact",viewNormal:"Normal"}
+};
+let LANG="en";
+function tt(k){ return (I18N[LANG]||I18N.en)[k]||k; }
+
+/* ---------- bracket logic (read-only) ---------- */
+let DATA=null;
+function regionEmpty(L,k){
+  const s=DATA.bracket.seeds, span=Math.pow(2,L), start=k*span;
+  for(let i=start;i<start+span && i<s.length;i++) if(s[i]) return false;
+  return true;
+}
+function advancer(L,k){
+  const b=DATA.bracket;
+  if(L===0) return b.seeds[k]||null;
+  const iA=2*k,iB=2*k+1;
+  const aE=regionEmpty(L-1,iA), bE=regionEmpty(L-1,iB);
+  if(aE&&bE) return null;
+  if(bE) return advancer(L-1,iA);
+  if(aE) return advancer(L-1,iB);
+  return (b.winners||{})[(L-1)+"-"+k]||null;
+}
+function playerById(id){ return (DATA.players||[]).find(p=>p.id===id); }
+function strokesBetween(a,b){ const diff=Math.abs((a.playingHcp||0)-(b.playingHcp||0)); return Math.round(diff*((DATA.allowance||90)/100)); }
+function roundName(r,numRounds){
+  const left=numRounds-r;
+  if(left===1) return tt("final");
+  if(left===2) return tt("semifinals");
+  if(left===3) return tt("quarterfinals");
+  return tt("roundOf")+" "+Math.pow(2,left);
+}
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function fmtDeadline(s){ if(!s) return ""; const d=new Date(s+"T00:00:00"); const loc=LANG==="nl"?"nl-BE":(LANG==="fr"?"fr-BE":"en-GB"); return d.toLocaleDateString(loc,{day:"2-digit",month:"short"}); }
+
+function slotHTML(pid,oppId,thisEmpty,oppEmpty,winnerId,incomingScore){
+  if(!pid){
+    if(thisEmpty && !oppEmpty) return `<div class="slot bye"><span class="pn">${tt("bye")}</span></div>`;
+    return `<div class="slot tbd"><span class="pn">${tt("tbd")}</span></div>`;
+  }
+  const p=playerById(pid);
+  const name = p?esc(p.name):"(removed)";
+  const ph = p?("PH "+(p.playingHcp??0)):"";
+  const scoreHTML = incomingScore?`<span class="score">${esc(incomingScore)}</span>`:'';
+  let cls="slot";
+  const isWin = winnerId===pid;
+  if(isWin) cls+=" winner"; else if(winnerId) cls+=" loser";
+  if(oppEmpty){
+    return `<div class="${cls} winner"><span class="pn">${name}</span>${scoreHTML}<span class="ph">${ph}</span><span class="check">&#10003;</span></div>`;
+  }
+  const check = isWin?'<span class="check">&#10003;</span>':'<span class="check"></span>';
+  return `<div class="${cls}"><span class="pn">${name}</span>${scoreHTML}<span class="ph">${ph}</span>${check}</div>`;
+}
+function tf(k,vars){ let s=tt(k); for(const x in vars) s=s.replace("{"+x+"}",vars[x]); return s; }
+
+/* ---------- view state ---------- */
+let VIEW_SPLIT = !!SPLIT_DEFAULT;
+let VIEW_TV = !!TV_MODE_DEFAULT;
+function toggleViewSplit(){ VIEW_SPLIT = !VIEW_SPLIT; render(); }
+function toggleViewTv(){ VIEW_TV = !VIEW_TV; render(); }
+
+function roundColumnHTML(r, mStart, mCount){
+  const b=DATA.bracket;
+  let matches="";
+  for(let m=mStart; m<mStart+mCount; m++){
+    const iA=2*m, iB=2*m+1;
+    const aP=advancer(r,iA), bP=advancer(r,iB);
+    const aE=regionEmpty(r,iA), bE=regionEmpty(r,iB);
+    const winnerId=advancer(r+1,m);
+    let head=`M${m+1}`;
+    if(aP&&bP){ const s=strokesBetween(playerById(aP)||{playingHcp:0},playerById(bP)||{playingHcp:0}); head+=` <span class="str">&middot; ${s>0?(s+" "+tt("strAbbr")):tt("scratch")}</span>`; }
+    const aScore = (r>0 && b.scores) ? (b.scores[(r-1)+"-"+(2*m)]||"") : "";
+    const bScore = (r>0 && b.scores) ? (b.scores[(r-1)+"-"+(2*m+1)]||"") : "";
+    matches+=`<div class="match"><div class="match-head"><span>${head}</span></div>${slotHTML(aP,bP,aE,bE,winnerId,aScore)}${slotHTML(bP,aP,bE,aE,winnerId,bScore)}</div>`;
+  }
+  const dl=(DATA.roundDates||{})[r]?`<span class="deadline">&#128197; ${tt("finishBy")} ${fmtDeadline(DATA.roundDates[r])}</span>`:"";
+  return `<div class="round"><div class="round-head">${roundName(r,b.numRounds)}<small>${tt("round")} ${r+1}</small>${dl}</div><div class="matches">${matches}</div></div>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  // apply user-tunable kiosk constants
+  const _r=document.documentElement.style;
+  _r.setProperty('--tv-font-size', COMPACT_FONT_SIZE+'px');
+  _r.setProperty('--tv-slot-padding', COMPACT_SLOT_PADDING+'px');
+  _r.setProperty('--tv-column-min', COMPACT_COLUMN_MIN+'px');
+  _r.setProperty('--tv-gap', COMPACT_GAP+'px');
+  document.body.classList.toggle('no-header', HIDE_HEADER && VIEW_TV);
+  document.body.classList.toggle('no-match-info', !SHOW_MATCH_INFO && VIEW_TV);
+  const root=document.getElementById("root");
+  if(!DATA || !DATA.bracket){ root.innerHTML='<div class="empty">'+tt("empty")+'</div>'; return; }
+  applyTheme(DATA.theme||"green");
+  document.body.classList.toggle("tv", VIEW_TV);
+  const b=DATA.bracket;
+  document.getElementById("title").textContent=DATA.title||tt("appTitle");
+  document.getElementById("refreshBtn").textContent="↻ "+tt("refresh");
+  const vb=document.getElementById("splitBtn"); if(vb) vb.textContent = VIEW_SPLIT?tt("viewLinear"):tt("viewSplit");
+  const cb=document.getElementById("tvBtn"); if(cb) cb.textContent = VIEW_TV?tt("viewNormal"):tt("viewCompact");
+  // champion
+  const champWrap=document.getElementById("champWrap");
+  const champId=advancer(b.numRounds,0);
+  const champ=champId?playerById(champId):null;
+  const finalScore=((b.scores||{})[(b.numRounds-1)+"-0"])||"";
+  const sLine = (champ && finalScore) ? `<div class="ws">${tf("wonFinal",{s:esc(finalScore)})}</div>` : "";
+  champWrap.innerHTML = champ ? `<div class="champ"><span class="cup">&#127942;</span><div><div class="t">${tt("champion")}</div><div class="n">${esc(champ.name)}</div>${sLine}</div></div>` : "";
+  // bracket: linear or split
+  let html="";
+  if(VIEW_SPLIT && b.numRounds>=2){
+    const last=b.numRounds-1;
+    for(let r=0;r<last;r++){ const total=b.size/Math.pow(2,r+1); html += roundColumnHTML(r,0,total/2); }
+    html += roundColumnHTML(last,0,1);
+    for(let r=last-1;r>=0;r--){ const total=b.size/Math.pow(2,r+1); html += roundColumnHTML(r,total/2,total/2); }
+  } else {
+    for(let r=0;r<b.numRounds;r++){ const total=b.size/Math.pow(2,r+1); html += roundColumnHTML(r,0,total); }
+  }
+  document.getElementById("bracket").innerHTML=html;
+  // updated time
+  const loc=LANG==="nl"?"nl-BE":(LANG==="fr"?"fr-BE":"en-GB");
+  document.getElementById("status").textContent=tt("updatedAt")+": "+new Date().toLocaleTimeString(loc);
+}
+
+function showError(msg){
+  document.getElementById("root").innerHTML='<div class="err">'+msg+'</div>';
+}
+
+/* ---------- fetch ---------- */
+let LAST_HASH = null;
+function _simpleHash(s){ let h=0; for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } return h; }
+function _cacheKey(){ return "golfKnockoutViewerCache_v1_"+BIN_ID; }
+function loadFromCache(){
+  // Instant first paint from the last good response, if any
+  if(!BIN_ID || BIN_ID==="PASTE_YOUR_BIN_ID_HERE") return false;
+  try{
+    const raw=localStorage.getItem(_cacheKey());
+    if(!raw) return false;
+    DATA = JSON.parse(raw);
+    LANG = (FORCE_LANG && I18N[FORCE_LANG]) ? FORCE_LANG : (DATA.lang && I18N[DATA.lang] ? DATA.lang : "en");
+    document.documentElement.lang = LANG;
+    LAST_HASH = _simpleHash(raw);
+    render();
+    return true;
+  }catch(e){ return false; }
+}
+async function loadData(){
+  if(!BIN_ID || BIN_ID==="PASTE_YOUR_BIN_ID_HERE"){ if(!DATA) showError(tt("errNoBin")); return; }
+  try{
+    const res=await fetch(JSONBIN_BASE+"/b/"+encodeURIComponent(BIN_ID)+"/latest",{ cache:"no-store" });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json=await res.json();
+    const fresh = json.record || json;
+    const freshStr = JSON.stringify(fresh);
+    const freshHash = _simpleHash(freshStr);
+    if(freshHash === LAST_HASH){ return; } // no change -> no re-render, no flicker
+    DATA = fresh;
+    LAST_HASH = freshHash;
+    LANG = (FORCE_LANG && I18N[FORCE_LANG]) ? FORCE_LANG : (DATA.lang && I18N[DATA.lang] ? DATA.lang : "en");
+    document.documentElement.lang = LANG;
+    try{ localStorage.setItem(_cacheKey(), freshStr); }catch(e){}
+    render();
+  }catch(e){
+    // network failed: keep showing whatever we already have, only error if truly empty
+    if(!DATA) showError(tt("errFetch")+" ("+e.message+")");
+  }
+}
+
+/* ---------- init UI ---------- */
+document.body.innerHTML = `
+<header>
+  <div class="wrap">
+    <div>
+      <h1 id="title">Golf Knockout</h1>
+      <div class="version">v${APP_VERSION} &middot; ${APP_BUILD}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button id="splitBtn" onclick="toggleViewSplit()">Split</button>
+      <button id="tvBtn" onclick="toggleViewTv()">Compact</button>
+      <button id="refreshBtn" onclick="loadData()">↻ Refresh</button>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="status" id="status"></div>
+  <div id="root">
+    <div id="champWrap"></div>
+    <div class="bracket-scroll"><div class="bracket" id="bracket"></div></div>
+  </div>
+</main>
+<footer>Powered by JSONBin.io &middot; auto-refresh every ${REFRESH_SECONDS}s</footer>
+`;
+
+loadFromCache();   // instant paint from last known good data
+loadData();        // refresh from the server in the background
+if(REFRESH_SECONDS>0){ setInterval(loadData, REFRESH_SECONDS*1000); }
+</script>
+</body>
+</html>

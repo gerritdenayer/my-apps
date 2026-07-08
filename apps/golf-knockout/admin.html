@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Knockout - Net Matchplay</title>
+<style>
+  :root{
+    --green:#1b7a43;
+    --green-dark:#145c33;
+    --green-light:#e8f3ec;
+    --ink:#1f2a24;
+    --muted:#65726b;
+    --line:#dfe6e1;
+    --bg:#f5f7f5;
+    --card:#ffffff;
+    --gold:#c9a227;
+    --gold-light:#fdf6e0;
+    --danger:#c0392b;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  header{background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;padding:22px 20px}
+  header .wrap{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  header h1{font-size:20px;margin:0;font-weight:650}
+  header .version{font-size:11px;opacity:.75;margin-top:3px;letter-spacing:.04em;font-weight:500}
+  header .hdr-status{margin-left:auto;text-align:right;line-height:1.35;color:#fff}
+  header .hdr-status .lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.78;font-weight:600}
+  header .hdr-status .val{display:block;font-size:13px;font-weight:600}
+  header .hdr-status .val .rev{opacity:.88;font-weight:500}
+  body.tv header .hdr-status .lbl{font-size:8.5px}
+  body.tv header .hdr-status .val{font-size:11px}
+  header p{margin:2px 0 0;font-size:13px;opacity:.88}
+  .flag{font-size:30px;line-height:1}
+  nav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  nav .wrap{max-width:1100px;margin:0 auto;display:flex;overflow-x:auto}
+  nav button{flex:0 0 auto;background:none;border:none;padding:14px 18px;font-size:14px;color:var(--muted);cursor:pointer;font-weight:550;border-bottom:3px solid transparent}
+  nav button.active{color:var(--green);border-bottom-color:var(--green)}
+  nav .profile-pick{margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:6px}
+  nav .profile-pick label{margin:0;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  nav .profile-pick select{padding:6px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px;font-weight:600;background:#fff;color:var(--ink);min-width:120px}
+  main{max-width:1100px;margin:0 auto;padding:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:18px}
+  h2{font-size:17px;margin:0 0 14px}
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:15px;background:#fff;color:var(--ink)}
+  textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;resize:vertical;min-height:120px;line-height:1.5}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-light)}
+  .field{flex:1;min-width:140px;margin-bottom:12px}
+  button.btn{background:var(--green);color:#fff;border:none;padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  button.btn:hover{background:var(--green-dark)}
+  button.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green)}
+  button.btn.ghost:hover{background:var(--green-light)}
+  button.btn.small{padding:7px 12px;font-size:13px}
+  button.btn.danger{background:#fff;color:var(--danger);border:1px solid #e7c3bf}
+  button.btn.danger:hover{background:#fdeceb}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);font-size:14px}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--green)}
+  .rank{font-weight:700;width:34px;text-align:center}
+  .name{font-weight:600}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600;background:var(--green-light);color:var(--green)}
+  .empty{text-align:center;padding:34px 10px;color:var(--muted)}
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  .help{font-size:12.5px;color:var(--muted);margin-top:-6px;margin-bottom:12px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1}
+  .hide{display:none !important}
+  .settings-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .settings-row input{max-width:90px}
+
+  /* --- champion banner --- */
+  .champ{background:linear-gradient(135deg,var(--gold),#b8901f);color:#fff;border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:14px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .champ .cup{font-size:34px}
+  .champ .t{font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.9}
+  .champ .n{font-size:22px;font-weight:750}
+
+  /* --- bracket --- */
+  .bracket-scroll{overflow-x:auto;padding:6px 2px 14px}
+  .bracket{display:flex;gap:22px;width:100%;align-items:stretch}
+  .round{display:flex;flex-direction:column;flex:1 1 0;min-width:150px;max-width:360px}
+  /* broaden the bracket card to fit more rounds without scrolling */
+  #bracketCard{margin-left:calc(50% - 49vw);width:98vw}
+  .tour-title{font-size:22px;font-weight:750;color:var(--green-dark);margin:0 0 14px}
+  .tour-title:empty{display:none}
+  .round-head .deadline{display:block;font-weight:600;color:var(--gold);font-size:11px;margin-top:2px}
+  /* color scheme picker */
+  .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+  .theme-opt{border:2px solid var(--line);border-radius:11px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink)}
+  .theme-opt:hover{border-color:var(--muted)}
+  .theme-opt.active{border-color:var(--green)}
+  .theme-sw{width:30px;height:30px;border-radius:8px;flex:0 0 auto;position:relative;border:1px solid rgba(0,0,0,.12)}
+  .theme-sw span{position:absolute;right:3px;bottom:3px;width:11px;height:11px;border-radius:50%;border:2px solid #fff}
+  .round-head{position:sticky;top:0;text-align:center;font-weight:700;font-size:13px;color:var(--green-dark);background:var(--green-light);border:1px solid #cbe3d4;border-radius:9px;padding:8px;margin-bottom:8px}
+  .round-head small{display:block;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .matches{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:12px}
+  .match{border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .match-head{display:flex;justify-content:space-between;align-items:center;background:#f3f6f3;padding:5px 10px;font-size:11px;color:var(--muted);font-weight:600}
+  .match-head .str{color:var(--green-dark)}
+  .slot{display:flex;align-items:center;gap:8px;padding:10px 11px;cursor:pointer;border-top:1px solid var(--line);transition:background .12s}
+  .slot:first-of-type{border-top:none}
+  .slot:hover{background:var(--green-light)}
+  .slot .seed{font-size:10px;color:var(--muted);width:18px;text-align:center;flex:0 0 auto}
+  .slot .pn{font-weight:600;font-size:14px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slot .ph{font-size:11px;color:var(--muted);flex:0 0 auto}
+  .slot.winner{background:var(--green-light)}
+  .slot.winner .pn{color:var(--green-dark)}
+  .slot.winner .check{color:var(--green);font-weight:800}
+  .slot.loser .pn{color:#a9b3ad;text-decoration:line-through}
+  .slot.tbd{cursor:default;color:#b6beb8}
+  .slot.tbd:hover{background:#fff}
+  .slot.bye{cursor:default;color:#b6beb8;font-style:italic}
+  .slot.bye:hover{background:#fff}
+  .slot .score{display:inline-block;font-size:10.5px;color:var(--green-dark);font-weight:700;background:#fff;border:1px solid var(--green);padding:1px 7px;border-radius:10px;margin:0 6px;flex:0 0 auto;line-height:1.4}
+  .slot.loser .score{color:#a9b3ad;border-color:#cfd6d1;background:#fff}
+  .champ .ws{font-size:13px;opacity:.95;margin-top:2px;font-weight:600}
+
+  /* --- compact / TV mode --- */
+  body.tv nav{padding:0}
+  body.tv nav button{padding:8px 12px;font-size:12.5px}
+  body.tv nav .profile-pick{padding-right:4px}
+  body.tv nav .profile-pick label{font-size:10px}
+  body.tv nav .profile-pick select{padding:4px 7px;font-size:11.5px;min-width:90px}
+  body.tv header{padding:8px 14px}
+  body.tv header h1{font-size:14px}
+  body.tv header p{font-size:11px}
+  body.tv .flag{font-size:18px}
+  body.tv main{padding:6px 10px;max-width:none}
+  body.tv .card{padding:8px 10px;margin-bottom:6px;border-radius:8px;box-shadow:none}
+  body.tv .card h2{font-size:13px;margin-bottom:6px}
+  body.tv .help{display:none}
+  body.tv .tour-title{font-size:14px;margin-bottom:4px}
+  body.tv #bracketCard{width:100%;margin-left:0}
+  body.tv .bracket-scroll{overflow:hidden;padding:0}
+  body.tv .bracket{gap:6px}
+  body.tv .round{min-width:60px;max-width:none}
+  body.tv .round-head{font-size:10px;padding:3px 4px;margin-bottom:4px;border-radius:5px}
+  body.tv .round-head small{font-size:8.5px;letter-spacing:.02em}
+  body.tv .round-head .deadline{font-size:9px;margin-top:1px}
+  body.tv .matches{gap:4px}
+  body.tv .match{border-radius:6px}
+  body.tv .match-head{font-size:9px;padding:2px 5px}
+  body.tv .slot{padding:4px 5px;gap:3px}
+  body.tv .slot .seed{display:none}
+  body.tv .slot .pn{font-size:11px}
+  body.tv .slot .ph{display:none}
+  body.tv .slot .score{font-size:9px;padding:0 4px;margin:0 3px}
+  body.tv .slot .check{width:9px}
+  body.tv .champ{padding:8px 12px;border-radius:8px;margin-bottom:6px;gap:10px}
+  body.tv .champ .cup{font-size:20px}
+  body.tv .champ .t{font-size:9px}
+  body.tv .champ .n{font-size:16px}
+  body.tv .champ .ws{font-size:11px}
+  .check{width:14px;flex:0 0 auto}
+  .seed-opts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .seed-opts .opt{flex:1;min-width:200px;border:1px solid var(--line);border-radius:11px;padding:14px;cursor:pointer}
+  .seed-opts .opt:hover{border-color:var(--green);background:var(--green-light)}
+  .seed-opts .opt b{display:block;margin-bottom:3px}
+  .draw-stats{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin:10px 0}
+  .draw-stats .s b{font-size:20px;color:var(--green-dark);display:block}
+  @media(max-width:560px){ .field{min-width:100%} }
+
+  /* --- drag & drop (first round) --- */
+  .slot.drag{cursor:grab}
+  .slot.drag:active{cursor:grabbing}
+  .slot.drag .seed{cursor:grab}
+  .slot.dragover{background:var(--gold-light);outline:2px dashed var(--gold);outline-offset:-2px}
+  .lockpill{font-size:11px;font-weight:700;background:var(--gold-light);color:#8a6d12;border:1px solid #e6d39a;padding:2px 9px;border-radius:20px;text-transform:none;letter-spacing:0}
+  /* stale banner shown when another admin published a newer version */
+  .stale-banner{background:var(--gold-light);border-bottom:2px solid var(--gold);color:#8a6d12;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px}
+  .stale-banner .btn{margin-left:auto}
+  .stale-banner b{color:#8a6d12}
+
+  /* --- print only --- */
+  .print-only{display:none}
+
+  /* --- print / save as PDF --- */
+  @media print{
+    nav, .toast, #drawSetup, .actions, .help, button{display:none !important}
+    header{background:#fff;color:#000;padding:0 0 6px;border-bottom:2px solid var(--green-dark)}
+    header h1{color:var(--green-dark)}
+    header p{color:#333}
+    .flag{display:none}
+    main{padding:0;max-width:none}
+    .card{box-shadow:none;border:none;padding:0;margin:0 0 8px}
+    #bracketCard{margin-left:0;width:auto}
+    .tour-title{font-size:16px;margin-bottom:4px}
+    .bracket-scroll{overflow:visible}
+    .bracket{gap:14px}
+    .round{min-width:130px}
+    .round-head{position:static}
+    .slot{cursor:default}
+    .slot:hover{background:#fff}
+    .slot.winner:hover{background:var(--green-light)}
+    .print-only{display:block;font-size:12px;color:#333;margin-bottom:8px}
+    body{background:#fff}
+    @page{size:landscape;margin:10mm}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="flag">&#127942;</span>
+    <div>
+      <h1 data-i18n="appTitle">Golf Knockout - Matchplay</h1>
+      <div class="version" id="appVersion"></div>
+    </div>
+    <div class="hdr-status" id="hdrStatus"></div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <button data-tab="bracket" class="active" data-i18n="navBracket">Bracket</button>
+    <button data-tab="players" data-i18n="navPlayers">Players</button>
+    <button data-tab="settings" data-i18n="navSettings">Settings</button>
+    <div class="profile-pick">
+      <label data-i18n="competition" for="profileSel">Competition</label>
+      <select id="profileSel" onchange="switchProfile(this.value)"></select>
+    </div>
+  </div>
+</nav>
+
+<div id="staleBanner" class="stale-banner hide"></div>
+
+<main>
+
+  <!-- BRACKET -->
+  <section id="tab-bracket">
+    <div id="tourTitleBracket" class="tour-title"></div>
+    <div id="champWrap"></div>
+
+    <div class="card hide" id="bracketEmpty">
+      <div class="empty" data-i18n-html="bracketEmpty">No draw yet. Go to the <b>Settings</b> tab and use <b>Create the draw</b> to build your knockout.</div>
+    </div>
+
+    <div class="card hide" id="bracketCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+        <h2 style="margin:0;display:flex;align-items:center;gap:8px"><span data-i18n="tournamentBracket">Tournament bracket</span> <span id="lockBadge"></span></h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost small" id="viewBtn" onclick="toggleView()">Split view</button>
+          <button class="btn ghost small" id="compactBtn" onclick="toggleCompact()">Compact</button>
+          <button class="btn ghost small" id="lockBtn" onclick="toggleLock()">Lock draw</button>
+          <button class="btn ghost small" onclick="printBracket()" data-i18n="printPdf">Print / Save PDF</button>
+          <button class="btn ghost small" onclick="redraw()" data-i18n="redrawBtn">Re-draw</button>
+        </div>
+      </div>
+      <div id="printHead" class="print-only"></div>
+      <p class="help" data-i18n-html="bracketHelp">Click the player who won each match to send them through. In the first round you can <b>drag a player</b> (use the &#9776; handle) and drop them onto another slot to rearrange the draw. The number on each match card is the net strokes the higher handicapper receives.</p>
+      <div class="bracket-scroll"><div class="bracket" id="bracket"></div></div>
+    </div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section id="tab-players" class="hide">
+    <div id="tourTitlePlayers" class="tour-title"></div>
+    <div class="card">
+      <h2 id="playerFormTitle" data-i18n="addPlayer">Add a player</h2>
+      <div class="row">
+        <div class="field"><label data-i18n="labelName">Name</label><input id="pName" data-i18n-ph="phName" placeholder="e.g. Jan Peeters"></div>
+        <div class="field"><label data-i18n="labelIndex">Handicap Index</label><input id="pIndex" type="number" step="0.1" data-i18n-ph="phIndex" placeholder="e.g. 14.2"></div>
+        <div class="field"><label data-i18n="labelPlaying">Playing Handicap</label><input id="pPlaying" type="number" step="1" data-i18n-ph="phPlaying" placeholder="e.g. 16"></div>
+      </div>
+      <div class="row" id="slotRow" style="display:none">
+        <div class="field"><label data-i18n="labelSlot">Put into first-round bracket slot</label><select id="pSlot"></select></div>
+      </div>
+      <p class="help" data-i18n="playersHelp">Playing Handicap drives the Net Matchplay strokes. When a draw exists, new players are dropped into the first empty slot automatically. Use the slot picker above to move a player to a specific spot. Changing the draw clears recorded results.</p>
+      <div class="actions">
+        <button class="btn ghost hide" id="cancelEdit" onclick="cancelEdit()" data-i18n="cancel">Cancel</button>
+        <button class="btn" id="savePlayerBtn" onclick="savePlayer()" data-i18n="addPlayerBtn">Add player</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2><span data-i18n="playersLabel">Players</span> (<span id="playerCount">0</span>)</h2>
+      <div id="playersTable"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="hide">
+    <div class="card">
+      <h2 data-i18n="profilesCard">Competitions</h2>
+      <p class="help" data-i18n="profilesHelp">Each competition has its own players, bracket and bin ID. Switch from the dropdown in the top bar.</p>
+      <div id="profilesList"></div>
+
+      <h3 data-i18n="addNewSection" style="font-size:13px;color:var(--green-dark);margin:20px 0 6px;text-transform:uppercase;letter-spacing:.05em">Add new competition</h3>
+      <div class="row">
+        <div class="field" style="max-width:280px">
+          <label data-i18n="newProfileName">New competition name</label>
+          <input id="newProfileName" type="text" data-i18n-ph="phNewProfile" placeholder="e.g. Junior 2026">
+        </div>
+      </div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn" onclick="addProfile()" data-i18n="addProfileBtn">Add competition</button>
+      </div>
+
+      <h3 data-i18n="downloadSection" style="font-size:13px;color:var(--green-dark);margin:20px 0 6px;text-transform:uppercase;letter-spacing:.05em">Download existing competition</h3>
+      <p class="help" data-i18n="downloadHint">Paste a JSONBin Bin-ID to download an existing competition.</p>
+      <div class="row">
+        <div class="field" style="max-width:420px">
+          <label data-i18n="publishBinId">Bin ID</label>
+          <input id="downloadBinId" type="text" autocomplete="off" placeholder="">
+        </div>
+      </div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn" onclick="downloadExisting()" data-i18n="downloadBtn">Download from JSONBin</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="languageCard">Language</h2>
+      <div class="settings-row">
+        <select id="langSel" onchange="setLang(this.value)" style="max-width:200px">
+          <option value="en">English</option>
+          <option value="nl">Nederlands</option>
+          <option value="fr">Français</option>
+        </select>
+      </div>
+      <p class="help" data-i18n="languageHelp">Choose the interface language.</p>
+    </div>
+    <div class="card" id="drawSetup">
+      <h2 data-i18n="createDraw">Create the draw</h2>
+      <p class="help" data-i18n="createDrawHelp">Build the knockout from your current players. Pick how many rounds you want, then choose a draw type. Top seeds get a bye if there are empty slots. The bracket appears on the Bracket tab.</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field" style="max-width:240px">
+          <label data-i18n="numRounds">Number of rounds</label>
+          <select id="numRoundsSel" onchange="renderDrawStats()"></select>
+        </div>
+      </div>
+      <div class="seed-opts">
+        <div class="opt" onclick="generateBracket('seed')">
+          <b data-i18n="seededDraw">Seeded draw</b>
+          <span class="muted" style="font-size:13px" data-i18n="seededDesc">Lowest playing handicap is seed 1. Strong players are kept apart until late rounds.</span>
+        </div>
+        <div class="opt" onclick="generateBracket('random')">
+          <b data-i18n="randomDraw">Random draw</b>
+          <span class="muted" style="font-size:13px" data-i18n="randomDesc">Names drawn out of the hat. Pure luck of the draw.</span>
+        </div>
+      </div>
+      <div id="drawStats"></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="importCard">Import players (paste from Excel)</h2>
+      <p class="help" data-i18n="importHelp">Copy two columns from Excel (Name and exact handicap / index) and paste them below, one player per row. The playing handicap is set to the rounded index; adjust it per player afterwards if needed.</p>
+      <textarea id="pasteBox" oninput="renderPastePreview()" data-i18n-ph="importPlaceholder" placeholder="Jan Peeters	14.2"></textarea>
+      <div id="pastePreview"></div>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn" onclick="importPlayers()" data-i18n="importAddBtn">Add these players</button>
+        <button class="btn ghost" onclick="clearPaste()" data-i18n="importClear">Clear</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="titleCard">Tournament title</h2>
+      <div class="settings-row">
+        <input id="setTitle" type="text" data-i18n-ph="phTitle" placeholder="e.g. Club Summer Knockout 2026" style="max-width:360px">
+        <button class="btn small" onclick="saveTitle()" data-i18n="save">Save</button>
+      </div>
+      <p class="help" data-i18n="titleHelp">This title appears at the top of the Bracket and Players tabs, and on the printed sheet.</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="colorScheme">Color scheme</h2>
+      <div class="theme-grid" id="themeGrid"></div>
+      <p class="help" data-i18n="colorHelp">Pick a scheme to match your website or club branding. It restyles the whole app and is saved automatically.</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="roundDeadlines">Round deadlines</h2>
+      <div id="roundDates"></div>
+      <p class="help" data-i18n="deadlinesHelp">Set the date each round should be finished by. These show under the round name on the bracket. Deadlines appear once a draw exists.</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="publishCard">Publish to web (JSONBin.io)</h2>
+      <p class="help" data-i18n="publishHelp">Connect to your free JSONBin.io account so visitors to your website can see the live bracket.</p>
+      <div class="row">
+        <div class="field" style="max-width:480px">
+          <label data-i18n="publishApiKey">JSONBin.io master key</label>
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input id="pubApiKey" type="password" autocomplete="off" oninput="savePublishKey()" onchange="savePublishKey()" style="flex:1">
+            <button type="button" class="btn ghost small" id="showKeyBtn" onclick="toggleKeyVisibility()" data-i18n="showKey">Show</button>
+            <button type="button" class="btn ghost small" onclick="copyKeyToClipboard()" data-i18n="copyKey">Copy</button>
+          </div>
+        </div>
+      </div>
+      <div id="viewerHintBox" class="muted" style="font-size:12.5px;margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="backupCard">Backup &amp; restore</h2>
+      <p class="help" data-i18n="backupHelp">All data lives only in this browser on your iMac. Export a backup regularly, and use it to restore or move to another computer.</p>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn ghost" onclick="exportData()" data-i18n="exportBackup">Export backup</button>
+        <button class="btn ghost" onclick="document.getElementById('importFile').click()" data-i18n="importBackup">Import backup</button>
+        <input type="file" id="importFile" accept="application/json" class="hide" onchange="importData(event)">
+      </div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="resetCard">Reset</h2>
+      <p class="help" data-i18n="resetHelp">Delete the current draw, or wipe everything. Make a backup first.</p>
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn danger" onclick="clearBracket()" data-i18n="clearDrawOnly">Clear draw only</button>
+        <button class="btn danger" onclick="resetAll()" data-i18n="deleteAll">Delete all data</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const APP_VERSION = "1.4.4";
+const APP_BUILD = "2026-06-09";
+const LEGACY_KEY = "golfLadderData_v1"; // pre-profile single storage
+const GLOBAL_KEY = "golfLadder_global_v1"; // global prefs + profile list
+const PROFILE_KEY_PREFIX = "golfLadderProfile_v2_"; // per-profile data
+const PROFILE_KEY = name => PROFILE_KEY_PREFIX + name;
+let state = { players: [], matches: [], allowance: 90, bracket: null, title: "", roundDates: {}, theme: "green", lang: "en", publish:{apiKey:"",binId:"",lastPublishedAt:"",revision:0,lastSyncedAt:""}, viewMode:"linear", compact:false, activeProfile:"Men", profiles:["Men","Ladies"] };
+let editingId = null;
+
+/* ---------- color schemes ---------- */
+const THEMES={
+  green:    {name:"Fairway Green", p:"#1b7a43", d:"#145c33", l:"#e8f3ec", a:"#c9a227", al:"#fdf6e0"},
+  blue:     {name:"Ocean Blue",    p:"#1f6fb2", d:"#16527f", l:"#e7f1f9", a:"#e08a1e", al:"#fbeed7"},
+  slate:    {name:"Corporate Slate",p:"#475569", d:"#334155", l:"#eef1f5", a:"#2f7fbf", al:"#e4eef7"},
+  burgundy: {name:"Burgundy",      p:"#8e2b3f", d:"#6e2030", l:"#f6e8eb", a:"#c9a227", al:"#fdf6e0"},
+  purple:   {name:"Royal Purple",  p:"#6b4099", d:"#533078", l:"#efe9f6", a:"#d4a72c", al:"#faf2da"},
+  teal:     {name:"Modern Teal",   p:"#0f8a8a", d:"#0a6868", l:"#e2f3f3", a:"#ef6f53", al:"#fce8e2"}
+};
+function applyTheme(key){
+  const t=THEMES[key]||THEMES.green, r=document.documentElement.style;
+  r.setProperty("--green",t.p); r.setProperty("--green-dark",t.d); r.setProperty("--green-light",t.l);
+  r.setProperty("--gold",t.a); r.setProperty("--gold-light",t.al);
+}
+function setTheme(key){ state.theme=key; applyTheme(key); save(); renderThemes(); toast(THEMES[key].name+" "+t("tApplied")); }
+function renderThemes(){
+  const el=document.getElementById("themeGrid"); if(!el) return;
+  const cur=state.theme||"green";
+  el.innerHTML=Object.keys(THEMES).map(k=>{ const t=THEMES[k];
+    return `<div class="theme-opt${k===cur?' active':''}" onclick="setTheme('${k}')"><span class="theme-sw" style="background:${t.p}"><span style="background:${t.a}"></span></span>${t.name}</div>`;
+  }).join("");
+}
+
+/* ---------- languages ---------- */
+const HANDLE="☰";
+const I18N={
+ en:{
+  appTitle:"Golf Knockout - Matchplay",
+  navBracket:"Bracket", navPlayers:"Players", navSettings:"Settings",
+  bracketEmpty:"No draw yet. Go to the <b>Settings</b> tab and use <b>Create the draw</b> to build your knockout.",
+  tournamentBracket:"Tournament bracket",
+  lockDraw:"Lock draw", reopenDraw:"Reopen draw", locked:"Locked",
+  printPdf:"Print / Save PDF", redrawBtn:"Re-draw",
+  bracketHelp:"Click the player who won each match to send them through. In the first round you can <b>drag a player</b> (use the "+HANDLE+" handle) and drop them onto another slot to rearrange the draw. The number on each match card is the net strokes the higher handicapper receives.",
+  final:"Final", semifinals:"Semifinals", quarterfinals:"Quarterfinals", roundOf:"Round of", round:"Round",
+  finishBy:"finish by", strAbbr:"str", scratch:"scratch", bye:"Bye", tbd:"To be decided", champion:"Champion",
+  addPlayer:"Add a player", editPlayer:"Edit player", addPlayerBtn:"Add player", saveChanges:"Save changes", cancel:"Cancel",
+  labelName:"Name", labelIndex:"Handicap Index", labelPlaying:"Playing Handicap",
+  phName:"e.g. Jan Peeters", phIndex:"e.g. 14.2", phPlaying:"e.g. 16",
+  labelSlot:"Put into first-round bracket slot",
+  playersHelp:"Playing Handicap drives the Net Matchplay strokes. When a draw exists, new players are dropped into the first empty slot automatically. Use the slot picker above to move a player to a specific spot. Changing the draw clears recorded results.",
+  playersLabel:"Players", colIndex:"Index", colPlaying:"Playing Hcp", edit:"Edit", remove:"Remove",
+  noPlayers:"No players yet. Add players above.",
+  leaveWhereItIs:"Leave where it is", notInDraw:"(currently not in the draw)", slotWord:"Slot", slotEmpty:"empty", slotHereNow:"here now",
+  createDraw:"Create the draw",
+  createDrawHelp:"Build the knockout from your current players. Pick how many rounds you want, then choose a draw type. Top seeds get a bye if there are empty slots. The bracket appears on the Bracket tab.",
+  numRounds:"Number of rounds", roundWord:"round", roundsWord:"rounds", slots:"slots",
+  seededDraw:"Seeded draw", seededDesc:"Lowest playing handicap is seed 1. Strong players are kept apart until late rounds.",
+  randomDraw:"Random draw", randomDesc:"Names drawn out of the hat. Pure luck of the draw.",
+  statPlayers:"players", statSize:"bracket size", statRounds:"rounds to the final", statByes:"first-round byes",
+  addPlayersFirst:"Add at least 2 players (in the Players tab) to create a draw.",
+  tooMany:"Too many players for {n} rounds. Choose more rounds.",
+  titleCard:"Tournament title", phTitle:"e.g. Club Summer Knockout 2026", save:"Save",
+  titleHelp:"This title appears at the top of the Bracket and Players tabs, and on the printed sheet.",
+  colorScheme:"Color scheme", colorHelp:"Pick a scheme to match your website or club branding. It restyles the whole app and is saved automatically.",
+  roundDeadlines:"Round deadlines",
+  deadlinesHelp:"Set the date each round should be finished by. These show under the round name on the bracket. Deadlines appear once a draw exists.",
+  createDrawFirst:"Create a draw first, then set a deadline for each round.",
+  allowanceCard:"Handicap allowance", allowanceSuffix:"% of the playing-handicap difference",
+  allowanceHelp:"Default is 90%. Change it if your club uses a different singles matchplay allowance.",
+  backupCard:"Backup & restore",
+  backupHelp:"All data lives only in this browser on your iMac. Export a backup regularly, and use it to restore or move to another computer.",
+  exportBackup:"Export backup", importBackup:"Import backup",
+  resetCard:"Reset", resetHelp:"Delete the current draw, or wipe everything. Make a backup first.",
+  clearDrawOnly:"Clear draw only", deleteAll:"Delete all data",
+  languageCard:"Language", languageHelp:"Choose the interface language.",
+  importCard:"Import players (paste from Excel)",
+  importHelp:"Copy two columns from Excel (Name and exact handicap / index) and paste them below, one player per row. The playing handicap is set to the rounded index; adjust it per player afterwards if needed.",
+  importPlaceholder:"Jan Peeters\t14.2\nMarie Dubois\t20.1",
+  importPreviewReady:"{n} players ready", importIgnored:"{n} lines ignored",
+  importAddBtn:"Add these players", importClear:"Clear",
+  importNothing:"Nothing to import. Paste Name and handicap, one player per row.", importedToast:"{n} players imported",
+  publishCard:"Publish to web (JSONBin.io)",
+  publishHelp:"Connect to your free JSONBin.io account so visitors to your website can see the live bracket. Paste your Master Key, then create a new bin or use an existing bin ID. Click Publish to send the latest bracket to the cloud.",
+  publishApiKey:"JSONBin.io master key", publishBinId:"Bin ID",
+  publishCreateBin:"Create new bin", publishNow:"Publish now", publishDownloadJson:"Download viewer JSON",
+  publishStatusNever:"Not published yet.", publishStatusOk:"Last published: {d}",
+  publishKeyMissing:"Save your JSONBin.io master key first.", publishBinMissing:"Create a bin or paste a bin ID first.",
+  publishCreated:"New bin created and saved.", publishedOk:"Published",
+  publishFailed:"Publish failed. Check your key and bin ID.", publishJsonDownloaded:"Viewer JSON downloaded",
+  publishViewerHint:"Bin ID for your public viewer",
+  pullFromWeb:"Pull from web", dismiss:"Dismiss",
+  syncing:"Checking online version...", syncedOk:"Latest version pulled (revision {r})",
+  syncAlreadyLatest:"You're already on the latest version.",
+  syncFailed:"Could not check online. You may be working on outdated data.",
+  syncConfirmPull:"Download the online version (revision {r}) and replace your local data for this competition? Unsaved local changes will be lost.",
+  staleBannerMsg:"<b>Heads up:</b> a newer version is online (revision {r}, published {when}). Pull it before making changes.",
+  publishStale:"Someone else published changes (revision {remote}) while you were working (your revision: {local}). Click OK to overwrite their version, or Cancel to pull their version first and re-do your changes.",
+  publishRev:"revision {r}",
+  showKey:"Show", hideKey:"Hide", copyKey:"Copy", copiedToast:"Copied to clipboard",
+  hdrLastUpdate:"Last published", hdrNeverPublished:"Not published yet",
+  cCreateBin:"Create a new JSONBin storage bin? Only do this the first time. If you already have a Bin ID set, this creates an additional bin and overwrites the saved Bin ID.",
+  checkVersion:"Check online version",
+  checkResultSame:"You're in sync (revision {r}).",
+  checkResultNewer:"Online is newer (revision {r}, published {when}). Click Pull from web to download.",
+  checkResultOlder:"Your local version (rev {local}) is newer than online (rev {remote}). Click Publish to push it.",
+  publishAuthFail:"Authentication failed. The JSONBin master key is missing, wrong, or not authorized for this bin. Click Show next to the key field to verify it matches your jsonbin.io API Keys page (and that it's a Master Key, not an Access Key).",
+  cAutoCreateBin:"Create a new JSONBin storage bin for this competition? This sets it up to publish independently. Click Cancel if you'll configure publishing later.",
+  tNewProfileNoKey:"Competition created. Set your JSONBin master key in Settings to be able to publish.",
+  tKeyInherited:"Master key inherited from your previous competition.",
+  cPullNewCompetition:"This JSON belongs to competition '{profile}', which doesn't exist in this browser yet. Click OK to create it and load the data. Cancel to do nothing.",
+  cPullSwitchCompetition:"This JSON belongs to competition '{profile}', not your current '{current}'. Click OK to switch to '{profile}' and load the data. Cancel to abort.",
+  tCompetitionAdded:"Competition '{profile}' added.",
+  tBinNoProfile:"Note: this bin doesn't carry a competition name yet. Click Publish from the source PC once to enable automatic switching for future pulls.",
+  editBinBtn:"Edit bin", noBinSet:"(no bin yet)",
+  editBinIdPrompt:"Bin ID for this competition. Leave empty to remove the link.", binIdSaved:"Bin ID saved.",
+  addNewSection:"Add new competition", downloadSection:"Download existing competition",
+  downloadHint:"Paste a JSONBin Bin-ID to download an existing competition. If the bin contains a competition name, it's used; otherwise we ask.",
+  downloadBtn:"Download from JSONBin",
+  downloadAskName:"This bin doesn't have a competition name. What should this competition be called?",
+  cDownloadReplace:"Competition '{profile}' already exists in this browser. Replace its data with the downloaded JSON?",
+  syncFailedNotFound:"Bin not found. Check the Bin-ID and try again.",
+  scorePrompt:"Match score (e.g. 3&2 or 1up). Leave empty if not known.",
+  wonFinal:"Won the final {s}",
+  viewSplit:"Split view", viewLinear:"Linear view", viewCompact:"Compact", viewNormal:"Normal",
+  competition:"Competition", profilesCard:"Competitions",
+  profilesHelp:"Each competition has its own players, bracket, deadlines and JSONBin bin. Switch from the dropdown in the top bar. Global settings (theme, language) are shared.",
+  profileName:"Name", active:"active",
+  newProfileName:"New competition name", phNewProfile:"e.g. Junior 2026", addProfileBtn:"Add competition",
+  renameProfile:"Rename", renameProfilePrompt:"New name for the competition:",
+  cDeleteProfile:"Delete competition '{name}'? This removes its players, bracket and settings. Cannot be undone.",
+  tCantDeleteLast:"You must keep at least one competition.",
+  tProfileExists:"A competition with this name already exists.",
+  tProfileRenamed:"Competition renamed.", tProfileDeleted:"Competition deleted.",
+  tSwitchedProfile:"Switched to {name}.",
+  cReplaceProfileBackup:"Replace data for competition '{profile}' with this backup?",
+  tPlayerAdded:"Player added", tPlayerUpdated:"Player updated", tPlayerRemoved:"Player removed", tEnterName:"Please enter a name",
+  tAddedSlot:"Player added to bracket slot {n}", tBracketFull:"Player added. Bracket is full, re-draw to include them.",
+  tAddedLocked:"Player added. Draw is locked, reopen it to include them.", tMovedSlot:"Player updated and moved to slot {n}",
+  tDrawGenerated:"Draw generated", tNeed2:"Add at least 2 players first", tDrawCleared:"Draw cleared", tNoDraw:"No draw to clear",
+  tReopened:"Draw reopened. You can edit it again.", tLockedMsg:"Draw locked. Match results stay editable; the structure is protected.",
+  tCreateFirst:"Create a draw first", tUpdated:"Updated", tSwapped:"Players swapped",
+  tLockedDragMsg:"Draw is locked. Reopen it to rearrange.", tLockedMoveMsg:"Draw is locked. Reopen it to move players.",
+  tAllowanceSet:"Allowance set to {n}%", tBadAllowance:"Enter a value between 0 and 100", tTitleSaved:"Title saved",
+  tApplied:"applied", tBackupDownloaded:"Backup downloaded", tBackupRestored:"Backup restored", tBadFile:"Could not read that file",
+  tAllDeleted:"All data deleted", tPickDraw:"Pick a draw type under Create the draw",
+  cNewDraw:"Create a new draw? This replaces the current bracket and results.",
+  cTooMany:"You have {n} players but {r} rounds only fit {s}. Choose more rounds.",
+  cClearDraw:"Clear the current draw? Players are kept.",
+  cReopen:"Reopen the draw for editing? You'll be able to drag and reassign players again.",
+  cRemovePlayer:"Remove {name}? If a draw already exists you should re-draw afterwards.",
+  cChangeClears:"Changing the draw will clear the recorded results. Continue?",
+  cRearrangeClears:"Rearranging the draw will clear the recorded results. Continue?",
+  cNoEmptySlot:"No empty slot to move {name}. Pick an empty bracket number.",
+  cReplaceBackup:"Replace all current data with this backup?",
+  cDeleteAll1:"Delete ALL players and the draw? This cannot be undone.", cDeleteAll2:"Are you sure? Make sure you have a backup.",
+  printLine:"Net Matchplay knockout · {n} players · {a}% allowance · printed {d}"
+ },
+ nl:{
+  appTitle:"Golf Knockout - Matchplay",
+  navBracket:"Schema", navPlayers:"Spelers", navSettings:"Instellingen",
+  bracketEmpty:"Nog geen loting. Ga naar het tabblad <b>Instellingen</b> en gebruik <b>Loting maken</b> om je knock-out te bouwen.",
+  tournamentBracket:"Toernooischema",
+  lockDraw:"Loting vergrendelen", reopenDraw:"Loting heropenen", locked:"Vergrendeld",
+  printPdf:"Afdrukken / PDF", redrawBtn:"Opnieuw loten",
+  bracketHelp:"Klik op de speler die elke match won om hem door te sturen. In de eerste ronde kun je een <b>speler verslepen</b> (gebruik de greep "+HANDLE+") en op een andere plek neerzetten om de loting aan te passen. Het getal op elke matchkaart is het aantal netto slagen voor de hogere handicap.",
+  final:"Finale", semifinals:"Halve finale", quarterfinals:"Kwartfinale", roundOf:"Ronde van", round:"Ronde",
+  finishBy:"klaar tegen", strAbbr:"slagen", scratch:"scratch", bye:"Bye", tbd:"Nog te bepalen", champion:"Kampioen",
+  addPlayer:"Speler toevoegen", editPlayer:"Speler bewerken", addPlayerBtn:"Speler toevoegen", saveChanges:"Wijzigingen opslaan", cancel:"Annuleren",
+  labelName:"Naam", labelIndex:"Handicap Index", labelPlaying:"Speelhandicap",
+  phName:"bv. Jan Peeters", phIndex:"bv. 14,2", phPlaying:"bv. 16",
+  labelSlot:"Plaats in een plek van de eerste ronde",
+  playersHelp:"De speelhandicap bepaalt de netto slagen. Als er een loting is, komen nieuwe spelers automatisch in de eerste lege plek. Gebruik de keuzelijst hierboven om een speler naar een vaste plek te verplaatsen. De loting wijzigen wist de bewaarde resultaten.",
+  playersLabel:"Spelers", colIndex:"Index", colPlaying:"Speelhcp", edit:"Bewerken", remove:"Verwijderen",
+  noPlayers:"Nog geen spelers. Voeg hierboven spelers toe.",
+  leaveWhereItIs:"Laat staan waar het is", notInDraw:"(staat nu niet in de loting)", slotWord:"Plek", slotEmpty:"leeg", slotHereNow:"staat hier nu",
+  createDraw:"Loting maken",
+  createDrawHelp:"Bouw de knock-out met je huidige spelers. Kies hoeveel rondes je wilt en daarna een lotingstype. Reekshoofden krijgen een bye als er lege plekken zijn. Het schema verschijnt op het tabblad Schema.",
+  numRounds:"Aantal rondes", roundWord:"ronde", roundsWord:"rondes", slots:"plekken",
+  seededDraw:"Loting met reekshoofden", seededDesc:"De laagste speelhandicap is reekshoofd 1. Sterke spelers blijven tot laat uit elkaar.",
+  randomDraw:"Willekeurige loting", randomDesc:"Namen uit de hoed. Puur geluk.",
+  statPlayers:"spelers", statSize:"schemagrootte", statRounds:"rondes tot de finale", statByes:"byes eerste ronde",
+  addPlayersFirst:"Voeg minstens 2 spelers toe (tabblad Spelers) om te loten.",
+  tooMany:"Te veel spelers voor {n} rondes. Kies meer rondes.",
+  titleCard:"Toernooinaam", phTitle:"bv. Club Zomer Knock-out 2026", save:"Opslaan",
+  titleHelp:"Deze naam verschijnt bovenaan de tabbladen Schema en Spelers, en op de afdruk.",
+  colorScheme:"Kleurenschema", colorHelp:"Kies een schema dat past bij je website of clubstijl. Het herstijlt de hele app en wordt automatisch bewaard.",
+  roundDeadlines:"Deadlines per ronde",
+  deadlinesHelp:"Stel de datum in waarop elke ronde klaar moet zijn. Dit verschijnt onder de rondenaam in het schema. Deadlines verschijnen zodra er een loting is.",
+  createDrawFirst:"Maak eerst een loting, stel daarna een deadline per ronde in.",
+  allowanceCard:"Handicapverrekening", allowanceSuffix:"% van het verschil in speelhandicap",
+  allowanceHelp:"Standaard is 90%. Pas aan als je club een andere verrekening gebruikt voor matchplay enkelspel.",
+  backupCard:"Back-up & herstel",
+  backupHelp:"Alle gegevens staan alleen in deze browser op je iMac. Exporteer regelmatig een back-up om te herstellen of naar een andere computer te verhuizen.",
+  exportBackup:"Back-up exporteren", importBackup:"Back-up importeren",
+  resetCard:"Wissen", resetHelp:"Verwijder de huidige loting of wis alles. Maak eerst een back-up.",
+  clearDrawOnly:"Alleen loting wissen", deleteAll:"Alle gegevens verwijderen",
+  languageCard:"Taal", languageHelp:"Kies de taal van de interface.",
+  importCard:"Spelers importeren (plakken uit Excel)",
+  importHelp:"Kopieer twee kolommen uit Excel (Naam en exacte handicap / index) en plak ze hieronder, één speler per rij. De speelhandicap wordt op de afgeronde index gezet; pas die nadien per speler aan indien nodig.",
+  importPlaceholder:"Jan Peeters\t14,2\nMarie Dubois\t20,1",
+  importPreviewReady:"{n} spelers klaar", importIgnored:"{n} regels overgeslagen",
+  importAddBtn:"Deze spelers toevoegen", importClear:"Wissen",
+  importNothing:"Niets om te importeren. Plak Naam en handicap, één speler per rij.", importedToast:"{n} spelers geïmporteerd",
+  publishCard:"Publiceren op het web (JSONBin.io)",
+  publishHelp:"Verbind met je gratis JSONBin.io-account zodat bezoekers van je website de actuele loting kunnen zien. Plak je Master Key, maak dan een nieuwe bin of gebruik een bestaande bin-ID. Klik op Publiceren om het laatste schema naar de cloud te sturen.",
+  publishApiKey:"JSONBin.io master key", publishBinId:"Bin-ID",
+  publishCreateBin:"Nieuwe bin maken", publishNow:"Nu publiceren", publishDownloadJson:"Viewer-JSON downloaden",
+  publishStatusNever:"Nog niet gepubliceerd.", publishStatusOk:"Laatst gepubliceerd: {d}",
+  publishKeyMissing:"Bewaar eerst je JSONBin.io master key.", publishBinMissing:"Maak een bin of plak eerst een bin-ID.",
+  publishCreated:"Nieuwe bin gemaakt en bewaard.", publishedOk:"Gepubliceerd",
+  publishFailed:"Publiceren mislukt. Controleer je key en bin-ID.", publishJsonDownloaded:"Viewer-JSON gedownload",
+  publishViewerHint:"Bin-ID voor je publieke viewer",
+  pullFromWeb:"Ophalen van web", dismiss:"Sluiten",
+  syncing:"Online versie controleren...", syncedOk:"Nieuwste versie binnengehaald (revisie {r})",
+  syncAlreadyLatest:"Je hebt al de nieuwste versie.",
+  syncFailed:"Kon online niet checken. Mogelijk werk je op verouderde gegevens.",
+  syncConfirmPull:"De online versie (revisie {r}) downloaden en je lokale gegevens van deze wedstrijd vervangen? Niet-opgeslagen lokale wijzigingen gaan verloren.",
+  staleBannerMsg:"<b>Let op:</b> er staat een nieuwere versie online (revisie {r}, gepubliceerd {when}). Haal die op voor je wijzigingen doet.",
+  publishStale:"Iemand anders heeft wijzigingen gepubliceerd (revisie {remote}) terwijl jij bezig was (jouw revisie: {local}). Klik OK om hun versie te overschrijven, of Annuleer om eerst hun versie op te halen en je wijzigingen opnieuw te doen.",
+  publishRev:"revisie {r}",
+  showKey:"Tonen", hideKey:"Verbergen", copyKey:"Kopiëren", copiedToast:"Gekopieerd naar klembord",
+  hdrLastUpdate:"Laatst gepubliceerd", hdrNeverPublished:"Nog niet gepubliceerd",
+  cCreateBin:"Een nieuwe JSONBin-bin maken? Doe dit alleen de eerste keer. Als je al een Bin-ID hebt, maakt dit een extra bin aan en overschrijft het opgeslagen Bin-ID.",
+  checkVersion:"Online versie controleren",
+  checkResultSame:"Je bent gelijk (revisie {r}).",
+  checkResultNewer:"Online is nieuwer (revisie {r}, gepubliceerd {when}). Klik op Ophalen van web om te downloaden.",
+  checkResultOlder:"Jouw lokale versie (rev {local}) is nieuwer dan online (rev {remote}). Klik op Publiceren om door te sturen.",
+  publishAuthFail:"Authenticatie mislukt. De JSONBin master key ontbreekt, is fout of heeft geen rechten op deze bin. Klik op Tonen naast het sleutelveld om te controleren dat ze gelijk is aan die op je jsonbin.io API Keys-pagina (en dat het een Master Key is, geen Access Key).",
+  cAutoCreateBin:"Een nieuwe JSONBin-bin maken voor deze wedstrijd? Zo kan ze onafhankelijk publiceren. Klik op Annuleren als je het publiceren later wil regelen.",
+  tNewProfileNoKey:"Wedstrijd gemaakt. Stel je JSONBin master key in via Instellingen om te kunnen publiceren.",
+  tKeyInherited:"Master key overgenomen van je vorige wedstrijd.",
+  cPullNewCompetition:"Deze JSON hoort bij wedstrijd '{profile}', die in deze browser nog niet bestaat. Klik OK om ze aan te maken en de gegevens te laden. Annuleren om niets te veranderen.",
+  cPullSwitchCompetition:"Deze JSON hoort bij wedstrijd '{profile}', niet bij je huidige '{current}'. Klik OK om over te schakelen naar '{profile}' en de gegevens te laden. Annuleren om af te breken.",
+  tCompetitionAdded:"Wedstrijd '{profile}' toegevoegd.",
+  tBinNoProfile:"Let op: deze bin bevat nog geen wedstrijdnaam. Klik eenmaal op Publiceren vanaf de bron-PC om automatische omschakeling te activeren voor volgende pulls.",
+  editBinBtn:"Bin bewerken", noBinSet:"(nog geen bin)",
+  editBinIdPrompt:"Bin-ID voor deze wedstrijd. Laat leeg om de koppeling te verwijderen.", binIdSaved:"Bin-ID bewaard.",
+  addNewSection:"Nieuwe wedstrijd toevoegen", downloadSection:"Bestaande wedstrijd ophalen",
+  downloadHint:"Plak een JSONBin Bin-ID om een bestaande wedstrijd op te halen. Bevat de bin een wedstrijdnaam, dan wordt die gebruikt; anders vragen we je er een.",
+  downloadBtn:"Ophalen van JSONBin",
+  downloadAskName:"Deze bin heeft geen wedstrijdnaam. Hoe wil je deze wedstrijd noemen?",
+  cDownloadReplace:"Wedstrijd '{profile}' bestaat al in deze browser. Vervangen door de gedownloade JSON?",
+  syncFailedNotFound:"Bin niet gevonden. Controleer het Bin-ID en probeer opnieuw.",
+  scorePrompt:"Score van de match (bv. 3&2 of 1up). Laat leeg als onbekend.",
+  wonFinal:"Won de finale met {s}",
+  viewSplit:"Gesplitste weergave", viewLinear:"Lineaire weergave", viewCompact:"Compact", viewNormal:"Normaal",
+  competition:"Wedstrijd", profilesCard:"Wedstrijden",
+  profilesHelp:"Elke wedstrijd heeft eigen spelers, schema, deadlines en JSONBin-bin. Wissel via de keuzelijst bovenaan. Algemene instellingen (thema, taal) gelden voor allemaal.",
+  profileName:"Naam", active:"actief",
+  newProfileName:"Nieuwe wedstrijdnaam", phNewProfile:"bv. Junior 2026", addProfileBtn:"Wedstrijd toevoegen",
+  renameProfile:"Hernoemen", renameProfilePrompt:"Nieuwe naam voor de wedstrijd:",
+  cDeleteProfile:"Wedstrijd '{name}' verwijderen? Dit wist de spelers, het schema en de instellingen. Kan niet ongedaan gemaakt worden.",
+  tCantDeleteLast:"Je moet minstens één wedstrijd behouden.",
+  tProfileExists:"Er bestaat al een wedstrijd met deze naam.",
+  tProfileRenamed:"Wedstrijd hernoemd.", tProfileDeleted:"Wedstrijd verwijderd.",
+  tSwitchedProfile:"Overgeschakeld naar {name}.",
+  cReplaceProfileBackup:"Gegevens van wedstrijd '{profile}' vervangen door deze back-up?",
+  tPlayerAdded:"Speler toegevoegd", tPlayerUpdated:"Speler bijgewerkt", tPlayerRemoved:"Speler verwijderd", tEnterName:"Vul een naam in",
+  tAddedSlot:"Speler toegevoegd op plek {n}", tBracketFull:"Speler toegevoegd. Schema is vol, loot opnieuw om hem op te nemen.",
+  tAddedLocked:"Speler toegevoegd. Loting is vergrendeld, heropen ze om hem op te nemen.", tMovedSlot:"Speler bijgewerkt en verplaatst naar plek {n}",
+  tDrawGenerated:"Loting gemaakt", tNeed2:"Voeg eerst minstens 2 spelers toe", tDrawCleared:"Loting gewist", tNoDraw:"Geen loting om te wissen",
+  tReopened:"Loting heropend. Je kunt ze weer bewerken.", tLockedMsg:"Loting vergrendeld. Resultaten blijven bewerkbaar; de structuur is beschermd.",
+  tCreateFirst:"Maak eerst een loting", tUpdated:"Bijgewerkt", tSwapped:"Spelers gewisseld",
+  tLockedDragMsg:"Loting is vergrendeld. Heropen ze om te herschikken.", tLockedMoveMsg:"Loting is vergrendeld. Heropen ze om spelers te verplaatsen.",
+  tAllowanceSet:"Verrekening op {n}% gezet", tBadAllowance:"Vul een waarde tussen 0 en 100 in", tTitleSaved:"Naam bewaard",
+  tApplied:"toegepast", tBackupDownloaded:"Back-up gedownload", tBackupRestored:"Back-up hersteld", tBadFile:"Kon dat bestand niet lezen",
+  tAllDeleted:"Alle gegevens verwijderd", tPickDraw:"Kies een lotingstype onder Loting maken",
+  cNewDraw:"Een nieuwe loting maken? Dit vervangt het huidige schema en de resultaten.",
+  cTooMany:"Je hebt {n} spelers maar {r} rondes passen maar {s}. Kies meer rondes.",
+  cClearDraw:"De huidige loting wissen? Spelers blijven behouden.",
+  cReopen:"De loting heropenen om te bewerken? Je kunt dan weer spelers verslepen en verplaatsen.",
+  cRemovePlayer:"{name} verwijderen? Als er al een loting is, loot daarna best opnieuw.",
+  cChangeClears:"De loting wijzigen wist de bewaarde resultaten. Doorgaan?",
+  cRearrangeClears:"De loting herschikken wist de bewaarde resultaten. Doorgaan?",
+  cNoEmptySlot:"Geen lege plek om {name} te verplaatsen. Kies een leeg pleknummer.",
+  cReplaceBackup:"Alle huidige gegevens vervangen door deze back-up?",
+  cDeleteAll1:"ALLE spelers en de loting verwijderen? Dit kan niet ongedaan gemaakt worden.", cDeleteAll2:"Zeker weten? Zorg dat je een back-up hebt.",
+  printLine:"Net matchplay knock-out · {n} spelers · {a}% verrekening · afgedrukt {d}"
+ },
+ fr:{
+  appTitle:"Golf Knockout - Matchplay",
+  navBracket:"Tableau", navPlayers:"Joueurs", navSettings:"Réglages",
+  bracketEmpty:"Pas encore de tirage. Allez dans l'onglet <b>Réglages</b> et utilisez <b>Créer le tirage</b> pour construire votre tableau.",
+  tournamentBracket:"Tableau du tournoi",
+  lockDraw:"Verrouiller le tirage", reopenDraw:"Rouvrir le tirage", locked:"Verrouillé",
+  printPdf:"Imprimer / PDF", redrawBtn:"Refaire le tirage",
+  bracketHelp:"Cliquez sur le joueur qui a gagné chaque match pour le faire avancer. Au premier tour, vous pouvez <b>faire glisser un joueur</b> (poignée "+HANDLE+") et le déposer sur un autre emplacement pour modifier le tirage. Le nombre sur chaque carte est le nombre de coups nets accordés au plus haut handicap.",
+  final:"Finale", semifinals:"Demi-finales", quarterfinals:"Quarts de finale", roundOf:"Tour de", round:"Tour",
+  finishBy:"à terminer le", strAbbr:"coups", scratch:"scratch", bye:"Exempt", tbd:"À déterminer", champion:"Champion",
+  addPlayer:"Ajouter un joueur", editPlayer:"Modifier le joueur", addPlayerBtn:"Ajouter le joueur", saveChanges:"Enregistrer", cancel:"Annuler",
+  labelName:"Nom", labelIndex:"Index de handicap", labelPlaying:"Handicap de jeu",
+  phName:"ex. Jan Peeters", phIndex:"ex. 14,2", phPlaying:"ex. 16",
+  labelSlot:"Placer dans un emplacement du premier tour",
+  playersHelp:"Le handicap de jeu détermine les coups nets. Si un tirage existe, les nouveaux joueurs sont placés automatiquement dans le premier emplacement libre. Utilisez la liste ci-dessus pour déplacer un joueur à un endroit précis. Modifier le tirage efface les résultats enregistrés.",
+  playersLabel:"Joueurs", colIndex:"Index", colPlaying:"Hcp de jeu", edit:"Modifier", remove:"Supprimer",
+  noPlayers:"Aucun joueur. Ajoutez des joueurs ci-dessus.",
+  leaveWhereItIs:"Laisser à sa place", notInDraw:"(actuellement hors tirage)", slotWord:"Emplacement", slotEmpty:"vide", slotHereNow:"ici actuellement",
+  createDraw:"Créer le tirage",
+  createDrawHelp:"Construisez le tableau à partir de vos joueurs. Choisissez le nombre de tours puis un type de tirage. Les têtes de série sont exemptes s'il reste des emplacements vides. Le tableau apparaît dans l'onglet Tableau.",
+  numRounds:"Nombre de tours", roundWord:"tour", roundsWord:"tours", slots:"emplacements",
+  seededDraw:"Tirage avec têtes de série", seededDesc:"Le plus bas handicap de jeu est tête de série 1. Les meilleurs joueurs sont séparés jusque tard.",
+  randomDraw:"Tirage au sort", randomDesc:"Noms tirés au hasard. Pur hasard du tirage.",
+  statPlayers:"joueurs", statSize:"taille du tableau", statRounds:"tours jusqu'à la finale", statByes:"exempts au 1er tour",
+  addPlayersFirst:"Ajoutez au moins 2 joueurs (onglet Joueurs) pour créer un tirage.",
+  tooMany:"Trop de joueurs pour {n} tours. Choisissez plus de tours.",
+  titleCard:"Nom du tournoi", phTitle:"ex. Coupe d'été du club 2026", save:"Enregistrer",
+  titleHelp:"Ce nom apparaît en haut des onglets Tableau et Joueurs, et sur l'impression.",
+  colorScheme:"Palette de couleurs", colorHelp:"Choisissez une palette assortie à votre site ou club. Toute l'appli est restylée et l'enregistrement est automatique.",
+  roundDeadlines:"Échéances des tours",
+  deadlinesHelp:"Définissez la date limite de chaque tour. Elle s'affiche sous le nom du tour dans le tableau. Les échéances apparaissent dès qu'un tirage existe.",
+  createDrawFirst:"Créez d'abord un tirage, puis définissez une échéance par tour.",
+  allowanceCard:"Réduction de handicap", allowanceSuffix:"% de la différence de handicap de jeu",
+  allowanceHelp:"Par défaut 90%. Modifiez si votre club utilise une autre réduction en simple matchplay.",
+  backupCard:"Sauvegarde & restauration",
+  backupHelp:"Toutes les données restent dans ce navigateur sur votre iMac. Exportez une sauvegarde régulièrement pour restaurer ou changer d'ordinateur.",
+  exportBackup:"Exporter la sauvegarde", importBackup:"Importer la sauvegarde",
+  resetCard:"Réinitialiser", resetHelp:"Supprimez le tirage actuel ou tout effacer. Faites une sauvegarde d'abord.",
+  clearDrawOnly:"Effacer le tirage", deleteAll:"Tout supprimer",
+  languageCard:"Langue", languageHelp:"Choisissez la langue de l'interface.",
+  importCard:"Importer des joueurs (coller depuis Excel)",
+  importHelp:"Copiez deux colonnes depuis Excel (Nom et handicap exact / index) et collez-les ci-dessous, un joueur par ligne. Le handicap de jeu est réglé sur l'index arrondi ; ajustez-le ensuite par joueur si besoin.",
+  importPlaceholder:"Jan Peeters\t14,2\nMarie Dubois\t20,1",
+  importPreviewReady:"{n} joueurs prêts", importIgnored:"{n} lignes ignorées",
+  importAddBtn:"Ajouter ces joueurs", importClear:"Effacer",
+  importNothing:"Rien à importer. Collez Nom et handicap, un joueur par ligne.", importedToast:"{n} joueurs importés",
+  publishCard:"Publier sur le web (JSONBin.io)",
+  publishHelp:"Connectez-vous à votre compte JSONBin.io gratuit pour que les visiteurs de votre site voient le tableau en direct. Collez votre Master Key, puis créez un nouveau bin ou utilisez un ID de bin existant. Cliquez sur Publier pour envoyer le dernier tableau dans le cloud.",
+  publishApiKey:"Master key JSONBin.io", publishBinId:"ID du bin",
+  publishCreateBin:"Créer un nouveau bin", publishNow:"Publier maintenant", publishDownloadJson:"Télécharger le JSON du viewer",
+  publishStatusNever:"Pas encore publié.", publishStatusOk:"Dernière publication : {d}",
+  publishKeyMissing:"Enregistrez d'abord votre master key JSONBin.io.", publishBinMissing:"Créez un bin ou collez un ID de bin d'abord.",
+  publishCreated:"Nouveau bin créé et enregistré.", publishedOk:"Publié",
+  publishFailed:"Échec de la publication. Vérifiez votre clé et l'ID du bin.", publishJsonDownloaded:"JSON du viewer téléchargé",
+  publishViewerHint:"ID de bin pour votre viewer public",
+  pullFromWeb:"Récupérer depuis le web", dismiss:"Fermer",
+  syncing:"Vérification de la version en ligne...", syncedOk:"Dernière version récupérée (révision {r})",
+  syncAlreadyLatest:"Vous avez déjà la dernière version.",
+  syncFailed:"Impossible de vérifier en ligne. Vous travaillez peut-être sur des données obsolètes.",
+  syncConfirmPull:"Télécharger la version en ligne (révision {r}) et remplacer vos données locales pour cette compétition ? Les modifications non enregistrées seront perdues.",
+  staleBannerMsg:"<b>Attention :</b> une version plus récente est en ligne (révision {r}, publiée {when}). Récupérez-la avant de modifier.",
+  publishStale:"Quelqu'un d'autre a publié des modifications (révision {remote}) pendant votre travail (votre révision : {local}). Cliquez OK pour écraser leur version, ou Annuler pour récupérer la leur d'abord et refaire vos modifications.",
+  publishRev:"révision {r}",
+  showKey:"Afficher", hideKey:"Masquer", copyKey:"Copier", copiedToast:"Copié dans le presse-papier",
+  hdrLastUpdate:"Dernière publication", hdrNeverPublished:"Pas encore publié",
+  cCreateBin:"Créer un nouveau bin JSONBin ? Faites cela uniquement la première fois. Si vous avez déjà un ID de bin, cela crée un bin supplémentaire et écrase l'ID enregistré.",
+  checkVersion:"Vérifier la version en ligne",
+  checkResultSame:"Vous êtes synchronisé (révision {r}).",
+  checkResultNewer:"La version en ligne est plus récente (révision {r}, publiée {when}). Cliquez sur Récupérer depuis le web pour la télécharger.",
+  checkResultOlder:"Votre version locale (rév {local}) est plus récente que celle en ligne (rév {remote}). Cliquez sur Publier pour l'envoyer.",
+  publishAuthFail:"Échec d'authentification. La master key JSONBin est manquante, incorrecte ou n'est pas autorisée pour ce bin. Cliquez sur Afficher à côté du champ de la clé pour vérifier qu'elle correspond à votre page API Keys jsonbin.io (et qu'il s'agit bien d'une Master Key, pas d'une Access Key).",
+  cAutoCreateBin:"Créer un nouveau bin JSONBin pour cette compétition ? Elle pourra ainsi publier de manière indépendante. Cliquez sur Annuler pour configurer la publication plus tard.",
+  tNewProfileNoKey:"Compétition créée. Définissez votre master key JSONBin dans Réglages pour pouvoir publier.",
+  tKeyInherited:"Master key héritée de votre compétition précédente.",
+  cPullNewCompetition:"Ce JSON appartient à la compétition '{profile}', qui n'existe pas encore dans ce navigateur. Cliquez OK pour la créer et charger les données. Annuler pour ne rien changer.",
+  cPullSwitchCompetition:"Ce JSON appartient à la compétition '{profile}', pas à votre '{current}' actuelle. Cliquez OK pour passer à '{profile}' et charger les données. Annuler pour abandonner.",
+  tCompetitionAdded:"Compétition '{profile}' ajoutée.",
+  tBinNoProfile:"Remarque : ce bin ne contient pas encore de nom de compétition. Cliquez une fois sur Publier depuis le PC source pour activer le basculement automatique lors des prochains pulls.",
+  editBinBtn:"Modifier le bin", noBinSet:"(pas encore de bin)",
+  editBinIdPrompt:"ID du bin pour cette compétition. Laissez vide pour supprimer le lien.", binIdSaved:"ID de bin enregistré.",
+  addNewSection:"Ajouter une nouvelle compétition", downloadSection:"Récupérer une compétition existante",
+  downloadHint:"Collez un ID de bin JSONBin pour récupérer une compétition existante. Si le bin contient un nom de compétition, il est utilisé ; sinon nous vous le demandons.",
+  downloadBtn:"Récupérer depuis JSONBin",
+  downloadAskName:"Ce bin n'a pas de nom de compétition. Comment souhaitez-vous nommer cette compétition ?",
+  cDownloadReplace:"La compétition '{profile}' existe déjà dans ce navigateur. Remplacer ses données par le JSON téléchargé ?",
+  syncFailedNotFound:"Bin introuvable. Vérifiez l'ID du bin et réessayez.",
+  scorePrompt:"Score du match (ex. 3&2 ou 1up). Laissez vide si inconnu.",
+  wonFinal:"A gagné la finale {s}",
+  viewSplit:"Vue divisée", viewLinear:"Vue linéaire", viewCompact:"Compact", viewNormal:"Normal",
+  competition:"Compétition", profilesCard:"Compétitions",
+  profilesHelp:"Chaque compétition a ses propres joueurs, tableau, échéances et bin JSONBin. Changez via la liste déroulante en haut. Les réglages globaux (thème, langue) sont partagés.",
+  profileName:"Nom", active:"active",
+  newProfileName:"Nom de la nouvelle compétition", phNewProfile:"ex. Juniors 2026", addProfileBtn:"Ajouter une compétition",
+  renameProfile:"Renommer", renameProfilePrompt:"Nouveau nom de la compétition :",
+  cDeleteProfile:"Supprimer la compétition '{name}' ? Cela efface ses joueurs, son tableau et ses réglages. Action irréversible.",
+  tCantDeleteLast:"Vous devez garder au moins une compétition.",
+  tProfileExists:"Une compétition portant ce nom existe déjà.",
+  tProfileRenamed:"Compétition renommée.", tProfileDeleted:"Compétition supprimée.",
+  tSwitchedProfile:"Basculé vers {name}.",
+  cReplaceProfileBackup:"Remplacer les données de la compétition '{profile}' par cette sauvegarde ?",
+  tPlayerAdded:"Joueur ajouté", tPlayerUpdated:"Joueur mis à jour", tPlayerRemoved:"Joueur supprimé", tEnterName:"Saisissez un nom",
+  tAddedSlot:"Joueur ajouté à l'emplacement {n}", tBracketFull:"Joueur ajouté. Tableau plein, refaites le tirage pour l'inclure.",
+  tAddedLocked:"Joueur ajouté. Tirage verrouillé, rouvrez-le pour l'inclure.", tMovedSlot:"Joueur mis à jour et déplacé vers l'emplacement {n}",
+  tDrawGenerated:"Tirage créé", tNeed2:"Ajoutez d'abord au moins 2 joueurs", tDrawCleared:"Tirage effacé", tNoDraw:"Aucun tirage à effacer",
+  tReopened:"Tirage rouvert. Vous pouvez le modifier à nouveau.", tLockedMsg:"Tirage verrouillé. Les résultats restent modifiables ; la structure est protégée.",
+  tCreateFirst:"Créez d'abord un tirage", tUpdated:"Mis à jour", tSwapped:"Joueurs échangés",
+  tLockedDragMsg:"Tirage verrouillé. Rouvrez-le pour réorganiser.", tLockedMoveMsg:"Tirage verrouillé. Rouvrez-le pour déplacer des joueurs.",
+  tAllowanceSet:"Réduction réglée à {n}%", tBadAllowance:"Saisissez une valeur entre 0 et 100", tTitleSaved:"Nom enregistré",
+  tApplied:"appliquée", tBackupDownloaded:"Sauvegarde téléchargée", tBackupRestored:"Sauvegarde restaurée", tBadFile:"Impossible de lire ce fichier",
+  tAllDeleted:"Toutes les données supprimées", tPickDraw:"Choisissez un type de tirage sous Créer le tirage",
+  cNewDraw:"Créer un nouveau tirage ? Cela remplace le tableau et les résultats actuels.",
+  cTooMany:"Vous avez {n} joueurs mais {r} tours n'en accueillent que {s}. Choisissez plus de tours.",
+  cClearDraw:"Effacer le tirage actuel ? Les joueurs sont conservés.",
+  cReopen:"Rouvrir le tirage pour le modifier ? Vous pourrez à nouveau glisser et déplacer des joueurs.",
+  cRemovePlayer:"Supprimer {name} ? Si un tirage existe déjà, refaites-le ensuite.",
+  cChangeClears:"Modifier le tirage effacera les résultats enregistrés. Continuer ?",
+  cRearrangeClears:"Réorganiser le tirage effacera les résultats enregistrés. Continuer ?",
+  cNoEmptySlot:"Aucun emplacement libre pour déplacer {name}. Choisissez un numéro libre.",
+  cReplaceBackup:"Remplacer toutes les données actuelles par cette sauvegarde ?",
+  cDeleteAll1:"Supprimer TOUS les joueurs et le tirage ? Action irréversible.", cDeleteAll2:"Êtes-vous sûr ? Assurez-vous d'avoir une sauvegarde.",
+  printLine:"Coupe net matchplay · {n} joueurs · {a}% de réduction · imprimé {d}"
+ }
+};
+const LANG_NAMES={en:"English", nl:"Nederlands", fr:"Français"};
+function t(key){ const L=I18N[state.lang]||I18N.en; return L[key]!==undefined?L[key]:(I18N.en[key]!==undefined?I18N.en[key]:key); }
+function tf(key,vars){ let s=t(key); for(const k in vars) s=s.replace("{"+k+"}",vars[k]); return s; }
+function applyLang(){
+  document.documentElement.lang=state.lang;
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent=t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML=t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph"))); });
+}
+function setLang(l){ state.lang=l; save(); applyLang(); renderAll(); }
+function renderLang(){ const sel=document.getElementById("langSel"); if(sel) sel.value=state.lang; }
+
+/* ---------- storage ---------- */
+function profileData(){
+  return { players:state.players, bracket:state.bracket, title:state.title, roundDates:state.roundDates, publish:state.publish, matches:state.matches, allowance:state.allowance };
+}
+function applyProfileData(p){
+  state.players = Array.isArray(p.players)?p.players:[];
+  state.bracket = p.bracket||null;
+  state.title = typeof p.title==="string"?p.title:"";
+  state.roundDates = (p.roundDates&&typeof p.roundDates==="object")?p.roundDates:{};
+  state.publish = (p.publish&&typeof p.publish==="object")?p.publish:{apiKey:"",binId:"",lastPublishedAt:"",revision:0,lastSyncedAt:""};
+  if(typeof state.publish.revision!=="number") state.publish.revision=0;
+  state.matches = Array.isArray(p.matches)?p.matches:[];
+  state.allowance = typeof p.allowance==="number"?p.allowance:90;
+}
+function load(){
+  try{
+    const gRaw = localStorage.getItem(GLOBAL_KEY);
+    if(gRaw){
+      const g = JSON.parse(gRaw);
+      if(Array.isArray(g.profiles) && g.profiles.length) state.profiles = g.profiles;
+      if(typeof g.activeProfile==="string" && state.profiles.includes(g.activeProfile)) state.activeProfile = g.activeProfile;
+      else state.activeProfile = state.profiles[0];
+      if(g.theme && THEMES[g.theme]) state.theme = g.theme;
+      if(g.lang && I18N[g.lang]) state.lang = g.lang;
+      if(g.viewMode==="linear" || g.viewMode==="split") state.viewMode = g.viewMode;
+      if(typeof g.compact==="boolean") state.compact = g.compact;
+    } else {
+      // No global yet: check for legacy data and migrate
+      const legacyRaw = localStorage.getItem(LEGACY_KEY);
+      if(legacyRaw){
+        const d = JSON.parse(legacyRaw);
+        // copy globals from legacy
+        if(d.theme && THEMES[d.theme]) state.theme = d.theme;
+        if(d.lang && I18N[d.lang]) state.lang = d.lang;
+        if(d.viewMode==="linear" || d.viewMode==="split") state.viewMode = d.viewMode;
+        if(typeof d.compact==="boolean") state.compact = d.compact;
+        // first profile gets the migrated data
+        state.profiles = ["Men","Ladies"];
+        state.activeProfile = "Men";
+        const migratedProfile = { players:d.players||[], bracket:d.bracket||null, title:d.title||"", roundDates:d.roundDates||{}, publish:d.publish||{apiKey:"",binId:"",lastPublishedAt:""}, matches:d.matches||[], allowance:typeof d.allowance==="number"?d.allowance:90 };
+        localStorage.setItem(PROFILE_KEY("Men"), JSON.stringify(migratedProfile));
+        // Ladies starts empty
+        localStorage.setItem(PROFILE_KEY("Ladies"), JSON.stringify({players:[],bracket:null,title:"",roundDates:{},publish:{apiKey:"",binId:"",lastPublishedAt:""},matches:[],allowance:90}));
+      }
+    }
+  }catch(e){ console.error(e); }
+  // Load the active profile's data
+  loadProfileData(state.activeProfile);
+  // safety defaults
+  if(!Array.isArray(state.profiles) || !state.profiles.length) state.profiles = ["Men","Ladies"];
+  if(!state.profiles.includes(state.activeProfile)) state.activeProfile = state.profiles[0];
+}
+function loadProfileData(name){
+  try{
+    const raw = localStorage.getItem(PROFILE_KEY(name));
+    if(raw){ applyProfileData(JSON.parse(raw)); return; }
+  }catch(e){}
+  // new/empty profile
+  applyProfileData({});
+}
+function save(){
+  // save profile data
+  try{ localStorage.setItem(PROFILE_KEY(state.activeProfile), JSON.stringify(profileData())); }catch(e){}
+  // save globals
+  try{ localStorage.setItem(GLOBAL_KEY, JSON.stringify({ profiles:state.profiles, activeProfile:state.activeProfile, theme:state.theme, lang:state.lang, viewMode:state.viewMode, compact:state.compact })); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function byId(id){ return state.players.find(p=>p.id===id); }
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(msg){ const t=document.getElementById("toast"); t.innerHTML=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+function strokesBetween(a,b){ const diff=Math.abs((a.playingHcp||0)-(b.playingHcp||0)); return Math.round(diff*(state.allowance/100)); }
+function nextPow2(n){ let p=1; while(p<n) p*=2; return p; }
+function seedOrder(size){
+  let pls=[1,2];
+  while(pls.length<size){ const sum=pls.length*2+1, out=[]; for(const p of pls){ out.push(p); out.push(sum-p); } pls=out; }
+  return pls;
+}
+function roundName(r,numRounds){
+  const left=numRounds-r; // rounds remaining including this one
+  if(left===1) return t("final");
+  if(left===2) return t("semifinals");
+  if(left===3) return t("quarterfinals");
+  return t("roundOf")+" "+Math.pow(2,left);
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll("nav button").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll("main > section").forEach(s=>s.classList.add("hide"));
+    document.getElementById("tab-"+btn.dataset.tab).classList.remove("hide");
+    renderAll();
+  };
+});
+
+/* ---------- players ---------- */
+function savePlayer(){
+  const name=document.getElementById("pName").value.trim();
+  const idx=parseFloat(document.getElementById("pIndex").value);
+  const ph=parseInt(document.getElementById("pPlaying").value,10);
+  if(!name){ toast(t("tEnterName")); return; }
+  if(editingId){
+    const p=byId(editingId); p.name=name; p.hcpIndex=isNaN(idx)?null:idx; p.playingHcp=isNaN(ph)?0:ph;
+    let msg=t("tPlayerUpdated");
+    if(state.bracket){
+      const v=document.getElementById("pSlot").value;
+      if(v!=="keep"){ if(placeInSlot(editingId,parseInt(v,10))) msg=tf("tMovedSlot",{n:parseInt(v,10)+1}); }
+    }
+    toast(msg);
+  }else{
+    const np={id:uid(),name,hcpIndex:isNaN(idx)?null:idx,playingHcp:isNaN(ph)?0:ph};
+    state.players.push(np);
+    if(state.bracket && state.bracket.locked){
+      toast(t("tAddedLocked"));
+    } else if(state.bracket){
+      const e=state.bracket.seeds.indexOf(null);
+      if(e>=0){ state.bracket.seeds[e]=np.id; clearDownstream(0,Math.floor(e/2)); toast(tf("tAddedSlot",{n:e+1})); }
+      else { toast(t("tBracketFull")); }
+    } else { toast(t("tPlayerAdded")); }
+  }
+  cancelEdit(); save(); renderAll();
+}
+function populateSlotSelect(pid){
+  const row=document.getElementById("slotRow"), sel=document.getElementById("pSlot"), b=state.bracket;
+  if(!b || b.locked){ row.style.display="none"; return; }
+  row.style.display="";
+  const cur=b.seeds.indexOf(pid);
+  let opts=`<option value="keep">${t("leaveWhereItIs")}${cur<0?" "+t("notInDraw"):""}</option>`;
+  for(let i=0;i<b.size;i++){
+    const occ=b.seeds[i];
+    let lbl=t("slotWord")+" "+(i+1)+" - "+(!occ?t("slotEmpty"):(occ===pid?t("slotHereNow"):((byId(occ)||{}).name||"player")));
+    opts+=`<option value="${i}">${esc(lbl)}</option>`;
+  }
+  sel.innerHTML=opts;
+}
+function editPlayer(id){
+  const p=byId(id); editingId=id;
+  document.getElementById("pName").value=p.name;
+  document.getElementById("pIndex").value=p.hcpIndex??"";
+  document.getElementById("pPlaying").value=p.playingHcp??"";
+  document.getElementById("playerFormTitle").textContent=t("editPlayer");
+  document.getElementById("savePlayerBtn").textContent=t("saveChanges");
+  document.getElementById("cancelEdit").classList.remove("hide");
+  populateSlotSelect(id);
+  document.querySelector('nav button[data-tab="players"]').click();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEdit(){
+  editingId=null;
+  document.getElementById("pName").value=""; document.getElementById("pIndex").value=""; document.getElementById("pPlaying").value="";
+  document.getElementById("playerFormTitle").textContent=t("addPlayer");
+  document.getElementById("savePlayerBtn").textContent=t("addPlayerBtn");
+  document.getElementById("cancelEdit").classList.add("hide");
+  document.getElementById("slotRow").style.display="none";
+}
+function deletePlayer(id){
+  const p=byId(id);
+  if(!confirm(tf("cRemovePlayer",{name:p.name}))) return;
+  state.players=state.players.filter(x=>x.id!==id); save(); renderAll(); toast(t("tPlayerRemoved"));
+}
+
+/* ---------- paste / import players ---------- */
+function parsePaste(text){
+  const rows=[]; let skipped=0, first=true;
+  (text||"").split(/\r?\n/).forEach(line=>{
+    const raw=line.trim(); if(!raw) return;
+    const parts=(raw.indexOf("\t")>=0?raw.split("\t"):raw.split(",")).map(s=>s.trim());
+    const name=parts[0]||"";
+    const hcp=parseFloat((parts[1]||"").replace(",","."));
+    if(!name || isNaN(hcp)){ if(!first) skipped++; first=false; return; } // first bad line treated as header
+    first=false;
+    rows.push({name, index:hcp});
+  });
+  return {rows, skipped};
+}
+function renderPastePreview(){
+  const box=document.getElementById("pasteBox"), el=document.getElementById("pastePreview");
+  const {rows,skipped}=parsePaste(box.value);
+  if(!rows.length && !skipped){ el.innerHTML=""; return; }
+  const tbl = rows.length ? ('<table><thead><tr><th>'+t("labelName")+'</th><th>'+t("colIndex")+'</th><th>'+t("colPlaying")+'</th></tr></thead><tbody>'+
+    rows.slice(0,100).map(r=>`<tr><td class="name">${esc(r.name)}</td><td>${r.index}</td><td><span class="pill">PH ${Math.round(r.index)}</span></td></tr>`).join('')+'</tbody></table>') : '';
+  el.innerHTML='<div class="muted" style="font-size:13px;margin:10px 0 6px">'+tf("importPreviewReady",{n:rows.length})+(skipped?(' · '+tf("importIgnored",{n:skipped})):'')+'</div>'+tbl;
+}
+function clearPaste(){ document.getElementById("pasteBox").value=""; renderPastePreview(); }
+function importPlayers(){
+  const box=document.getElementById("pasteBox");
+  const {rows}=parsePaste(box.value);
+  if(!rows.length){ toast(t("importNothing")); return; }
+  rows.forEach(r=>{
+    const np={id:uid(),name:r.name,hcpIndex:r.index,playingHcp:Math.round(r.index)};
+    state.players.push(np);
+    if(state.bracket && !state.bracket.locked){
+      const e=state.bracket.seeds.indexOf(null);
+      if(e>=0){ state.bracket.seeds[e]=np.id; clearDownstream(0,Math.floor(e/2)); }
+    }
+  });
+  save(); box.value=""; renderPastePreview(); renderAll();
+  toast(tf("importedToast",{n:rows.length}));
+}
+
+/* ---------- publish to JSONBin.io ---------- */
+const JSONBIN_BASE="https://api.jsonbin.io/v3";
+function publishPayload(revision){
+  return {
+    profile: state.activeProfile||"",
+    title: state.title||"",
+    allowance: state.allowance,
+    theme: state.theme,
+    lang: state.lang,
+    roundDates: state.roundDates||{},
+    players: (state.players||[]).map(p=>({id:p.id, name:p.name, playingHcp:p.playingHcp})),
+    bracket: state.bracket,
+    publishedAt: new Date().toISOString(),
+    revision: revision
+  };
+}
+function savePublishKey(){ state.publish.apiKey=document.getElementById("pubApiKey").value.trim(); save(); renderPublish(); }
+function toggleKeyVisibility(){
+  const inp=document.getElementById("pubApiKey"); const btn=document.getElementById("showKeyBtn");
+  if(!inp||!btn) return;
+  if(inp.type==="password"){ inp.type="text"; btn.textContent=t("hideKey"); }
+  else { inp.type="password"; btn.textContent=t("showKey"); }
+}
+async function copyKeyToClipboard(){
+  const inp=document.getElementById("pubApiKey"); if(!inp) return;
+  const val=inp.value||"";
+  if(!val){ toast(t("publishKeyMissing")); return; }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(val);
+    } else {
+      // fallback: temporarily reveal and use execCommand
+      const wasPwd = inp.type==="password";
+      if(wasPwd) inp.type="text";
+      inp.select(); inp.setSelectionRange(0, val.length);
+      document.execCommand("copy");
+      if(wasPwd) inp.type="password";
+      window.getSelection && window.getSelection().removeAllRanges();
+    }
+    toast(t("copiedToast"));
+  }catch(e){ toast(t("copiedToast")); }
+}
+function savePublishBin(){ state.publish.binId=document.getElementById("pubBinId").value.trim(); save(); renderPublish(); }
+
+/* ---------- multi-admin sync ---------- */
+async function checkRemoteVersion(){
+  const bin = (state.publish.binId||"").trim();
+  if(!bin) return null;
+  try{
+    const res = await fetch(JSONBIN_BASE+"/b/"+encodeURIComponent(bin)+"/latest",{cache:"no-store"});
+    if(!res.ok) return null;
+    const json = await res.json();
+    const data = json.record || json;
+    return { revision: (typeof data.revision==="number"?data.revision:0), publishedAt: data.publishedAt||"", data };
+  }catch(e){ return null; }
+}
+function applyRemoteData(d){
+  if(typeof d.title==="string") state.title = d.title;
+  if(typeof d.allowance==="number") state.allowance = d.allowance;
+  if(THEMES[d.theme]) state.theme = d.theme;
+  if(I18N[d.lang]) state.lang = d.lang;
+  if(d.roundDates && typeof d.roundDates==="object") state.roundDates = d.roundDates;
+  if(Array.isArray(d.players)) state.players = d.players;
+  if(d.bracket) state.bracket = d.bracket;
+}
+async function pullFromWeb(){
+  const bin = (state.publish.binId||"").trim();
+  if(!bin){ toast(t("publishBinMissing")); return; }
+  const carriedKey = (state.publish.apiKey||"").trim();
+  toast(t("syncing"));
+  const remote = await checkRemoteVersion();
+  if(!remote){ toast(t("syncFailed")); return; }
+  const localRev = state.publish.revision || 0;
+
+  // Does this JSON belong to a different competition than we're in right now?
+  const rawProfile = remote.data && typeof remote.data.profile==="string" ? remote.data.profile.trim() : "";
+  const needSwitch = rawProfile && rawProfile !== state.activeProfile;
+  const needCreate = needSwitch && !state.profiles.includes(rawProfile);
+
+  if(needCreate){
+    if(!confirm(tf("cPullNewCompetition",{profile:rawProfile}))) return;
+  } else if(needSwitch){
+    if(!confirm(tf("cPullSwitchCompetition",{profile:rawProfile, current:state.activeProfile}))) return;
+  } else {
+    // same competition: keep the original sync-confirm behavior
+    if(remote.revision === localRev && remote.revision !== 0){ toast(t("syncAlreadyLatest")); hideStaleBanner(); return; }
+    if(!confirm(tf("syncConfirmPull",{r:remote.revision}))) return;
+  }
+
+  if(needSwitch){
+    save(); // persist whatever was on the previous profile first
+    if(needCreate){
+      state.profiles.push(rawProfile);
+      toast(tf("tCompetitionAdded",{profile:rawProfile}));
+    }
+    state.activeProfile = rawProfile;
+    loadProfileData(rawProfile);
+    // carry the publish credentials forward so the target profile can keep using this bin
+    if(carriedKey) state.publish.apiKey = carriedKey;
+    state.publish.binId = bin;
+  }
+
+  applyRemoteData(remote.data);
+  state.publish.revision = remote.revision;
+  state.publish.lastSyncedAt = new Date().toISOString();
+  save(); applyTheme(state.theme); applyLang(); renderAll();
+  hideStaleBanner();
+  toast(tf("syncedOk",{r:remote.revision}));
+  // Helpful nudge when the bin pre-dates the competition-name feature
+  if(!rawProfile){ setTimeout(()=>toast(t("tBinNoProfile")), 2400); }
+}
+async function checkStaleAndBanner(){
+  const bin = (state.publish.binId||"").trim();
+  if(!bin){ hideStaleBanner(); return; }
+  const remote = await checkRemoteVersion();
+  if(!remote) return; // network failed, silent
+  const local = state.publish.revision || 0;
+  const banner = document.getElementById("staleBanner");
+  if(!banner) return;
+  if(remote.revision > local){
+    const loc = state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB");
+    const when = remote.publishedAt ? new Date(remote.publishedAt).toLocaleString(loc) : "";
+    banner.innerHTML = '<span>'+tf("staleBannerMsg",{r:remote.revision, when:esc(when)})+'</span>' +
+      ' <button class="btn small" onclick="pullFromWeb()">'+esc(t("pullFromWeb"))+'</button>' +
+      ' <button class="btn ghost small" onclick="hideStaleBanner()">'+esc(t("dismiss"))+'</button>';
+    banner.classList.remove("hide");
+  } else {
+    banner.classList.add("hide");
+  }
+}
+function hideStaleBanner(){ const b=document.getElementById("staleBanner"); if(b) b.classList.add("hide"); }
+async function checkVersionOnly(){
+  const bin = (state.publish.binId||"").trim();
+  if(!bin){ toast(t("publishBinMissing")); return; }
+  toast(t("syncing"));
+  const remote = await checkRemoteVersion();
+  if(!remote){ toast(t("syncFailed")); return; }
+  const local = state.publish.revision || 0;
+  const loc = state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB");
+  const when = remote.publishedAt ? new Date(remote.publishedAt).toLocaleString(loc) : "";
+  if(remote.revision > local){
+    toast(tf("checkResultNewer",{r:remote.revision, when}));
+    checkStaleAndBanner(); // also refresh the warning banner
+  } else if(remote.revision < local){
+    toast(tf("checkResultOlder",{remote:remote.revision, local}));
+  } else {
+    toast(tf("checkResultSame",{r:remote.revision}));
+    hideStaleBanner();
+  }
+}
+
+async function createBin(opts){
+  opts = opts || {};
+  const key=(state.publish.apiKey||"").trim();
+  if(!key){ toast(t("publishKeyMissing")); return; }
+  if(!opts.skipConfirm && !confirm(t("cCreateBin"))) return;
+  // name the bin after the active competition so it's easy to find in jsonbin.io
+  const safeProfile=(state.activeProfile||"main").replace(/[^a-zA-Z0-9_-]/g,"_");
+  const dateStr=new Date().toISOString().slice(0,10);
+  const binName="golf-knockout-"+safeProfile+"-"+dateStr;
+  try{
+    const res=await fetch(JSONBIN_BASE+"/b",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json","X-Master-Key":key,"X-Bin-Private":"false","X-Bin-Name":binName },
+      body: JSON.stringify(publishPayload(1))
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    const id=(data.metadata&&data.metadata.id)||data.id;
+    if(!id) throw new Error("no id");
+    state.publish.binId=id; state.publish.lastPublishedAt=new Date().toISOString();
+    state.publish.revision = 1;
+    state.publish.lastSyncedAt = state.publish.lastPublishedAt;
+    save(); renderPublish(); toast(t("publishCreated"));
+  }catch(e){
+    if(String(e.message||"").indexOf("401")>=0) toast(t("publishAuthFail"));
+    else toast(t("publishFailed")+" ("+e.message+")");
+  }
+}
+async function publishNow(){
+  const key=(state.publish.apiKey||"").trim(), bin=(state.publish.binId||"").trim();
+  if(!key){ toast(t("publishKeyMissing")); return; }
+  if(!bin){ toast(t("publishBinMissing")); return; }
+  // stale check: another admin may have published while we were editing
+  const remote = await checkRemoteVersion();
+  const localRev = state.publish.revision || 0;
+  if(remote && remote.revision > localRev){
+    if(!confirm(tf("publishStale",{remote:remote.revision, local:localRev}))){
+      // user chose to keep theirs; show the banner so they can pull
+      checkStaleAndBanner();
+      return;
+    }
+    // user chose to overwrite
+  }
+  const newRev = Math.max(localRev, remote?remote.revision:0) + 1;
+  try{
+    const res=await fetch(JSONBIN_BASE+"/b/"+encodeURIComponent(bin),{
+      method:"PUT",
+      headers:{ "Content-Type":"application/json","X-Master-Key":key },
+      body: JSON.stringify(publishPayload(newRev))
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    state.publish.lastPublishedAt = new Date().toISOString();
+    state.publish.revision = newRev;
+    state.publish.lastSyncedAt = state.publish.lastPublishedAt;
+    save(); renderPublish(); hideStaleBanner(); toast(t("publishedOk"));
+  }catch(e){
+    if(String(e.message||"").indexOf("401")>=0) toast(t("publishAuthFail"));
+    else toast(t("publishFailed")+" ("+e.message+")");
+  }
+}
+function exportViewerJSON(){
+  const blob=new Blob([JSON.stringify(publishPayload(state.publish.revision||0),null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="golf-knockout-viewer-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(a.href);
+  toast(t("publishJsonDownloaded"));
+}
+function renderHeaderStatus(){
+  const el=document.getElementById("hdrStatus"); if(!el) return;
+  const last=state.publish.lastPublishedAt; const rev=state.publish.revision||0;
+  if(!last){
+    el.innerHTML='<span class="lbl">'+esc(t("hdrLastUpdate"))+'</span><span class="val">'+esc(t("hdrNeverPublished"))+'</span>';
+    return;
+  }
+  const loc=state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB");
+  const d=new Date(last).toLocaleString(loc,{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+  const revPart = rev ? ' <span class="rev">· '+esc(tf("publishRev",{r:rev}))+'</span>' : '';
+  el.innerHTML='<span class="lbl">'+esc(t("hdrLastUpdate"))+'</span><span class="val">'+esc(d)+revPart+'</span>';
+}
+function renderPublish(){
+  const k=document.getElementById("pubApiKey"); if(k && document.activeElement!==k) k.value=state.publish.apiKey||"";
+  const b=document.getElementById("pubBinId"); if(b && document.activeElement!==b) b.value=state.publish.binId||"";
+  renderHeaderStatus();
+  const st=document.getElementById("publishStatus");
+  if(st){
+    if(state.publish.lastPublishedAt){
+      const loc=state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB");
+      const d=new Date(state.publish.lastPublishedAt).toLocaleString(loc);
+      const rev=state.publish.revision||0;
+      st.textContent=tf("publishStatusOk",{d}) + (rev?" · "+tf("publishRev",{r:rev}):"");
+    } else { st.textContent=t("publishStatusNever"); }
+  }
+  const u=document.getElementById("viewerHintBox");
+  if(u){
+    if(state.publish.binId){ u.innerHTML=t("publishViewerHint")+': <code style="user-select:all;background:var(--green-light);padding:2px 6px;border-radius:5px">'+esc(state.publish.binId)+'</code>'; }
+    else u.innerHTML="";
+  }
+}
+
+/* ---------- bracket build ---------- */
+function naturalRounds(n){ return Math.max(1, Math.round(Math.log2(nextPow2(Math.max(2,n))))); }
+function generateBracket(method){
+  let ps=state.players.slice();
+  if(ps.length<2){ toast(t("tNeed2")); return; }
+  const sel=document.getElementById("numRoundsSel");
+  const chosen=sel && sel.value ? parseInt(sel.value,10) : naturalRounds(ps.length);
+  const size=Math.pow(2,chosen);
+  if(ps.length>size){ alert(tf("cTooMany",{n:ps.length,r:chosen,s:size})); return; }
+  if(state.bracket && !confirm(t("cNewDraw"))) return;
+  if(method==="random"){ for(let i=ps.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [ps[i],ps[j]]=[ps[j],ps[i]]; } }
+  else { ps.sort((a,b)=>(a.playingHcp||0)-(b.playingHcp||0)); }
+  const order=seedOrder(size);
+  const seeds=order.map(sn=> sn<=ps.length ? ps[sn-1].id : null);
+  state.bracket={ size, numRounds:chosen, seeds, winners:{}, scores:{}, method, createdAt:new Date().toISOString() };
+  save(); renderAll();
+  document.querySelector('nav button[data-tab="bracket"]').click(); // show the new bracket
+  toast(t("tDrawGenerated"));
+}
+function redraw(){ document.querySelector('nav button[data-tab="settings"]').click(); window.scrollTo({top:0,behavior:"smooth"}); toast(t("tPickDraw")); }
+function clearBracket(){
+  if(!state.bracket){ toast(t("tNoDraw")); return; }
+  if(!confirm(t("cClearDraw"))) return;
+  state.bracket=null; save(); renderAll(); toast(t("tDrawCleared"));
+}
+function toggleLock(){
+  const b=state.bracket; if(!b){ toast(t("tCreateFirst")); return; }
+  if(b.locked){
+    if(!confirm(t("cReopen"))) return;
+    b.locked=false; toast(t("tReopened"));
+  } else {
+    b.locked=true; toast(t("tLockedMsg"));
+  }
+  save(); renderAll();
+}
+
+/* ---------- competition profiles ---------- */
+function switchProfile(name){
+  if(name===state.activeProfile) return;
+  if(!state.profiles.includes(name)) return;
+  save(); // save current profile first
+  state.activeProfile = name;
+  loadProfileData(name);
+  save();
+  applyTheme(state.theme); applyLang();
+  renderAll();
+  toast(tf("tSwitchedProfile",{name}));
+  // check if another admin published a newer version for this competition
+  checkStaleAndBanner();
+}
+async function addProfile(){
+  const inp = document.getElementById("newProfileName");
+  const name = (inp.value||"").trim();
+  if(!name){ toast(t("tEnterName")); return; }
+  if(state.profiles.includes(name)){ toast(t("tProfileExists")); return; }
+  // remember the key from the profile we're leaving, so the new one inherits it
+  const inheritedKey = (state.publish.apiKey||"").trim();
+  state.profiles.push(name);
+  inp.value = "";
+  save();
+  switchProfile(name);
+  // give the new profile the master key from where we came
+  if(inheritedKey && !(state.publish.apiKey||"").trim()){
+    state.publish.apiKey = inheritedKey;
+    save(); renderPublish();
+    toast(t("tKeyInherited"));
+  }
+  // offer to auto-create a dedicated bin for this competition
+  if((state.publish.apiKey||"").trim()){
+    if(confirm(t("cAutoCreateBin"))){
+      await createBin({skipConfirm:true});
+    }
+  } else {
+    toast(t("tNewProfileNoKey"));
+  }
+}
+function renameProfile(oldName){
+  const newName = prompt(t("renameProfilePrompt"), oldName);
+  if(!newName || newName.trim()===oldName) return;
+  const trimmed = newName.trim();
+  if(state.profiles.includes(trimmed)){ toast(t("tProfileExists")); return; }
+  const data = localStorage.getItem(PROFILE_KEY(oldName));
+  if(data){ localStorage.setItem(PROFILE_KEY(trimmed), data); localStorage.removeItem(PROFILE_KEY(oldName)); }
+  const idx = state.profiles.indexOf(oldName);
+  if(idx>=0) state.profiles[idx] = trimmed;
+  if(state.activeProfile===oldName) state.activeProfile = trimmed;
+  save();
+  renderAll();
+  toast(t("tProfileRenamed"));
+}
+function deleteProfile(name){
+  if(state.profiles.length<=1){ toast(t("tCantDeleteLast")); return; }
+  if(!confirm(tf("cDeleteProfile",{name}))) return;
+  localStorage.removeItem(PROFILE_KEY(name));
+  state.profiles = state.profiles.filter(p=>p!==name);
+  if(state.activeProfile===name){
+    state.activeProfile = state.profiles[0];
+    loadProfileData(state.activeProfile);
+  }
+  save();
+  renderAll();
+  toast(t("tProfileDeleted"));
+}
+function getProfileBinId(name){
+  if(name === state.activeProfile) return state.publish.binId||"";
+  try{
+    const raw = localStorage.getItem(PROFILE_KEY(name));
+    if(!raw) return "";
+    const d = JSON.parse(raw);
+    return (d.publish && d.publish.binId) || "";
+  }catch(e){ return ""; }
+}
+function setProfileBinId(name, newId){
+  newId = (newId||"").trim();
+  if(name === state.activeProfile){
+    state.publish.binId = newId;
+    state.publish.revision = 0; // bin changed -> reset sync state
+    state.publish.lastSyncedAt = "";
+    save();
+  } else {
+    try{
+      const raw = localStorage.getItem(PROFILE_KEY(name));
+      const d = raw ? JSON.parse(raw) : {};
+      if(!d.publish) d.publish = {apiKey:"",binId:"",lastPublishedAt:"",revision:0,lastSyncedAt:""};
+      d.publish.binId = newId;
+      d.publish.revision = 0;
+      d.publish.lastSyncedAt = "";
+      localStorage.setItem(PROFILE_KEY(name), JSON.stringify(d));
+    }catch(e){ console.error(e); }
+  }
+}
+function editBinId(profileName){
+  const current = getProfileBinId(profileName);
+  const v = prompt(t("editBinIdPrompt"), current);
+  if(v === null) return;
+  setProfileBinId(profileName, v);
+  renderAll();
+  toast(t("binIdSaved"));
+}
+function renderProfiles(){
+  const sel = document.getElementById("profileSel");
+  if(sel){
+    sel.innerHTML = state.profiles.map(p=>`<option value="${esc(p)}"${p===state.activeProfile?" selected":""}>${esc(p)}</option>`).join("");
+  }
+  const list = document.getElementById("profilesList");
+  if(!list) return;
+  list.innerHTML = '<table><thead><tr><th>'+t("profileName")+'</th><th>'+t("publishBinId")+'</th><th></th></tr></thead><tbody>'+
+    state.profiles.map(p=>{
+      const bin = getProfileBinId(p);
+      const binCell = bin
+        ? '<code style="font-size:11.5px;background:var(--green-light);padding:2px 6px;border-radius:5px;user-select:all;word-break:break-all">'+esc(bin)+'</code>'
+        : '<span class="muted">'+esc(t("noBinSet"))+'</span>';
+      const isActive = (p === state.activeProfile);
+      const safe = esc(p);
+      let actions;
+      if(isActive){
+        actions = `
+          <button class="btn small" onclick="publishNow()">${t("publishNow")}</button>
+          <button class="btn ghost small" onclick="pullFromWeb()">${t("pullFromWeb")}</button>
+          <button class="btn ghost small" onclick="checkVersionOnly()">${t("checkVersion")}</button>
+          <button class="btn ghost small" onclick="editBinId('${safe}')">${t("editBinBtn")}</button>
+          <button class="btn ghost small" onclick="createBin()">${t("publishCreateBin")}</button>
+          <button class="btn ghost small" onclick="exportViewerJSON()">${t("publishDownloadJson")}</button>
+          <button class="btn ghost small" onclick="renameProfile('${safe}')">${t("renameProfile")}</button>
+          <button class="btn danger small" onclick="deleteProfile('${safe}')">${t("remove")}</button>`;
+      } else {
+        actions = `
+          <button class="btn ghost small" onclick="switchProfile('${safe}')">${t("competition")}</button>
+          <button class="btn ghost small" onclick="editBinId('${safe}')">${t("editBinBtn")}</button>
+          <button class="btn ghost small" onclick="renameProfile('${safe}')">${t("renameProfile")}</button>
+          <button class="btn danger small" onclick="deleteProfile('${safe}')">${t("remove")}</button>`;
+      }
+      return `<tr>
+        <td class="name">${esc(p)}${isActive?' <span class="pill">'+t("active")+'</span>':''}</td>
+        <td>${binCell}</td>
+        <td class="actions" style="margin-top:0;flex-wrap:wrap;display:flex;gap:6px">${actions}</td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
+}
+
+async function downloadExisting(){
+  const inp = document.getElementById("downloadBinId"); if(!inp) return;
+  const binId = (inp.value||"").trim();
+  if(!binId){ toast(t("publishBinMissing")); return; }
+  toast(t("syncing"));
+  try{
+    const res = await fetch(JSONBIN_BASE+"/b/"+encodeURIComponent(binId)+"/latest",{cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json = await res.json();
+    const data = json.record || json;
+    let profileName = (data && typeof data.profile==="string") ? data.profile.trim() : "";
+    if(!profileName){
+      profileName = (prompt(t("downloadAskName"), "") || "").trim();
+      if(!profileName) return;
+    }
+    if(state.profiles.includes(profileName)){
+      if(!confirm(tf("cDownloadReplace",{profile:profileName}))) return;
+    } else {
+      state.profiles.push(profileName);
+    }
+    save(); // persist current profile data first
+    const carriedKey = (state.publish.apiKey||"").trim();
+    state.activeProfile = profileName;
+    loadProfileData(profileName);
+    if(carriedKey) state.publish.apiKey = carriedKey;
+    state.publish.binId = binId;
+    applyRemoteData(data);
+    state.publish.revision = (typeof data.revision==="number" ? data.revision : 0);
+    state.publish.lastSyncedAt = new Date().toISOString();
+    save(); applyTheme(state.theme); applyLang(); renderAll();
+    inp.value = "";
+    toast(tf("syncedOk",{r:state.publish.revision}));
+  }catch(e){
+    if(String(e.message||"").indexOf("404")>=0) toast(t("syncFailedNotFound"));
+    else toast(t("syncFailed")+" ("+e.message+")");
+  }
+}
+
+/* ---------- bracket logic ---------- */
+// Is the region of seeds feeding slot k at level L completely empty?
+function regionEmpty(L,k){
+  const s=state.bracket.seeds, span=Math.pow(2,L), start=k*span;
+  for(let i=start;i<start+span && i<s.length;i++) if(s[i]) return false;
+  return true;
+}
+// Who occupies slot k at level L? Level 0 = seeds. A player advances only by
+// winning a real match, OR by a bye (the opposing region is empty) - and a bye
+// only carries them one level, never several.
+function advancer(L,k){
+  const b=state.bracket;
+  if(L===0) return b.seeds[k]||null;
+  const iA=2*k, iB=2*k+1;
+  const aE=regionEmpty(L-1,iA), bE=regionEmpty(L-1,iB);
+  if(aE&&bE) return null;
+  if(bE) return advancer(L-1,iA); // a has a bye this round
+  if(aE) return advancer(L-1,iB); // b has a bye this round
+  return b.winners[(L-1)+"-"+k]||null; // real match: needs an explicit winner
+}
+function clearDownstream(r,m){
+  const b=state.bracket; let cm=m;
+  for(let rr=r+1; rr<b.numRounds; rr++){ cm=Math.floor(cm/2); delete b.winners[rr+"-"+cm]; if(b.scores) delete b.scores[rr+"-"+cm]; }
+}
+function setWinner(r,m,pid){
+  const b=state.bracket; const w=b.winners; if(!b.scores) b.scores={};
+  if(w[r+"-"+m]===pid){
+    delete w[r+"-"+m]; delete b.scores[r+"-"+m];
+  } else {
+    const prev=b.scores[r+"-"+m]||"";
+    const sc=prompt(t("scorePrompt"), prev);
+    if(sc===null) return; // user cancelled
+    w[r+"-"+m]=pid;
+    const v=(sc||"").trim();
+    if(v) b.scores[r+"-"+m]=v; else delete b.scores[r+"-"+m];
+  }
+  clearDownstream(r,m);
+  save(); renderBracket(); renderChampion(); toast(t("tUpdated"));
+}
+// Move a player to a specific first-round slot. Returns true if the draw changed.
+function placeInSlot(pid,target){
+  const b=state.bracket; if(!b||isNaN(target)) return false;
+  if(b.locked){ toast(t("tLockedMoveMsg")); return false; }
+  const s=b.seeds, cur=s.indexOf(pid);
+  if(cur===target) return false;
+  if(Object.keys(b.winners).length>0 && !confirm(t("cChangeClears"))) return false;
+  const occ=s[target];
+  if(occ){
+    if(cur>=0){ s[cur]=occ; s[target]=pid; }
+    else {
+      const e=s.indexOf(null);
+      if(e<0){ alert(tf("cNoEmptySlot",{name:((byId(occ)||{}).name||"?")})); return false; }
+      s[e]=occ; s[target]=pid;
+    }
+  } else {
+    if(cur>=0) s[cur]=null;
+    s[target]=pid;
+  }
+  b.winners={}; b.method="manual";
+  return true;
+}
+
+/* ---------- settings ---------- */
+function saveAllowance(){
+  const v=parseInt(document.getElementById("setAllowance").value,10);
+  if(isNaN(v)||v<0||v>100){ toast(t("tBadAllowance")); return; }
+  state.allowance=v; save(); renderAll(); toast(tf("tAllowanceSet",{n:v}));
+}
+function saveTitle(){
+  state.title=document.getElementById("setTitle").value.trim();
+  save(); renderAll(); toast(t("tTitleSaved"));
+}
+function saveRoundDate(r,val){ state.roundDates[r]=val; save(); renderBracket(); }
+function fmtDeadline(s){ if(!s) return ""; const d=new Date(s+"T00:00:00"); const loc=state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB"); return d.toLocaleDateString(loc,{day:"2-digit",month:"short"}); }
+function renderTitle(){
+  const t=state.title||"";
+  document.getElementById("tourTitleBracket").textContent=t;
+  document.getElementById("tourTitlePlayers").textContent=t;
+  const inp=document.getElementById("setTitle"); if(inp && document.activeElement!==inp) inp.value=t;
+}
+function renderRoundDates(){
+  const el=document.getElementById("roundDates"); const b=state.bracket;
+  if(!b){ el.innerHTML='<p class="muted" style="font-size:13px">Create a draw first, then set a deadline for each round.</p>'; return; }
+  let rows="";
+  for(let r=0;r<b.numRounds;r++){
+    rows+=`<div class="settings-row"><label style="margin:0;min-width:130px">${roundName(r,b.numRounds)}</label>
+      <input type="date" style="max-width:180px" value="${state.roundDates[r]||""}" onchange="saveRoundDate(${r},this.value)"></div>`;
+  }
+  el.innerHTML=rows;
+}
+function exportData(){
+  const payload = Object.assign({ profile: state.activeProfile, theme:state.theme, lang:state.lang, viewMode:state.viewMode, compact:state.compact }, profileData());
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  const safe=(state.activeProfile||"main").replace(/[^a-z0-9_-]/gi,"_");
+  a.download="golf-knockout-"+safe+"-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(a.href);
+  toast(t("tBackupDownloaded"));
+}
+function importData(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result); if(!d.players) throw new Error("bad");
+    const target = (typeof d.profile==="string" && d.profile.trim()) ? d.profile.trim() : state.activeProfile;
+    if(!confirm(tf("cReplaceProfileBackup",{profile:target}))) return;
+    if(!state.profiles.includes(target)) state.profiles.push(target);
+    state.activeProfile = target;
+    applyProfileData(d);
+    if(THEMES[d.theme]) state.theme = d.theme;
+    if(I18N[d.lang]) state.lang = d.lang;
+    if(d.viewMode==="split"||d.viewMode==="linear") state.viewMode = d.viewMode;
+    if(typeof d.compact==="boolean") state.compact = d.compact;
+    applyTheme(state.theme); applyLang(); save(); renderAll(); toast(t("tBackupRestored"));
+  }catch(e){ toast(t("tBadFile")); } };
+  r.readAsText(file); ev.target.value="";
+}
+function resetAll(){
+  if(!confirm(t("cDeleteAll1"))) return;
+  if(!confirm(t("cDeleteAll2"))) return;
+  // clear only the active profile's data; keep globals and other profiles
+  applyProfileData({});
+  save(); renderAll(); toast(t("tAllDeleted"));
+}
+
+/* ---------- render ---------- */
+let sortState={col:'playingHcp',dir:'asc'};
+function setSort(col){
+  if(sortState.col===col) sortState.dir = (sortState.dir==='asc'?'desc':'asc');
+  else { sortState.col=col; sortState.dir='asc'; }
+  renderPlayers();
+}
+function sortArrow(col){ return sortState.col===col ? (sortState.dir==='asc'?' ▲':' ▼') : ''; }
+function renderPlayers(){
+  document.getElementById("playerCount").textContent=state.players.length;
+  const el=document.getElementById("playersTable");
+  if(!state.players.length){ el.innerHTML='<div class="empty">'+t("noPlayers")+'</div>'; return; }
+  const dir=sortState.dir==='asc'?1:-1, col=sortState.col;
+  const sorted=state.players.slice().sort((a,b)=>{
+    if(col==='name') return dir*a.name.localeCompare(b.name,undefined,{sensitivity:'base'});
+    const av=(col==='hcpIndex')?(a.hcpIndex??Infinity):(a.playingHcp??Infinity);
+    const bv=(col==='hcpIndex')?(b.hcpIndex??Infinity):(b.playingHcp??Infinity);
+    return dir*(av-bv);
+  });
+  el.innerHTML='<table><thead><tr>'+
+      `<th class="sortable" onclick="setSort('name')">${t("labelName")}${sortArrow('name')}</th>`+
+      `<th class="sortable" onclick="setSort('hcpIndex')">${t("colIndex")}${sortArrow('hcpIndex')}</th>`+
+      `<th class="sortable" onclick="setSort('playingHcp')">${t("colPlaying")}${sortArrow('playingHcp')}</th>`+
+      '<th></th></tr></thead><tbody>'+
+    sorted.map(p=>`<tr>
+      <td class="name">${esc(p.name)}</td>
+      <td>${p.hcpIndex??"-"}</td>
+      <td><span class="pill">PH ${p.playingHcp??0}</span></td>
+      <td class="actions" style="margin-top:0">
+        <button class="btn ghost small" onclick="editPlayer('${p.id}')">${t("edit")}</button>
+        <button class="btn danger small" onclick="deletePlayer('${p.id}')">${t("remove")}</button>
+      </td></tr>`).join('')+'</tbody></table>';
+}
+
+let lastRenderedProfile = null;
+function renderDrawStats(){
+  const el=document.getElementById("drawStats");
+  const sel=document.getElementById("numRoundsSel");
+  const n=state.players.length;
+  const profileChanged = lastRenderedProfile !== state.activeProfile;
+  lastRenderedProfile = state.activeProfile;
+  // populate the rounds dropdown (1..8)
+  if(sel){
+    const prevRaw=parseInt(sel.value,10);
+    let opts="";
+    for(let r=1;r<=8;r++) opts+=`<option value="${r}">${r} ${r>1?t("roundsWord"):t("roundWord")} (${Math.pow(2,r)} ${t("slots")})</option>`;
+    sel.innerHTML=opts;
+    // priority: actual bracket size > user's in-progress choice (same profile) > natural rounds
+    let def;
+    if(state.bracket){ def = state.bracket.numRounds; }
+    else if(!profileChanged && !isNaN(prevRaw) && prevRaw>=1 && prevRaw<=8){ def = prevRaw; }
+    else { def = naturalRounds(n); }
+    sel.value = String(def);
+  }
+  if(n<2){ el.innerHTML='<p class="muted" style="font-size:13px">'+t("addPlayersFirst")+'</p>'; return; }
+  const chosen=sel&&sel.value?parseInt(sel.value,10):naturalRounds(n);
+  const size=Math.pow(2,chosen), byes=Math.max(0,size-n), tooMany=n>size;
+  el.innerHTML=`<div class="draw-stats">
+    <div class="s"><b>${n}</b>${t("statPlayers")}</div>
+    <div class="s"><b>${size}</b>${t("statSize")}</div>
+    <div class="s"><b>${chosen}</b>${t("statRounds")}</div>
+    <div class="s"><b>${byes}</b>${t("statByes")}</div>
+  </div>${tooMany?'<p class="muted" style="font-size:13px;color:var(--danger)">'+tf("tooMany",{n:chosen})+'</p>':''}`;
+}
+
+function dragPart(r,pos,hasPlayer){
+  if(r!==0) return ""; // only the opening round can be rearranged
+  if(state.bracket && state.bracket.locked) return ""; // locked draw cannot be dragged
+  let s=` data-pos="${pos}" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropSlot(event,${pos})"`;
+  if(hasPlayer) s+=` draggable="true" ondragstart="dragStart(event,${pos})" ondragend="dragLeave(event)"`;
+  return s;
+}
+// pid: player in this slot (or null). oppId: opponent player (or null).
+// thisEmpty/oppEmpty: whether each side's feeding region has no players.
+// winnerId: who advances from this match.
+function slotHTML(r,m,which,pid,oppId,thisEmpty,oppEmpty,winnerId,incomingScore){
+  const pos = 2*m + (which==="b"?1:0);
+  const d0 = (r===0);
+  const handle = (d0 && !(state.bracket && state.bracket.locked)) ? '&#9776;' : '';
+  if(!pid){
+    if(thisEmpty && !oppEmpty) return `<div class="slot bye"${dragPart(r,pos,false)}><span class="seed"></span><span class="pn">${t("bye")}</span></div>`;
+    return `<div class="slot tbd"${dragPart(r,pos,false)}><span class="seed"></span><span class="pn">${t("tbd")}</span></div>`;
+  }
+  const p=byId(pid);
+  const name = p?esc(p.name):"(removed)";
+  const ph = p?("PH "+(p.playingHcp??0)):"";
+  const scoreHTML = incomingScore?`<span class="score">${esc(incomingScore)}</span>`:'';
+  let cls="slot";
+  if(d0) cls+=" drag";
+  const isWin = winnerId===pid;
+  if(isWin) cls+=" winner"; else if(winnerId) cls+=" loser";
+  if(oppEmpty){ // opponent region empty -> this player gets a bye (auto, one round)
+    return `<div class="${cls} winner"${dragPart(r,pos,true)}><span class="seed">${handle}</span><span class="pn">${name}</span>${scoreHTML}<span class="ph">${ph}</span><span class="check">&#10003;</span></div>`;
+  }
+  const check = isWin?'<span class="check">&#10003;</span>':'<span class="check"></span>';
+  const clickable = oppId?`onclick="setWinner(${r},${m},'${pid}')"`:""; // only a real opponent is clickable
+  return `<div class="${cls}" ${clickable}${dragPart(r,pos,true)}><span class="seed">${handle}</span><span class="pn">${name}</span>${scoreHTML}<span class="ph">${ph}</span>${check}</div>`;
+}
+
+/* ---------- drag & drop (first round) ---------- */
+let dragSrc=null;
+function dragStart(e,pos){ dragSrc=pos; e.dataTransfer.effectAllowed="move"; try{ e.dataTransfer.setData("text/plain",String(pos)); }catch(_){} }
+function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect="move"; e.currentTarget.classList.add("dragover"); }
+function dragLeave(e){ e.currentTarget.classList.remove("dragover"); }
+function dropSlot(e,pos){
+  e.preventDefault(); e.currentTarget.classList.remove("dragover");
+  let src=dragSrc;
+  if(src===null){ const t=e.dataTransfer.getData("text/plain"); if(t!=="") src=parseInt(t,10); }
+  dragSrc=null;
+  if(src===null||isNaN(src)||src===pos) return;
+  swapSeeds(src,pos);
+}
+function swapSeeds(i,j){
+  const b=state.bracket; if(!b) return;
+  if(b.locked){ toast(t("tLockedDragMsg")); return; }
+  if(Object.keys(b.winners).length>0 && !confirm(t("cRearrangeClears"))) return;
+  const s=b.seeds; const tmp=s[i]; s[i]=s[j]; s[j]=tmp;
+  b.winners={}; b.method="manual";
+  save(); renderBracket(); renderChampion(); toast(t("tSwapped"));
+}
+
+/* ---------- print / save as PDF ---------- */
+function printBracket(){
+  if(!state.bracket){ toast(t("tCreateFirst")); return; }
+  const ph=document.getElementById("printHead");
+  const locale=state.lang==="nl"?"nl-BE":(state.lang==="fr"?"fr-BE":"en-GB");
+  const dt=new Date().toLocaleDateString(locale,{day:"2-digit",month:"long",year:"numeric"});
+  const ttl=state.title?("<b>"+esc(state.title)+"</b><br>"):"";
+  ph.innerHTML=ttl+tf("printLine",{n:state.players.length,a:state.allowance,d:dt});
+  window.print();
+}
+
+function toggleView(){ state.viewMode = (state.viewMode==="split"?"linear":"split"); save(); renderBracket(); }
+function toggleCompact(){ state.compact = !state.compact; save(); renderBracket(); }
+
+function renderRoundColumn(r, mStart, mCount){
+  const b=state.bracket;
+  let matches="";
+  for(let m=mStart; m<mStart+mCount; m++){
+    const iA=2*m, iB=2*m+1;
+    const aP=advancer(r,iA), bP=advancer(r,iB);
+    const aE=regionEmpty(r,iA), bE=regionEmpty(r,iB);
+    const winnerId=advancer(r+1,m);
+    let head=`M${m+1}`;
+    if(aP&&bP){ const s=strokesBetween(byId(aP)||{playingHcp:0},byId(bP)||{playingHcp:0}); head+=` <span class="str">&middot; ${s>0?(s+" "+t("strAbbr")):t("scratch")}</span>`; }
+    const aScore = (r>0 && b.scores) ? (b.scores[(r-1)+"-"+(2*m)]||"") : "";
+    const bScore = (r>0 && b.scores) ? (b.scores[(r-1)+"-"+(2*m+1)]||"") : "";
+    matches+=`<div class="match"><div class="match-head"><span>${head}</span></div>${slotHTML(r,m,"a",aP,bP,aE,bE,winnerId,aScore)}${slotHTML(r,m,"b",bP,aP,bE,aE,winnerId,bScore)}</div>`;
+  }
+  const dl=state.roundDates[r]?`<span class="deadline">&#128197; ${t("finishBy")} ${fmtDeadline(state.roundDates[r])}</span>`:"";
+  return `<div class="round"><div class="round-head">${roundName(r,b.numRounds)}<small>${t("round")} ${r+1}</small>${dl}</div><div class="matches">${matches}</div></div>`;
+}
+function renderBracket(){
+  const b=state.bracket;
+  const card=document.getElementById("bracketCard");
+  const empty=document.getElementById("bracketEmpty");
+  if(!b){ card.classList.add("hide"); empty.classList.remove("hide"); document.body.classList.remove("tv"); return; }
+  empty.classList.add("hide");
+  card.classList.remove("hide");
+  document.body.classList.toggle("tv", !!state.compact);
+  const lockBtn=document.getElementById("lockBtn"); if(lockBtn) lockBtn.textContent=b.locked?t("reopenDraw"):t("lockDraw");
+  const badge=document.getElementById("lockBadge"); if(badge) badge.innerHTML=b.locked?'<span class="lockpill">&#128274; '+t("locked")+'</span>':'';
+  const vb=document.getElementById("viewBtn"); if(vb) vb.textContent = state.viewMode==="split"?t("viewLinear"):t("viewSplit");
+  const cb=document.getElementById("compactBtn"); if(cb) cb.textContent = state.compact?t("viewNormal"):t("viewCompact");
+  const root=document.getElementById("bracket");
+  let html="";
+  if(state.viewMode==="split" && b.numRounds>=2){
+    const last=b.numRounds-1;
+    // left columns: rounds 0..last-1, upper half of matches
+    for(let r=0;r<last;r++){
+      const total=b.size/Math.pow(2,r+1);
+      html += renderRoundColumn(r, 0, total/2);
+    }
+    // center: final
+    html += renderRoundColumn(last, 0, 1);
+    // right columns: rounds last-1..0 (reversed), lower half
+    for(let r=last-1; r>=0; r--){
+      const total=b.size/Math.pow(2,r+1);
+      html += renderRoundColumn(r, total/2, total/2);
+    }
+  } else {
+    for(let r=0;r<b.numRounds;r++){
+      const total=b.size/Math.pow(2,r+1);
+      html += renderRoundColumn(r, 0, total);
+    }
+  }
+  root.innerHTML=html;
+}
+
+function renderChampion(){
+  const wrap=document.getElementById("champWrap");
+  const b=state.bracket;
+  if(!b){ wrap.innerHTML=""; return; }
+  const champId=advancer(b.numRounds,0);
+  if(champId && byId(champId)){
+    const finalScore=(b.scores||{})[(b.numRounds-1)+"-0"];
+    const sLine = finalScore ? `<div class="ws">${tf("wonFinal",{s:esc(finalScore)})}</div>` : "";
+    wrap.innerHTML=`<div class="champ"><span class="cup">&#127942;</span><div><div class="t">${t("champion")}</div><div class="n">${esc(byId(champId).name)}</div>${sLine}</div></div>`;
+  } else { wrap.innerHTML=""; }
+}
+
+function renderAll(){ renderLang(); renderThemes(); renderProfiles(); renderTitle(); renderPlayers(); renderDrawStats(); renderBracket(); renderChampion(); renderRoundDates(); renderPublish(); }
+
+/* ---------- init ---------- */
+load(); applyTheme(state.theme); applyLang(); renderAll();
+// async background check: is there a newer version online than what we have locally?
+checkStaleAndBanner();
+const _v=document.getElementById("appVersion"); if(_v) _v.textContent = "v"+APP_VERSION+" · "+APP_BUILD;
+</script>
+</body>
+</html>
