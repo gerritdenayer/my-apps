@@ -363,13 +363,16 @@
     ].join("\n");
   }
 
-  // Marker text on the track: the event name plus the "other" grouping dimension for context.
-  // Grouping by Cluster adds the entity; grouping by entity adds the cluster.
-  function markerText(e){
-    let t=e.name||"";
-    if(view.groupBy==="cluster"){ const en=S.eventEntityName(e); if(en) t+=` - ${en}`; }
-    else if(view.groupBy==="entity"){ t+=` - ${clusterOf(e)}`; }
-    return t;
+  // The bar/diamond shows the event name. The left row label shows the next level down from the
+  // current grouping (see subLabelFor), so the name is not repeated on both sides.
+  function markerText(e){ return e.name||""; }
+  function subLabelFor(e){
+    if(view.groupBy==="entity") return S.eventOwnerName(e)||"";
+    if(view.groupBy==="m1") return clusterOf(e);
+    if(view.groupBy==="owner") return S.eventEntityName(e)||"";
+    if(view.groupBy==="none") return clusterOf(e);
+    // cluster, type, kind -> show the entity as the deeper structural level
+    return S.eventEntityName(e)||"";
   }
 
   // Shared "has budget" marker: a small green euro badge used on bars and diamonds alike.
@@ -381,7 +384,7 @@
     row.className="tl-row"; row.style.width=(LABELW+g.trackW)+"px";
     const label=document.createElement("div");
     label.className="tl-rowlabel"; label.style.width=LABELW+"px";
-    label.textContent=e.name; label.title=tip;
+    label.textContent=subLabelFor(e); label.title=tip;
     row.appendChild(label);
 
     const track=document.createElement("div");
@@ -590,20 +593,19 @@
       <div class="row-3">
         <div><label>Start *</label><input id="c-start" type="date" value="${e.start||""}" /></div>
         <div><label>End</label><input id="c-end" type="date" value="${e.end||""}" /></div>
-        <div><label>Type (activity type) *</label>
-          <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
+        <div><label>Owner</label><select id="c-owner">${ownerOptions(e.ownerId||"")}</select></div>
       </div>
       <div class="row-3">
         <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
         <div><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
-        <div><label>Owner</label><select id="c-owner">${ownerOptions(e.ownerId||"")}</select></div>
-      </div>
-      <div class="row-3">
         <div><label>SVP</label>
           <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${e.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+      </div>
+      <div class="row-3">
         <div><label>Global campaign</label>
           <select id="c-global"><option value="">Select...</option>${(data.settings.globalCampaigns||[]).map(g=>`<option ${e.globalCampaignId===g.id?"selected":""} value="${g.id}">${S.escapeHtml(g.name)}</option>`).join("")}</select></div>
         <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
+        <div></div>
       </div>
       <label>Notes</label>
       <textarea id="c-info">${S.escapeHtml(e.info||"")}</textarea>
@@ -622,6 +624,12 @@
 
       <h3 style="margin:14px 0 4px">Budget *</h3>
       <p class="muted small" style="margin:0 0 8px">Every campaign needs a budget line. Either link existing budget line(s), or create a new line from this campaign's details.</p>
+      <div class="row-3">
+        <div><label>Type (activity type) *</label>
+          <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
+        <div></div>
+        <div></div>
+      </div>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
@@ -638,7 +646,7 @@
         </div>
         <div class="row-3">
           <div><label>Forecast gross (EUR)</label><input id="c-bfg" type="number" step="0.01" value="${bFG}" /></div>
-          <div><label>Forecast partner (EUR)</label><input id="c-bfp" type="number" step="0.01" value="${bFP}" /></div>
+          <div><label>Forecast partner (EUR)</label><input id="c-bfp" type="number" step="0.01" value="${bFP}" title="Auto-filled from the partner co-funding amounts below" /></div>
           <div><label>&nbsp;</label><div class="muted small" style="padding-top:8px">Net = gross - partner</div></div>
         </div>
         <div class="row-3">
@@ -769,6 +777,7 @@
       const m=ev.target.value;
       modal.querySelector("#c-bnew").hidden = (m!=="new");
       modal.querySelector("#c-bexisting").hidden = (m!=="existing");
+      if(m==="new") recomputePartnerBudget();
     };
 
     // Countries picker: group chips tick their members, search filters the list, clear/copy helpers.
@@ -797,10 +806,22 @@
       div.innerHTML=`
         <input type="text" list="c-partnerlist" placeholder="Partner name" value="${S.escapeHtml(p.name||"")}" />
         <input type="text" placeholder="Role (e.g. co-host, sponsor)" value="${S.escapeHtml(p.role||"")}" />
-        <input type="number" step="0.01" placeholder="Co-funding EUR" value="${p.coFunding!==undefined&&p.coFunding!==""?p.coFunding:""}" />
+        <input type="number" step="0.01" class="pf-cof" placeholder="Co-funding EUR" value="${p.coFunding!==undefined&&p.coFunding!==""?p.coFunding:""}" />
         <button class="tl-iconbtn" type="button" title="Remove">&times;</button>`;
-      div.querySelector(".tl-iconbtn").onclick=()=>div.remove();
+      div.querySelector(".pf-cof").oninput=recomputePartnerBudget;
+      div.querySelector(".tl-iconbtn").onclick=()=>{ div.remove(); recomputePartnerBudget(); };
       partnersBox.appendChild(div);
+    }
+    // Total partner co-funding drives the budget line's Forecast partner, so it is not typed twice.
+    function recomputePartnerBudget(){
+      const bfp=modal.querySelector("#c-bfp");
+      if(!bfp) return; // only when creating a new budget line
+      let sum=0, any=false;
+      partnersBox.querySelectorAll("input.pf-cof").forEach(inp=>{
+        const t=(inp.value||"").trim();
+        if(t!==""){ const v=parseFloat(t); if(!isNaN(v)){ sum+=v; any=true; } }
+      });
+      if(any) bfp.value=sum;
     }
     function contentRow(c){
       c=c||{label:"",url:""};
@@ -814,6 +835,7 @@
     }
     (e.partners||[]).forEach(partnerRow);
     (e.content||[]).forEach(contentRow);
+    recomputePartnerBudget();
     modal.querySelector("#c-addpartner").onclick=()=>partnerRow();
     modal.querySelector("#c-addcontent").onclick=()=>contentRow();
 

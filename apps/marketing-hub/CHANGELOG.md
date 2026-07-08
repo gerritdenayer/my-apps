@@ -1,5 +1,19 @@
 # Changelog
 
+## [v3.29] - 2026-07-03 - Campaign form tidy-up and timeline labels
+
+### Changed
+- Campaign / event form: Activity type moved out of the event section into the Budget part,
+  where it belongs. The event top now holds only event fields (name, kind, dates, owner,
+  organising entity/cluster, SVP, global campaign, campaign code, countries, notes, partners,
+  content).
+- Partner co-funding now fills the budget line automatically: enter co-funding on a partner line
+  and it adds up into the budget line's Forecast partner, so you do not type it twice. Still
+  editable.
+- Timeline: the event name no longer shows twice. The bar shows the event name, and the left
+  label now shows the next level down from the grouping (grouping by Cluster shows the Entity
+  there, by Entity shows the Owner, and so on).
+
 ## [v3.28] - 2026-07-03 - Fix: deleted rows reappearing after publish
 
 ### Fixed
