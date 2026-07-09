@@ -1,0 +1,3090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1:1 Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --border: #e4e7ec;
+      --text: #101828;
+      --text-muted: #667085;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --radius: 10px;
+
+      --sort-bg:    #f1f5f9; --sort-text:    #475569; --sort-border:    #cbd5e1; --sort-dot:    #94a3b8;
+      --ask-bg: #fffbeb; --ask-text: #92400e; --ask-border: #fde68a; --ask-dot: #f59e0b;
+      --follow-bg:   #eff6ff; --follow-text:   #1e3a8a; --follow-border:   #bfdbfe; --follow-dot:   #3b82f6;
+      --done-bg:  #f0fdf4; --done-text:  #14532d; --done-border:  #bbf7d0; --done-dot:  #22c55e;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ─── Header ──────────────────────────────────────── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; white-space: nowrap; }
+    .logo em { color: var(--primary); font-style: normal; }
+    .header-spacer { flex: 1; }
+
+    .toggle-group {
+      display: flex;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+      border: 1px solid var(--border);
+    }
+
+    .toggle-btn {
+      padding: 5px 14px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .toggle-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* ─── Buttons ─────────────────────────────────────── */
+    .btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-ghost    { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover  { background: var(--bg); color: var(--text); }
+    .btn-danger   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+    /* ─── Board ───────────────────────────────────────── */
+    .board {
+      padding: 24px;
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      min-height: calc(100vh - 57px);
+      align-items: flex-start;
+      padding-bottom: 48px;
+    }
+
+    /* ─── Column ──────────────────────────────────────── */
+    .column { flex: 0 0 280px; }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 2px 12px;
+    }
+
+    .col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .col-title {
+      font-size: 12px;
+      font-weight: 700;
+      flex: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .col-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--border);
+      color: var(--text-muted);
+    }
+
+    .col-body { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ─── Card ────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.09);
+    }
+
+    .card.dragging {
+      opacity: 0.35;
+      transform: rotate(1.5deg) scale(0.97);
+      box-shadow: none;
+      cursor: grabbing;
+    }
+
+    .card[draggable="true"] { cursor: grab; }
+
+    .col-body.drag-over {
+      background: rgba(99,102,241,0.05);
+      border-radius: var(--radius);
+      outline: 2px dashed var(--primary);
+      outline-offset: 4px;
+      min-height: 60px;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .card-icons { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+    .icon-note { font-size: 12px; opacity: 0.45; cursor: default; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    /* ─── Chips ───────────────────────────────────────── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: opacity 0.1s, transform 0.1s;
+      user-select: none;
+    }
+
+    .chip:hover { opacity: 0.72; transform: scale(1.04); }
+    .chip.to-sort    { background: var(--sort-bg);    color: var(--sort-text);    border-color: var(--sort-border); }
+    .chip.to-ask { background: var(--ask-bg); color: var(--ask-text); border-color: var(--ask-border); }
+    .chip.to-follow-up   { background: var(--follow-bg);   color: var(--follow-text);   border-color: var(--follow-border); }
+    .chip.done    { background: var(--done-bg);  color: var(--done-text);  border-color: var(--done-border); }
+
+    /* ─── Status pill (person view) ───────────────────── */
+    .spill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      user-select: none;
+      white-space: nowrap;
+      transition: opacity 0.1s;
+    }
+
+    .spill:hover { opacity: 0.72; }
+    .spill.to-sort    { background: var(--sort-bg);    color: var(--sort-text);    border-color: var(--sort-border); }
+    .spill.to-ask { background: var(--ask-bg); color: var(--ask-text); border-color: var(--ask-border); }
+    .spill.to-follow-up   { background: var(--follow-bg);   color: var(--follow-text);   border-color: var(--follow-border); }
+    .spill.done    { background: var(--done-bg);  color: var(--done-text);  border-color: var(--done-border); }
+
+    /* ─── Empty state ─────────────────────────────────── */
+    .empty {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* ─── Welcome screen ──────────────────────────────── */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+      padding: 60px 24px;
+      color: var(--text-muted);
+    }
+
+    .welcome-icon { font-size: 52px; }
+    .welcome h2 { font-size: 20px; font-weight: 800; color: var(--text); }
+    .welcome p { font-size: 13px; max-width: 380px; line-height: 1.6; }
+    .welcome-btns { display: flex; gap: 8px; margin-top: 8px; }
+
+    /* ─── Modal ───────────────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(16,24,40,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    }
+
+    .modal-lg { max-width: 560px; }
+
+    .mhd {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      border-radius: 16px 16px 0 0;
+      z-index: 1;
+    }
+
+    .mhd-title { font-size: 15px; font-weight: 700; }
+
+    .mhd-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      transition: background 0.1s;
+    }
+
+    .mhd-close:hover { background: var(--bg); }
+
+    .mbody {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mfoot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mfoot-spacer { flex: 1; }
+
+    /* ─── Form ────────────────────────────────────────── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .field-label em { font-style: normal; font-weight: 400; }
+
+    .field-input, .field-textarea {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field-input:focus, .field-textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .field-input.error { border-color: #f87171; }
+    .field-textarea { resize: vertical; min-height: 72px; }
+
+    /* ─── People toggles (subject form) ───────────────── */
+    .people-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .ptoggle {
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface);
+      transition: all 0.12s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ptoggle.on {
+      border-color: var(--primary);
+      background: rgba(99,102,241,0.07);
+      color: var(--primary);
+    }
+
+    .pcheck {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      border: 1.5px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+    }
+
+    /* ─── Assignment rows (detail modal) ──────────────── */
+    .asgn-list { display: flex; flex-direction: column; gap: 7px; }
+
+    .asgn-row {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .asgn-row-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .asgn-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .asgn-btns { display: flex; gap: 4px; }
+
+    /* ─── History toggle ──────────────────────────────── */
+    .asgn-hist-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 2px 5px;
+      border-radius: 4px;
+      transition: all 0.1s;
+      white-space: nowrap;
+    }
+    .asgn-hist-toggle:hover { background: var(--border); color: var(--text); }
+
+    /* ─── History timeline ────────────────────────────── */
+    .asgn-history {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 4px 2px 4px;
+      border-top: 1px solid var(--border);
+    }
+    .asgn-history.open { display: flex; }
+
+    .hist-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .hist-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .hist-label { font-weight: 600; color: var(--text); }
+    .hist-date  { font-size: 10px; }
+    .hist-cap {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--text-muted); padding: 2px 0 1px;
+    }
+
+    .asgn-btn {
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface);
+      color: var(--text-muted);
+      transition: all 0.12s;
+    }
+
+    .asgn-btn:hover { opacity: 0.8; }
+    .asgn-btn.act-to-sort    { background: var(--sort-bg);    color: var(--sort-text);    border-color: var(--sort-border); }
+    .asgn-btn.act-to-ask { background: var(--ask-bg); color: var(--ask-text); border-color: var(--ask-border); }
+    .asgn-btn.act-to-follow-up   { background: var(--follow-bg);   color: var(--follow-text);   border-color: var(--follow-border); }
+    .asgn-btn.act-done    { background: var(--done-bg);  color: var(--done-text);  border-color: var(--done-border); }
+
+    /* ─── Notes display block ─────────────────────────── */
+    .notes-block {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #78350f;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    /* ─── People list (management modal) ─────────────── */
+    .plist { display: flex; flex-direction: column; gap: 7px; }
+
+    .pitem {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    .pitem input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 500;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+    }
+
+    .pitem input:focus { background: white; border-radius: 4px; padding: 2px 4px; }
+
+    .pitem-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 15px;
+      padding: 3px 5px;
+      border-radius: 5px;
+      transition: all 0.1s;
+    }
+
+    .pitem-del:hover { color: #dc2626; background: #fee2e2; }
+
+    .add-row { display: flex; gap: 8px; }
+    .add-row .field-input { flex: 1; }
+
+    /* ─── Toast ───────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--text);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 8px;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ─── Scrollbar ───────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+    /* ─── Filter bar ─────────────────────────────────── */
+    .filter-bar {
+      background: rgba(99,102,241,0.08);
+      border-bottom: 1px solid rgba(99,102,241,0.2);
+      padding: 8px 24px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      position: sticky;
+      top: 57px;
+      z-index: 40;
+    }
+
+    .filter-bar.active { display: flex; }
+
+    .filter-bar-label { color: var(--text-muted); }
+
+    .filter-bar-name {
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .filter-bar-spacer { flex: 1; }
+
+    .filter-bar-clear {
+      background: none;
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 6px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .filter-bar-clear:hover { background: rgba(99,102,241,0.1); }
+
+    /* ─── Person focus modal ─────────────────────────── */
+    .modal-focus { max-width: 540px; }
+
+    .pf-section { margin-bottom: 4px; }
+
+    .pf-section-hd {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 2px 8px;
+    }
+
+    .pf-section-hd span:first-of-type {
+      flex: 1;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .pf-rows { display: flex; flex-direction: column; gap: 6px; }
+
+    .pf-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: box-shadow 0.12s, transform 0.12s;
+    }
+
+    .pf-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.07); transform: translateY(-1px); }
+
+    .pf-row-title { flex: 1; font-size: 13px; font-weight: 600; line-height: 1.4; }
+
+    /* ─── Move modal ──────────────────────────────────── */
+    .move-person-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      user-select: none;
+    }
+
+    .move-person-row.checked {
+      border-color: var(--primary);
+      background: rgba(99,102,241,0.05);
+    }
+
+    .move-person-row .mcheck {
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+
+    .move-person-row.checked .mcheck {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .move-person-name { flex: 1; font-size: 13px; font-weight: 500; }
+
+    .move-arrow {
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ─── Email drop hint (small, non-blocking) ── */
+    .drop-hint {
+      position: fixed;
+      top: 14px; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 10px;
+      background: var(--primary); color: #fff;
+      padding: 10px 18px; border-radius: 999px;
+      box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+      z-index: 9000; pointer-events: none;
+      font-size: 14px; font-weight: 600;
+    }
+    .drop-hint.active { display: flex; }
+    .drop-hint-icon { font-size: 18px; }
+
+    /* ─── Import Email modal ────────────────────── */
+    .email-drop {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 22px 16px;
+      text-align: center;
+      color: var(--text-muted);
+      transition: border-color .15s, background .15s;
+    }
+    .email-drop.over { border-color: var(--primary); background: rgba(99,102,241,0.07); color: var(--primary); }
+    .email-drop-icon { font-size: 30px; }
+    .email-drop-title { font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .email-sep {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text-muted); font-size: 11px; margin: 12px 0;
+    }
+    .email-sep::before, .email-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .email-paste {
+      width: 100%; min-height: 90px; resize: vertical;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 9px 11px; font-size: 13px; font-family: inherit; box-sizing: border-box;
+    }
+    .email-paste:focus { outline: none; border-color: var(--primary); }
+    .email-help { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 10px; }
+
+    /* ─── Widget / Compact mode ──────────────────────── */
+    body.compact .header {
+      padding: 6px 12px;
+      gap: 6px;
+    }
+    body.compact .logo { font-size: 14px; }
+    body.compact .toggle-group { padding: 2px; }
+    body.compact .toggle-btn { padding: 3px 8px; font-size: 11px; }
+    body.compact .btn { padding: 4px 8px; font-size: 11px; gap: 4px; }
+    body.compact .btn-sm { padding: 3px 7px; font-size: 10px; }
+
+    body.compact .filter-bar { padding: 4px 12px; font-size: 11px; }
+
+    /* ─── Quick-add bar (email → task) ───────── */
+    .quickadd-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 24px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .quickadd-icon { font-size: 15px; flex-shrink: 0; }
+    .quickadd-input {
+      flex: 1; min-width: 0; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 7px 11px; font-size: 13px; font-family: inherit;
+    }
+    .quickadd-input:focus { outline: none; border-color: var(--primary); }
+    .quickadd-target { font-size: 12px; color: var(--primary); font-weight: 600; white-space: nowrap; }
+    body.compact .quickadd-bar { padding: 4px 12px; }
+    body.compact .quickadd-input { padding: 4px 8px; font-size: 12px; }
+
+    body.compact .board { padding: 10px; gap: 10px; min-height: calc(100vh - 38px); padding-bottom: 20px; }
+    body.compact .column { flex: 0 0 210px; }
+    body.compact .col-header { padding: 4px 2px 6px; gap: 5px; }
+    body.compact .col-dot { width: 7px; height: 7px; }
+    body.compact .col-title { font-size: 10px; letter-spacing: 0.4px; }
+    body.compact .col-badge { font-size: 9px; padding: 1px 6px; }
+    body.compact .col-body { gap: 6px; }
+
+    body.compact .card { padding: 7px 9px; border-radius: 7px; }
+    body.compact .card-top { margin-bottom: 5px; gap: 5px; }
+    body.compact .card-title { font-size: 11px; line-height: 1.35; }
+    body.compact .icon-note { font-size: 10px; }
+    body.compact .chips { gap: 3px; }
+    body.compact .chip { padding: 2px 6px; font-size: 9px; }
+    body.compact .spill { padding: 2px 6px; font-size: 9px; gap: 2px; }
+
+    body.compact .empty { padding: 14px 10px; font-size: 10px; border-width: 1px; }
+    body.compact .welcome { padding: 30px 16px; gap: 8px; }
+    body.compact .welcome-icon { font-size: 32px; }
+    body.compact .welcome h2 { font-size: 15px; }
+    body.compact .welcome p { font-size: 11px; }
+
+    body.compact .modal { border-radius: 10px; }
+    body.compact .mhd { padding: 10px 14px 8px; }
+    body.compact .mbody { padding: 14px; }
+
+    /* Widget toggle button style */
+    .widget-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      transition: all 0.15s;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+    .widget-toggle:hover { background: var(--bg); color: var(--text); }
+    .widget-toggle.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    body.compact .widget-toggle { font-size: 12px; padding: 3px 6px; }
+
+    /* ─── 1:1 meeting mode (live session) ──────────────── */
+    .modal-session { max-width: 560px; }
+
+    .sess-progress-wrap { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .sess-bar-track { flex: 1; height: 6px; border-radius: 99px; background: var(--border); overflow: hidden; }
+    .sess-bar-fill { height: 100%; background: var(--primary); transition: width 0.25s; }
+    .sess-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+    .sess-list { display: flex; flex-direction: column; gap: 7px; }
+    .sess-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border: 1.5px solid var(--border);
+      border-radius: 9px; background: var(--surface);
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .sess-row.treated { background: var(--bg); }
+    .sess-check {
+      background: none; border: none; cursor: pointer; font-size: 19px; line-height: 1;
+      color: var(--text-muted); padding: 0; margin-top: 1px; flex-shrink: 0;
+    }
+    .sess-row.treated .sess-check { color: var(--done-dot); }
+    .sess-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .sess-title { font-size: 13px; font-weight: 600; line-height: 1.4; }
+    .sess-row.treated .sess-title { text-decoration: line-through; color: var(--text-muted); }
+    .sess-notes-toggle {
+      align-self: flex-start; background: none; border: none; cursor: pointer;
+      font-size: 10px; color: var(--text-muted); padding: 0;
+    }
+    .sess-notes-toggle:hover { color: var(--text); }
+    .sess-notes {
+      display: none; font-size: 12px; color: #78350f; background: #fffbeb;
+      border: 1px solid #fde68a; border-radius: 6px; padding: 8px 10px;
+      white-space: pre-wrap; line-height: 1.5;
+    }
+    .sess-notes.open { display: block; }
+    .sess-row .spill { flex-shrink: 0; cursor: pointer; margin-top: 1px; }
+
+    .sess-choice { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .sess-choice-q { font-size: 11px; color: var(--text-muted); }
+    .sess-choice-btn {
+      padding: 4px 10px; border-radius: 7px; border: 1.5px solid var(--border);
+      background: var(--surface); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .sess-choice-btn.to-follow-up  { background: var(--follow-bg);  color: var(--follow-text);  border-color: var(--follow-border); }
+    .sess-choice-btn.done { background: var(--done-bg); color: var(--done-text); border-color: var(--done-border); }
+    .sess-choice-btn:hover { opacity: 0.82; }
+    .sess-cancel { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 2px 4px; }
+
+    .sess-seg { display: flex; border: 1.5px solid var(--border); border-radius: 7px; overflow: hidden; flex-shrink: 0; }
+    .sess-seg button {
+      padding: 4px 9px; border: none; background: var(--surface);
+      font-size: 11px; font-weight: 600; cursor: pointer; color: var(--text-muted); white-space: nowrap;
+    }
+    .sess-seg button + button { border-left: 1.5px solid var(--border); }
+    .sess-seg button.to-follow-up.on  { background: var(--follow-bg);  color: var(--follow-text); }
+    .sess-seg button.done.on { background: var(--done-bg); color: var(--done-text); }
+    .sess-seg button:hover { background: var(--bg); }
+
+    /* ─── Person picker ──────────────────────────── */
+    .pick-list { display: flex; flex-direction: column; gap: 7px; }
+    .pick-row {
+      display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 9px; background: var(--surface);
+      cursor: pointer; transition: border-color 0.12s, transform 0.12s;
+    }
+    .pick-row:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .pick-avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(99,102,241,0.1); color: var(--primary);
+      display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    }
+    .pick-name { font-size: 13px; font-weight: 600; }
+    .pick-sub { font-size: 11px; color: var(--text-muted); }
+    .pick-go { font-style: normal; color: var(--primary); font-size: 13px; }
+
+    /* ─── Meetings feed (blocks by date) ──────────────── */
+    .board.feed { display: block; padding-top: 24px; }
+    .sessions-feed { display: flex; flex-direction: column; gap: 12px; max-width: 560px; margin: 0 auto; }
+    .sessions-date {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: capitalize; letter-spacing: 0.3px; padding: 8px 2px 2px;
+    }
+    .session-block {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .session-block.in-progress { border-color: var(--primary); }
+    .session-block-hd {
+      display: flex; align-items: center; gap: 11px; padding: 11px 14px;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+    }
+    .session-block-name { font-size: 14px; font-weight: 600; }
+    .session-block-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .session-block-body { padding: 9px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .session-entry { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+    .session-entry-title { flex: 1; }
+    .spill.mini { font-size: 10px; padding: 1px 7px; }
+    .session-empty { font-size: 12px; color: var(--text-muted); padding: 2px 0; }
+    .session-block-foot { padding: 0 14px 12px; }
+
+    /* ─── In-progress meeting banner ─────────────────────── */
+    #resume-slot:empty { display: none; }
+    .resume-banner {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(239,68,68,0.07); border-bottom: 1px solid rgba(239,68,68,0.2);
+      padding: 8px 24px; font-size: 13px;
+      position: sticky; top: 57px; z-index: 39;
+    }
+    .resume-pulse {
+      width: 9px; height: 9px; border-radius: 50%; background: #ef4444; flex-shrink: 0;
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    body.compact .resume-banner { padding: 4px 12px; font-size: 11px; }
+
+  </style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="header">
+  <div class="logo">1:1 <em>Manager</em></div>
+  <div class="header-spacer"></div>
+  <div class="toggle-group">
+    <button class="toggle-btn active" id="btn-by-status" onclick="setView('status')">📋 By Status</button>
+    <button class="toggle-btn" id="btn-by-person" onclick="setView('person')">👥 By Person</button>
+    <button class="toggle-btn" id="btn-by-sessions" onclick="setView('sessions')">🗓️ Meetings</button>
+  </div>
+  <button class="btn btn-ghost" id="btn-sync" onclick="openSyncModal()">🔗 Sync</button>
+  <button class="btn btn-ghost" onclick="exportData()">⬇ Export</button>
+  <button class="btn btn-ghost" onclick="triggerImport()">⬆ Import</button>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+  <button class="btn btn-ghost" onclick="openEmailModal()">📧 Email</button>
+  <button class="btn btn-ghost" onclick="openPeopleModal()">⚙️ People</button>
+  <button class="btn btn-ghost" id="btn-start-session" onclick="startSessionEntry()">▶ Start a 1:1</button>
+  <button class="btn btn-primary" onclick="openSubjectModal()">＋ New Topic</button>
+  <button class="widget-toggle" id="widget-toggle" onclick="toggleCompact()" title="Compact / widget mode">⊟</button>
+</header>
+
+<!-- ══════════ FILTER BAR ══════════ -->
+<div class="filter-bar" id="filter-bar">
+  <span class="filter-bar-label">👤 Filtered view:</span>
+  <span class="filter-bar-name" id="filter-bar-name"></span>
+  <span class="filter-bar-spacer"></span>
+  <button class="filter-bar-clear" onclick="clearPersonFilter()">✕ Show all</button>
+</div>
+
+<!-- ══════════ QUICK ADD (email → task) ══════════ -->
+<div class="quickadd-bar">
+  <span class="quickadd-icon">⚡</span>
+  <input type="text" id="quickadd-input" class="quickadd-input"
+         placeholder="Paste an email subject (or type a topic) then press Enter…"
+         onkeydown="if(event.key==='Enter')quickAdd()">
+  <span class="quickadd-target" id="quickadd-target"></span>
+  <button class="btn btn-primary btn-sm" onclick="quickAdd()">Add</button>
+</div>
+
+<!-- ══════════ SÉANCE EN COURS ══════════ -->
+<div id="resume-slot"></div>
+
+<!-- ══════════ BOARD ══════════ -->
+<main class="board" id="board"></main>
+
+<!-- ══════════ DROP OVERLAY ══════════ -->
+<!-- Non-blocking hint shown while dragging an email -->
+<div class="drop-hint" id="drop-hint">
+  <span class="drop-hint-icon">📧</span>
+  <span>Drop the email or text here to create a topic</span>
+</div>
+
+<!-- .eml file input (reliable method, all browsers) -->
+<input type="file" id="eml-file" accept=".eml,message/rfc822" style="display:none" onchange="onEmlFilePicked(this)">
+
+<!-- ══════════ MODAL: Selective Move ══════════ -->
+<div class="overlay" id="m-move" style="display:none" onclick="if(event.target===this)closeModal('m-move')">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mhd-title" id="m-move-title">Move to…</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px" id="m-move-sub"></div>
+      </div>
+      <button class="mhd-close" onclick="closeModal('m-move')">✕</button>
+    </div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:-4px">
+        Choose the people to move:
+      </div>
+      <div id="m-move-people" style="display:flex;flex-direction:column;gap:7px"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost btn-sm" onclick="toggleAllMoveRows()">Select all / none</button>
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('m-move')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="applyMove()">Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Sync ══════════ -->
+<div class="overlay" id="m-sync" style="display:none" onclick="if(event.target===this)closeModal('m-sync')">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mhd-title">🔗 Sync between your Macs</div>
+      <button class="mhd-close" onclick="closeModal('m-sync')">✕</button>
+    </div>
+    <div class="mbody" id="sync-body"></div>
+    <div class="mfoot">
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('m-sync')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TOAST ══════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════ MODAL: Topic (create / edit) ══════════ -->
+<div class="overlay" id="m-subject" style="display:none" onclick="if(event.target===this)closeModal('m-subject')">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mhd-title" id="m-subject-title">New Topic</div>
+      <button class="mhd-close" onclick="closeModal('m-subject')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="field">
+        <label class="field-label">Title</label>
+        <input class="field-input" id="f-title" placeholder="e.g., Q2 Goals, Dev Plan, Feedback…"
+          onkeydown="if(event.key==='Enter')saveSubject()">
+      </div>
+      <div class="field">
+        <label class="field-label">Notes <em>(optional)</em></label>
+        <textarea class="field-textarea" id="f-notes" placeholder="Context, questions to ask…"></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">People involved</label>
+        <div class="people-grid" id="f-people"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-danger btn-sm" id="btn-del-subject" onclick="confirmDeleteSubject()" style="display:none">🗑 Delete</button>
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-ghost btn-sm" onclick="cancelSubjectModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveSubject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Topic Detail ══════════ -->
+<div class="overlay" id="m-detail" style="display:none" onclick="if(event.target===this)closeModal('m-detail')">
+  <div class="modal modal-lg">
+    <div class="mhd">
+      <div class="mhd-title" id="m-detail-title"></div>
+      <button class="mhd-close" onclick="closeModal('m-detail')">✕</button>
+    </div>
+    <div class="mbody">
+      <div id="d-notes-wrap" style="display:none">
+        <div class="field-label" style="margin-bottom:8px">Notes</div>
+        <div class="notes-block" id="d-notes"></div>
+      </div>
+      <div id="d-created" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:none"></div>
+      <div>
+        <div class="field-label" style="margin-bottom:10px">Status by person</div>
+        <div class="asgn-list" id="d-asgns"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost btn-sm" onclick="editFromDetail()">✏️ Edit</button>
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('m-detail')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Person Focus ══════════ -->
+<div class="overlay" id="m-focus" style="display:none" onclick="if(event.target===this)closeModal('m-focus')">
+  <div class="modal modal-focus">
+    <div class="mhd">
+      <div>
+        <div class="mhd-title">👤 <span id="pf-name"></span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px" id="pf-count"></div>
+      </div>
+      <button class="mhd-close" onclick="closeModal('m-focus')">✕</button>
+    </div>
+    <div class="mbody" id="pf-body"></div>
+    <div class="mfoot">
+      <button class="btn btn-ghost btn-sm" onclick="newSubjectForFocusPerson()">＋ New Topic</button>
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('m-focus')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Manage People ══════════ -->
+<div class="overlay" id="m-people" style="display:none" onclick="if(event.target===this)closeModal('m-people')">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mhd-title">Manage People</div>
+      <button class="mhd-close" onclick="closeModal('m-people')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="plist" id="plist"></div>
+      <div class="add-row">
+        <input class="field-input" id="new-person" placeholder="Team member's name…"
+          onkeydown="if(event.key==='Enter')addPerson()">
+        <button class="btn btn-primary btn-sm" onclick="addPerson()">Add</button>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('m-people')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: 1:1 Meeting (live) ══════════ -->
+<div class="overlay" id="m-session" style="display:none" onclick="if(event.target===this)cancelLiveSession()">
+  <div class="modal modal-session">
+    <div class="mhd" style="align-items:flex-start">
+      <div style="flex:1">
+        <div class="mhd-title" id="sess-name"></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px" id="sess-date"></div>
+        <div class="sess-progress-wrap">
+          <div class="sess-bar-track"><div class="sess-bar-fill" id="sess-bar" style="width:0%"></div></div>
+          <span class="sess-count" id="sess-count">0/0 covered</span>
+        </div>
+      </div>
+      <button class="mhd-close" onclick="cancelLiveSession()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="sess-list" id="sess-list"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost btn-sm" onclick="addSubjectToSession()">＋ Add a Topic</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteInProgressSession()" title="Cancel without saving">🗑 Cancel</button>
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="endSession()">✓ End Meeting</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Choose Person ══════════ -->
+<div class="overlay" id="m-pick" style="display:none" onclick="if(event.target===this)closeModal('m-pick')">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mhd-title">Start a 1:1</div>
+      <button class="mhd-close" onclick="closeModal('m-pick')">✕</button>
+    </div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:-4px">Who are you meeting with?</div>
+      <div class="pick-list" id="pick-person-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Import Email ══════════ -->
+<div class="overlay" id="m-email" style="display:none" onclick="if(event.target===this)closeModal('m-email')">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mhd-title">Import an Email</div>
+      <button class="mhd-close" onclick="closeModal('m-email')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="email-drop" id="email-drop">
+        <div class="email-drop-icon">📧</div>
+        <div class="email-drop-title">Drop an .eml file here</div>
+      </div>
+      <div style="text-align:center;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('eml-file').click()">📁 Choose an .eml file</button>
+      </div>
+      <div class="email-sep">or paste the text</div>
+      <textarea class="email-paste" id="email-paste" placeholder="Paste the subject and body of the email here…"></textarea>
+      <div style="text-align:right;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="createFromPaste()">Create Topic</button>
+      </div>
+      <div class="email-help">
+        Tip: if drag-and-drop doesn't work in your browser, drag the email from Outlook to your desktop (this creates an .eml file), then click "Choose a file". Or simply copy and paste the content — the first line becomes the title.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// DATA MODEL
+// ════════════════════════════════════════════════════
+// state.people   = [{ id, name }]
+// state.subjects = [{ id, title, notes, assignments: { personId: { status } } }]
+// state.sessions = [{ id, personId, startedAt, endedAt, date:'YYYY-MM-DD', treated:[subjectId], entries:[{subjectId,title,status}] }]
+// statuses: 'to-ask' | 'to-follow-up' | 'done'
+
+const STORAGE_KEY = '1on1-v2';
+const PERSONAL_ID = '__personal__'; // fixed pseudo-person used for the "Personal To-Dos" lane
+let state = { view: 'status', people: [], subjects: [], sessions: [] };
+let _editId    = null;   // topic currently being edited
+let _detailId  = null;   // topic shown in the detail modal
+let _fromEmail = false;  // true when the modal was opened from a dropped email
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// Real direct reports only (excludes the fixed "Personal To-Dos" lane).
+function realPeople() { return state.people.filter(p => !p.special); }
+
+// Any status code ever used by this app (old French codes, partial-English
+// codes from earlier exports, or the current canonical codes) maps here, so
+// old backups and old browser data are never lost or blanked out.
+const STATUS_ALIASES = {
+  'a-trier': 'to-sort',    'to-sort': 'to-sort',
+  'a-demander': 'to-ask',  'to-ask': 'to-ask',
+  'a-suivre': 'to-follow-up', 'to-follow-up': 'to-follow-up', 'follow-up': 'to-follow-up', 'suivre': 'to-follow-up',
+  'termine': 'done',       'done': 'done',
+};
+function migrateStatus(s) { return STATUS_ALIASES[s] || 'to-ask'; }
+
+// Normalizes freshly-loaded data: fixes up any legacy status codes and makes
+// sure the fixed "Personal To-Dos" lane exists and stays first in the list.
+function migrateState() {
+  (state.subjects || []).forEach(sub => {
+    if (!sub.assignments) return;
+    Object.values(sub.assignments).forEach(a => {
+      if (!a) return;
+      if (a.status) a.status = migrateStatus(a.status);
+      if (Array.isArray(a.history)) a.history.forEach(h => { if (h && h.status) h.status = migrateStatus(h.status); });
+    });
+  });
+  (state.sessions || []).forEach(sess => {
+    (sess.entries || []).forEach(e => { if (e && e.status) e.status = migrateStatus(e.status); });
+  });
+
+  if (!Array.isArray(state.people)) state.people = [];
+  const pi = state.people.findIndex(p => p.id === PERSONAL_ID);
+  if (pi === -1) {
+    state.people.unshift({ id: PERSONAL_ID, name: 'Personal To-Dos', special: true });
+  } else if (pi > 0) {
+    const [p] = state.people.splice(pi, 1);
+    state.people.unshift(p);
+  }
+}
+
+function load() {
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) Object.assign(state, JSON.parse(s)); } catch {}
+  if (!Array.isArray(state.sessions)) state.sessions = [];
+  if (!Array.isArray(state.people))   state.people   = [];
+  if (!Array.isArray(state.subjects)) state.subjects = [];
+  migrateState();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // persist the migrated codes right away
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleFileSync(); // write-through to the connected sync file, if any (defined below)
+}
+
+// ════════════════════════════════════════════════════
+// STATUS CONFIG
+// ════════════════════════════════════════════════════
+const S = {
+  'to-sort':    { label: 'To Sort',    dot: 'var(--sort-dot)',    next: 'to-ask',  icon: '⋯' },
+  'to-ask': { label: 'To Ask', dot: 'var(--ask-dot)', next: 'to-follow-up',    icon: '◎' },
+  'to-follow-up':   { label: 'To Follow Up',   dot: 'var(--follow-dot)',   next: 'done',     icon: '⟳' },
+  'done':    { label: 'Done',    dot: 'var(--done-dot)',  next: 'to-sort',     icon: '✓' },
+};
+const ORDER = ['to-sort', 'to-ask', 'to-follow-up', 'done'];
+
+// ════════════════════════════════════════════════════
+// VIEW TOGGLE
+// ════════════════════════════════════════════════════
+function setView(v) {
+  state.view = v;
+  save();
+  document.getElementById('btn-by-status').classList.toggle('active', v === 'status');
+  document.getElementById('btn-by-person').classList.toggle('active', v === 'person');
+  document.getElementById('btn-by-sessions').classList.toggle('active', v === 'sessions');
+  render();
+}
+
+// ════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════
+function render() {
+  // ── Filter bar ──
+  const filterBar  = document.getElementById('filter-bar');
+  const filterName = document.getElementById('filter-bar-name');
+  if (_filterPersonId) {
+    const p = findPerson(_filterPersonId);
+    filterBar.classList.add('active');
+    filterName.textContent = p?.name ?? '';
+  } else {
+    filterBar.classList.remove('active');
+  }
+
+  // ── Cible de l'ajout rapide ──
+  const qt = document.getElementById('quickadd-target');
+  if (qt) qt.textContent = _filterPersonId ? '→ ' + (findPerson(_filterPersonId)?.name ?? '') : '';
+
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  board.classList.remove('feed');
+
+  // ── In-progress meeting banner ──
+  renderResumeBanner();
+
+  if (!realPeople().length && !state.subjects.length) {
+    board.innerHTML = `
+      <div class="welcome">
+        <div class="welcome-icon">👋</div>
+        <h2>Welcome to 1:1 Manager</h2>
+        <p>Start by adding your direct reports, then create discussion topics for your regular check-ins.</p>
+        <div class="welcome-btns">
+          <button class="btn btn-ghost" onclick="openPeopleModal()">⚙️ Add People</button>
+          <button class="btn btn-primary" onclick="openSubjectModal()">＋ New Topic</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Meetings view: vertical feed by date. Otherwise, person filter → status columns.
+  if (state.view === 'sessions') renderBySessions(board);
+  else if (state.view === 'status' || _filterPersonId) renderByStatus(board);
+  else renderByPerson(board);
+}
+
+// Red "meeting in progress" banner (click to resume)
+function renderResumeBanner() {
+  const slot = document.getElementById('resume-slot');
+  slot.innerHTML = '';
+  const prog = anyInProgress();
+  if (!prog) return;
+  const p = findPerson(prog.personId);
+  const treated = (prog.treated || []).length;
+  const banner = el('div', 'resume-banner');
+  banner.innerHTML = `
+    <span class="resume-pulse"></span>
+    <span>Meeting in progress with <strong>${esc(p ? p.name : '—')}</strong>${treated ? ` · ${treated} topic(s) covered` : ''}</span>
+    <span style="flex:1"></span>
+    <button class="btn btn-primary btn-sm" onclick="resumeSession('${prog.id}')">Resume</button>`;
+  slot.appendChild(banner);
+}
+
+// ── Status view ─────────────────────────────────
+function renderByStatus(board) {
+  ORDER.forEach(status => {
+    const cfg = S[status];
+    // Filter: either the active person, or everyone
+    const subs = _filterPersonId
+      ? state.subjects.filter(s => s.assignments?.[_filterPersonId]?.status === status)
+      : state.subjects.filter(s => {
+          const asgns = Object.values(s.assignments || {});
+          if (!asgns.length) return status === 'to-sort'; // no assignment → "To Sort" column
+          return asgns.some(a => a.status === status);
+        });
+
+    const col = el('div', 'column');
+    col.innerHTML = `
+      <div class="col-header">
+        <div class="col-dot" style="background:${cfg.dot}"></div>
+        <div class="col-title">${cfg.label}</div>
+        <div class="col-badge">${subs.length}</div>
+      </div>`;
+
+    const body = el('div', 'col-body');
+    if (!subs.length) {
+      body.innerHTML = `<div class="empty">No topics</div>`;
+    } else {
+      subs.forEach(sub => body.appendChild(statusCard(sub, status)));
+    }
+    setupColumnDrop(body, status);
+    col.appendChild(body);
+    board.appendChild(col);
+  });
+}
+
+function statusCard(sub, colStatus) {
+  // In filtered mode: no chips (the person is already known)
+  // In normal mode: clickable chips to filter by person
+  const chips = _filterPersonId ? '' :
+    Object.entries(sub.assignments || {})
+      .filter(([, a]) => a.status === colStatus)
+      .map(([pid]) => {
+        const p = findPerson(pid);
+        const label = (p?.special ? '📥 ' : '') + esc(p?.name || '');
+        return p ? `<span class="chip ${colStatus}"
+          onclick="event.stopPropagation();setPersonFilter('${pid}')"
+          title="Filter on ${esc(p.name)}">${label}</span>` : '';
+      }).join('');
+
+  const card = el('div', 'card');
+  card.setAttribute('draggable', 'true');
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="card-title">${esc(sub.title)}</div>
+      <div class="card-icons">${sub.notes ? '<span class="icon-note" title="Notes available">📝</span>' : ''}</div>
+    </div>
+    <div class="chips">${chips}</div>`;
+
+  card.addEventListener('dragstart', e => {
+    _dragging = { subId: sub.id, fromStatus: colStatus };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', sub.id); // requis Firefox
+    setTimeout(() => card.classList.add('dragging'), 0);
+  });
+
+  card.addEventListener('dragend', () => {
+    _dragging = null;
+    document.querySelectorAll('.col-body').forEach(b => b.classList.remove('drag-over'));
+  });
+
+  // Click = open detail (only if not dragging)
+  card.addEventListener('click', () => { if (!_dragging) openDetailModal(sub.id); });
+  return card;
+}
+
+// ── Person view ────────────────────────────────
+function renderByPerson(board) {
+  const peopleToShow = _filterPersonId
+    ? state.people.filter(p => p.id === _filterPersonId)
+    : state.people;
+
+  peopleToShow.forEach(person => {
+    const assigned = state.subjects
+      .filter(s => s.assignments?.[person.id])
+      .sort((a, b) =>
+        ORDER.indexOf(a.assignments[person.id]?.status) -
+        ORDER.indexOf(b.assignments[person.id]?.status)
+      );
+
+    const pending = assigned.filter(s => s.assignments[person.id]?.status !== 'done').length;
+    const allDone = assigned.length > 0 && pending === 0;
+    const label = (person.special ? '📥 ' : '') + esc(person.name);
+
+    const col = el('div', 'column');
+    col.innerHTML = `
+      <div class="col-header">
+        <div class="col-dot" style="background:${person.special ? '#8b5cf6' : 'var(--primary)'}"></div>
+        <div class="col-title" style="cursor:pointer;text-decoration-line:underline;text-decoration-style:dotted;text-underline-offset:3px"
+          onclick="setPersonFilter('${person.id}')"
+          title="${_filterPersonId === person.id ? 'Clear filter' : 'Filter on ' + esc(person.name)}">${label}</div>
+        <div class="col-badge" style="${allDone ? 'background:#dcfce7;color:#15803d' : ''}">${allDone ? '✓' : pending || '0'}</div>
+      </div>`;
+
+    const body = el('div', 'col-body');
+    if (!assigned.length) {
+      body.innerHTML = `<div class="empty">No topics</div>`;
+    } else {
+      assigned.forEach(sub => body.appendChild(personCard(sub, person.id)));
+    }
+    col.appendChild(body);
+    board.appendChild(col);
+  });
+}
+
+function personCard(sub, pid) {
+  const status = sub.assignments[pid]?.status ?? 'to-ask';
+  const cfg = S[status];
+  const card = el('div', 'card');
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="card-title">${esc(sub.title)}</div>
+      <div class="card-icons">
+        ${sub.notes ? '<span class="icon-note" title="Notes available">📝</span>' : ''}
+        <span class="spill ${status}"
+          onclick="event.stopPropagation();cycleStatus('${sub.id}','${pid}')"
+          title="Click to move to the next status">
+          ${cfg.icon} ${cfg.label}
+        </span>
+      </div>
+    </div>`;
+  card.addEventListener('click', () => openDetailModal(sub.id));
+  return card;
+}
+
+// ════════════════════════════════════════════════════
+// HISTORY LOGGING
+// ════════════════════════════════════════════════════
+function logStatus(asgn, status) {
+  if (!asgn.history) asgn.history = [];
+  asgn.history.push({ status, at: new Date().toISOString() });
+}
+
+// ════════════════════════════════════════════════════
+// CYCLE STATUS (clic rapide sur chip / pill)
+// ════════════════════════════════════════════════════
+function cycleStatus(subId, pid) {
+  const sub = findSubject(subId);
+  if (!sub?.assignments?.[pid]) return;
+  const next = S[sub.assignments[pid].status]?.next ?? 'to-ask';
+  sub.assignments[pid].status = next;
+  logStatus(sub.assignments[pid], next);
+  save();
+  render();
+  if (_detailId === subId) refreshDetailAssignments(sub);
+  toast(`${S[next].label} ✓`);
+}
+
+// ════════════════════════════════════════════════════
+// DETAIL MODAL
+// ════════════════════════════════════════════════════
+function openDetailModal(subId) {
+  _detailId = subId;
+  const sub = findSubject(subId);
+  if (!sub) return;
+
+  document.getElementById('m-detail-title').textContent = sub.title;
+  const nw = document.getElementById('d-notes-wrap');
+  if (sub.notes) {
+    nw.style.display = '';
+    document.getElementById('d-notes').textContent = sub.notes;
+  } else {
+    nw.style.display = 'none';
+  }
+
+  // Creation date
+  const createdEl = document.getElementById('d-created');
+  if (createdEl) {
+    createdEl.textContent = sub.createdAt
+      ? '📅 Created on ' + formatHistDate(sub.createdAt)
+      : '';
+    createdEl.style.display = sub.createdAt ? '' : 'none';
+  }
+
+  refreshDetailAssignments(sub);
+  openModal('m-detail');
+}
+
+// Meetings (1:1s) where a topic was discussed with a given person, most recent first
+function subjectSessions(subId, pid) {
+  return (state.sessions || [])
+    .filter(s => s.personId === pid && Array.isArray(s.treated) && s.treated.includes(subId))
+    .map(s => {
+      const inProgress = !s.endedAt;
+      const status = inProgress
+        ? (findSubject(subId)?.assignments?.[pid]?.status ?? null)
+        : ((s.entries || []).find(e => e.subjectId === subId)?.status ?? null);
+      return { id: s.id, date: s.date, endedAt: s.endedAt, inProgress, status };
+    })
+    .sort((a, b) => new Date(b.endedAt || (b.date + 'T00:00:00')) - new Date(a.endedAt || (a.date + 'T00:00:00')));
+}
+
+function refreshDetailAssignments(sub) {
+  const container = document.getElementById('d-asgns');
+  container.innerHTML = '';
+
+  const entries = Object.entries(sub.assignments || {});
+  if (!entries.length) {
+    container.innerHTML = `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px">No one assigned</div>`;
+    return;
+  }
+
+  entries.sort(([,a],[,b]) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
+
+  entries.forEach(([pid, asgn]) => {
+    const p = findPerson(pid);
+    if (!p) return;
+
+    const histId = `hist-${pid}-${sub.id}`;
+    const histCount = asgn.history?.length ?? 0;
+    const otoList = subjectSessions(sub.id, pid);
+    const otoId = `oto-${pid}-${sub.id}`;
+
+    const row = el('div', 'asgn-row');
+    row.innerHTML = `
+      <div class="asgn-row-top">
+        <div class="asgn-name">${esc(p.name)}</div>
+        <div class="asgn-btns"></div>
+        ${otoList.length ? `<button class="asgn-hist-toggle" style="opacity:1" onclick="toggleHistory('${otoId}',this)" title="Meetings where this topic came up">🗓️ ${otoList.length}</button>` : ''}
+        ${histCount > 0 ? `<button class="asgn-hist-toggle" onclick="toggleHistory('${histId}',this)" title="Status change history">🕐 ${histCount}</button>` : ''}
+      </div>
+      <div class="asgn-history${otoList.length ? ' open' : ''}" id="${otoId}">
+        ${otoList.length ? `<div class="hist-cap">Discussed in meeting</div>` : ''}
+        ${otoList.map(o => `
+          <div class="hist-entry">
+            <div class="hist-dot" style="background:${S[o.status]?.dot ?? '#ccc'}"></div>
+            <span class="hist-label">${o.inProgress ? 'Meeting in progress' : formatDateLabel(o.date)}</span>
+            <span class="hist-date">${o.status ? '→ ' + (S[o.status]?.label ?? '') : ''}</span>
+          </div>`).join('')}
+      </div>
+      <div class="asgn-history" id="${histId}">
+        ${histCount ? `<div class="hist-cap">Status changes</div>` : ''}
+        ${(asgn.history ?? []).map(h => `
+          <div class="hist-entry">
+            <div class="hist-dot" style="background:${S[h.status]?.dot ?? '#ccc'}"></div>
+            <span class="hist-label">${S[h.status]?.label ?? h.status}</span>
+            <span class="hist-date">${formatHistDate(h.at)}</span>
+          </div>`).join('')}
+      </div>`;
+
+    const btns = row.querySelector('.asgn-btns');
+    ORDER.forEach(s => {
+      const b = el('button', `asgn-btn${asgn.status === s ? ` act-${s}` : ''}`);
+      b.textContent = S[s].label;
+      b.onclick = () => {
+        if (asgn.status === s) return;
+        asgn.status = s;
+        logStatus(asgn, s);
+        save();
+        render();
+        refreshDetailAssignments(sub);
+        toast(`${S[s].label} ✓`);
+      };
+      btns.appendChild(b);
+    });
+
+    container.appendChild(row);
+  });
+}
+
+function toggleHistory(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  btn.style.opacity = el.classList.contains('open') ? '1' : '';
+}
+
+function formatHistDate(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: '2-digit' })
+      + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+function editFromDetail() {
+  const id = _detailId;
+  closeModal('m-detail');
+  openSubjectModal(id);
+}
+
+// ════════════════════════════════════════════════════
+// SUBJECT MODAL
+// ════════════════════════════════════════════════════
+function openSubjectModal(subId = null, preselectPersonId = null) {
+  _editId = subId;
+  const sub = subId ? findSubject(subId) : null;
+
+  document.getElementById('m-subject-title').textContent = sub ? 'Edit Topic' : 'New Topic';
+  document.getElementById('f-title').value = sub?.title ?? '';
+  document.getElementById('f-notes').value = sub?.notes ?? '';
+  document.getElementById('btn-del-subject').style.display = sub ? '' : 'none';
+  document.getElementById('f-title').classList.remove('error');
+
+  const grid = document.getElementById('f-people');
+  grid.innerHTML = '';
+
+  state.people.forEach(p => {
+    const isOn = sub ? !!sub.assignments?.[p.id] : false;
+    const btn = el('div', `ptoggle${isOn ? ' on' : ''}`);
+    btn.dataset.pid = p.id;
+    btn.innerHTML = `<div class="pcheck">${isOn ? '✓' : ''}</div>${p.special ? '📥 ' : ''}${esc(p.name)}`;
+    btn.onclick = () => {
+      btn.classList.toggle('on');
+      btn.querySelector('.pcheck').textContent = btn.classList.contains('on') ? '✓' : '';
+    };
+    grid.appendChild(btn);
+  });
+
+  // Pre-check the person: explicit person passed in, else the active filter,
+  // else (only for brand-new topics) default to the Personal To-Dos lane.
+  const pre = preselectPersonId || (!subId ? (_filterPersonId || PERSONAL_ID) : null);
+  if (pre) {
+    const b = grid.querySelector(`.ptoggle[data-pid="${pre}"]`);
+    if (b && !b.classList.contains('on')) {
+      b.classList.add('on');
+      const chk = b.querySelector('.pcheck'); if (chk) chk.textContent = '✓';
+    }
+  }
+
+  openModal('m-subject');
+  setTimeout(() => document.getElementById('f-title').focus(), 80);
+}
+
+function saveSubject() {
+  const titleEl = document.getElementById('f-title');
+  const title = titleEl.value.trim();
+  if (!title) { titleEl.classList.add('error'); titleEl.focus(); return; }
+  titleEl.classList.remove('error');
+
+  const notes = document.getElementById('f-notes').value.trim();
+  const selected = [...document.querySelectorAll('.ptoggle.on')].map(b => b.dataset.pid);
+
+  if (_editId) {
+    const sub = findSubject(_editId);
+    sub.title = title;
+    sub.notes = notes;
+    const newAsgn = {};
+    selected.forEach(pid => {
+      if (sub.assignments?.[pid]) {
+        newAsgn[pid] = sub.assignments[pid]; // keep the existing history
+      } else {
+        const a = { status: 'to-ask' };
+        logStatus(a, 'to-ask');
+        newAsgn[pid] = a;
+      }
+    });
+    sub.assignments = newAsgn;
+  } else {
+    const defaultStatus = _fromEmail ? 'to-sort' : 'to-ask';
+    const asgn = {};
+    selected.forEach(pid => {
+      const a = { status: defaultStatus };
+      logStatus(a, defaultStatus);
+      asgn[pid] = a;
+    });
+    state.subjects.unshift({ id: uid(), title, notes, assignments: asgn, createdAt: new Date().toISOString() });
+  }
+  _fromEmail = false;
+
+  save();
+  render();
+  closeModal('m-subject');
+  toast(_editId ? 'Topic updated ✓' : 'Topic created ✓');
+  const back = _sessionReturn; _sessionReturn = false;
+  if (back && _liveSessionId) { openModal('m-session'); renderLiveSession(); }
+}
+
+function cancelSubjectModal() {
+  _fromEmail = false;
+  const back = _sessionReturn; _sessionReturn = false;
+  closeModal('m-subject');
+  if (back && _liveSessionId) { openModal('m-session'); renderLiveSession(); }
+}
+
+function confirmDeleteSubject() {
+  if (!_editId || !confirm('Delete this topic permanently?')) return;
+  state.subjects = state.subjects.filter(s => s.id !== _editId);
+  save();
+  render();
+  closeModal('m-subject');
+  toast('Topic deleted');
+}
+
+// ════════════════════════════════════════════════════
+// PEOPLE MODAL
+// ════════════════════════════════════════════════════
+function openPeopleModal() {
+  renderPeopleList();
+  openModal('m-people');
+  setTimeout(() => document.getElementById('new-person').focus(), 80);
+}
+
+function renderPeopleList() {
+  const list = document.getElementById('plist');
+  list.innerHTML = '';
+
+  if (!realPeople().length) {
+    const hint = el('div');
+    hint.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;padding:8px';
+    hint.textContent = 'No direct reports yet. Add them below.';
+    list.appendChild(hint);
+  }
+
+  state.people.forEach(p => {
+    const row = el('div', 'pitem');
+    if (p.special) {
+      row.innerHTML = `
+        <span style="color:var(--text-muted);font-size:13px">📥</span>
+        <input value="${esc(p.name)}"
+          onblur="renamePerson('${p.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+        <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;padding:0 4px">fixed</span>`;
+    } else {
+      row.innerHTML = `
+        <span style="color:var(--text-muted);font-size:13px">👤</span>
+        <input value="${esc(p.name)}"
+          onblur="renamePerson('${p.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()">
+        <button class="pitem-del" onclick="removePerson('${p.id}')" title="Delete">🗑</button>`;
+    }
+    list.appendChild(row);
+  });
+}
+
+function addPerson() {
+  const inp = document.getElementById('new-person');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  state.people.push({ id: uid(), name });
+  save();
+  renderPeopleList();
+  render();
+  inp.value = '';
+  inp.focus();
+  toast(`${name} added ✓`);
+}
+
+function renamePerson(pid, newName) {
+  const name = newName.trim();
+  const p = findPerson(pid);
+  if (p && name && p.name !== name) { p.name = name; save(); render(); }
+}
+
+function removePerson(pid) {
+  if (pid === PERSONAL_ID) { toast('The Personal To-Dos lane cannot be removed'); return; }
+  const p = findPerson(pid);
+  if (!p || !confirm(`Remove ${p.name}?\nTopics assigned to them will lose that assignment.`)) return;
+  state.people = state.people.filter(x => x.id !== pid);
+  state.subjects.forEach(s => { if (s.assignments) delete s.assignments[pid]; });
+  save();
+  renderPeopleList();
+  render();
+  toast(`${p.name} removed`);
+}
+
+// ════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════
+function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+function esc(s = '') { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function findPerson(id)  { return state.people.find(p => p.id === id); }
+function findSubject(id) { return state.subjects.find(s => s.id === id); }
+function openModal(id)   { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id)  { document.getElementById(id).style.display = 'none'; }
+
+let _toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ════════════════════════════════════════════════════
+// PERSON FOCUS
+// ════════════════════════════════════════════════════
+let _focusPersonId   = null; // kept for compatibility
+let _filterPersonId  = null;
+
+function setPersonFilter(personId) {
+  _filterPersonId = (_filterPersonId === personId) ? null : personId;
+  render();
+}
+
+function clearPersonFilter() {
+  _filterPersonId = null;
+  render();
+}
+
+// ════════════════════════════════════════════════════
+// COMPACT / WIDGET MODE
+// ════════════════════════════════════════════════════
+function toggleCompact() {
+  const active = document.body.classList.toggle('compact');
+  document.getElementById('widget-toggle').classList.toggle('active', active);
+  localStorage.setItem('1on1-compact', active ? '1' : '0');
+}
+
+function restoreCompact() {
+  if (localStorage.getItem('1on1-compact') === '1') {
+    document.body.classList.add('compact');
+    document.getElementById('widget-toggle').classList.add('active');
+  }
+}
+
+function openPersonFocus(personId) { setPersonFilter(personId); }
+
+function renderPersonFocus() {
+  const person = findPerson(_focusPersonId);
+  if (!person) return;
+
+  document.getElementById('pf-name').textContent = person.name;
+
+  const assigned = state.subjects.filter(s => s.assignments?.[person.id]);
+  const pending  = assigned.filter(s => s.assignments[person.id]?.status !== 'done').length;
+  const countEl  = document.getElementById('pf-count');
+  if (!assigned.length) {
+    countEl.textContent = 'No topics';
+    countEl.style.color = '';
+  } else if (pending === 0) {
+    countEl.textContent = 'All done ✓';
+    countEl.style.color = 'var(--done-text)';
+  } else {
+    countEl.textContent = `${pending} topic(s) in progress`;
+    countEl.style.color = '';
+  }
+
+  const body = document.getElementById('pf-body');
+  body.innerHTML = '';
+
+  if (!assigned.length) {
+    body.innerHTML = '<div class="empty">No topics assigned to this person</div>';
+    return;
+  }
+
+  ORDER.forEach(status => {
+    const subs = assigned.filter(s => s.assignments[person.id]?.status === status);
+    if (!subs.length) return;
+
+    const cfg     = S[status];
+    const section = el('div', 'pf-section');
+    section.innerHTML = `
+      <div class="pf-section-hd">
+        <div class="col-dot" style="background:${cfg.dot}"></div>
+        <span>${cfg.label}</span>
+        <span class="col-badge">${subs.length}</span>
+      </div>`;
+
+    const rows = el('div', 'pf-rows');
+    subs.forEach(sub => {
+      const row = el('div', 'pf-row');
+      row.innerHTML = `
+        <div class="pf-row-title">${esc(sub.title)}</div>
+        ${sub.notes ? '<span class="icon-note" title="Notes available">📝</span>' : ''}
+        <span class="spill ${status}"
+          onclick="event.stopPropagation();cycleStatusInFocus('${sub.id}','${person.id}')"
+          title="Change status">${cfg.icon} ${cfg.label}</span>`;
+      row.addEventListener('click', () => {
+        closeModal('m-focus');
+        openDetailModal(sub.id);
+      });
+      rows.appendChild(row);
+    });
+
+    section.appendChild(rows);
+    body.appendChild(section);
+  });
+}
+
+function cycleStatusInFocus(subId, pid) {
+  const sub = findSubject(subId);
+  if (!sub?.assignments?.[pid]) return;
+  const next = S[sub.assignments[pid].status]?.next ?? 'to-ask';
+  sub.assignments[pid].status = next;
+  save();
+  render();            // update the board in the background
+  renderPersonFocus(); // refresh the focus view
+  toast(`${S[next].label} ✓`);
+}
+
+function newSubjectForFocusPerson() {
+  closeModal('m-focus');
+  openSubjectModal(null, _focusPersonId);
+}
+
+// ════════════════════════════════════════════════════
+// 1:1 MEETING MODE (live sessions)
+// ════════════════════════════════════════════════════
+let _liveSessionId = null;
+let _sessionReturn = false; // true when adding a topic from within a session
+let _choosing = new Set();  // topics currently being marked (follow up / done)
+
+function todayISODate() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function initials(name = '') {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
+}
+
+function liveSession()            { return state.sessions.find(s => s.id === _liveSessionId); }
+function inProgressSessionFor(pid) { return state.sessions.find(s => s.personId === pid && !s.endedAt); }
+function anyInProgress()          { return state.sessions.find(s => !s.endedAt); }
+
+// ── Entry point: "Start a 1:1" button ──
+function startSessionEntry() {
+  if (!realPeople().length) { toast('Add a person first'); openPeopleModal(); return; }
+  if (_filterPersonId && _filterPersonId !== PERSONAL_ID) { startOrResumeSession(_filterPersonId); return; }
+  const prog = anyInProgress();
+  if (prog && realPeople().length === 1) { startOrResumeSession(prog.personId); return; }
+  openPickPerson();
+}
+
+function openPickPerson() {
+  const list = document.getElementById('pick-person-list');
+  list.innerHTML = '';
+  realPeople().forEach(p => {
+    const prog    = inProgressSessionFor(p.id);
+    const pending = state.subjects.filter(s => s.assignments?.[p.id] && s.assignments[p.id].status !== 'done').length;
+    const row = el('div', 'pick-row');
+    row.innerHTML = `
+      <div class="pick-avatar">${esc(initials(p.name))}</div>
+      <div style="flex:1">
+        <div class="pick-name">${esc(p.name)}</div>
+        <div class="pick-sub">${prog ? '🔴 Meeting in progress' : (pending ? pending + ' topic(s) pending' : 'No topics pending')}</div>
+      </div>
+      <i class="pick-go">▶</i>`;
+    row.onclick = () => { closeModal('m-pick'); startOrResumeSession(p.id); };
+    list.appendChild(row);
+  });
+  openModal('m-pick');
+}
+
+function startOrResumeSession(personId) {
+  let sess = inProgressSessionFor(personId);
+  if (!sess) {
+    sess = { id: uid(), personId, startedAt: new Date().toISOString(), endedAt: null, date: todayISODate(), treated: [], entries: [] };
+    state.sessions.unshift(sess);
+    save();
+    render();
+  }
+  _liveSessionId = sess.id;
+  _choosing.clear();
+  openModal('m-session');
+  renderLiveSession();
+}
+
+function resumeSession(id) {
+  _liveSessionId = id;
+  _choosing.clear();
+  openModal('m-session');
+  renderLiveSession();
+}
+
+// Agenda: this person's unfinished topics + any already covered in this session
+function sessionAgenda(sess) {
+  return state.subjects.filter(s => {
+    const a = s.assignments?.[sess.personId];
+    if (!a) return false;
+    if (a.status !== 'done') return true;
+    return sess.treated.includes(s.id);
+  });
+}
+
+function renderLiveSession() {
+  const sess = liveSession();
+  if (!sess) { closeModal('m-session'); return; }
+  const person = findPerson(sess.personId);
+  if (!person) { closeModal('m-session'); return; }
+
+  document.getElementById('sess-name').textContent = '1:1 with ' + person.name;
+  document.getElementById('sess-date').textContent = 'Meeting on ' + formatDateLabel(sess.date) + ' · in progress';
+
+  const agenda       = sessionAgenda(sess);
+  const treatedCount = agenda.filter(s => sess.treated.includes(s.id)).length;
+  const total        = agenda.length;
+  const pct          = total ? Math.round((treatedCount / total) * 100) : 0;
+
+  document.getElementById('sess-bar').style.width = pct + '%';
+  document.getElementById('sess-count').textContent = treatedCount + '/' + total + ' covered';
+
+  const body = document.getElementById('sess-list');
+  body.innerHTML = '';
+
+  if (!total) {
+    body.innerHTML = `<div class="empty">No topics on the agenda for this person.<br>Add one with “＋ Add a Topic”.</div>`;
+    return;
+  }
+
+  agenda.forEach(sub => {
+    const a        = sub.assignments[sess.personId];
+    const treated  = sess.treated.includes(sub.id);
+    const choosing = _choosing.has(sub.id);
+    const row      = el('div', 'sess-row' + (treated ? ' treated' : ''));
+
+    let right;
+    if (treated) {
+      // topic covered: toggle between the two outcomes, still editable
+      right = `
+        <div class="sess-seg">
+          <button class="to-follow-up${a.status === 'to-follow-up' ? ' on' : ''}" data-act="to-follow-up">⟳ Follow Up</button>
+          <button class="done${a.status === 'done' ? ' on' : ''}" data-act="done">✓ Done</button>
+        </div>`;
+    } else if (choosing) {
+      // just got checked: ask for the outcome
+      right = `
+        <div class="sess-choice">
+          <span class="sess-choice-q">Covered →</span>
+          <button class="sess-choice-btn to-follow-up" data-act="to-follow-up">⟳ Follow Up</button>
+          <button class="sess-choice-btn done" data-act="done">✓ Done</button>
+          <button class="sess-cancel" data-act="cancel" title="Cancel">✕</button>
+        </div>`;
+    } else {
+      const cfg = S[a.status];
+      right = `<span class="spill ${a.status}" style="cursor:default" title="Current status">${cfg.icon} ${cfg.label}</span>`;
+    }
+
+    row.innerHTML = `
+      <button class="sess-check" title="${treated ? 'Remove from covered' : 'Mark as covered'}">${treated ? '☑' : '☐'}</button>
+      <div class="sess-row-main">
+        <div class="sess-title">${esc(sub.title)}</div>
+        ${sub.notes ? `<button class="sess-notes-toggle">📝 View notes</button><div class="sess-notes">${esc(sub.notes)}</div>` : ''}
+      </div>
+      ${right}`;
+
+    row.querySelector('.sess-check').onclick = e => {
+      e.stopPropagation();
+      if (treated) untreat(sub.id);
+      else         startChoose(sub.id);
+    };
+    const nt = row.querySelector('.sess-notes-toggle');
+    if (nt) nt.onclick = e => { e.stopPropagation(); row.querySelector('.sess-notes').classList.toggle('open'); };
+    row.querySelectorAll('[data-act]').forEach(b => {
+      b.onclick = e => {
+        e.stopPropagation();
+        const act = b.dataset.act;
+        if (act === 'cancel')       cancelChoose(sub.id);
+        else if (act === 'to-follow-up')  treatWith(sub.id, 'to-follow-up');
+        else if (act === 'done') treatWith(sub.id, 'done');
+      };
+    });
+    body.appendChild(row);
+  });
+}
+
+function startChoose(subId)  { _choosing.add(subId);    renderLiveSession(); }
+function cancelChoose(subId) { _choosing.delete(subId); renderLiveSession(); }
+
+// Marks a topic as covered and sets its outcome (follow up / done), logged in history
+function treatWith(subId, status) {
+  const sess = liveSession();
+  if (!sess) return;
+  const sub = findSubject(subId);
+  const a   = sub?.assignments?.[sess.personId];
+  if (!a) return;
+  if (a.status !== status) { a.status = status; logStatus(a, status); }
+  if (!sess.treated.includes(subId)) sess.treated.push(subId);
+  _choosing.delete(subId);
+  save();
+  renderLiveSession();
+  render();              // update the board in the background
+  renderResumeBanner();
+  toast(`Covered → ${S[status].label} ✓`);
+}
+
+// Removes the "covered" mark (the topic's status stays unchanged)
+function untreat(subId) {
+  const sess = liveSession();
+  if (!sess) return;
+  const i = sess.treated.indexOf(subId);
+  if (i >= 0) sess.treated.splice(i, 1);
+  _choosing.delete(subId);
+  save();
+  renderLiveSession();
+  render();
+  renderResumeBanner();
+}
+
+function addSubjectToSession() {
+  const sess = liveSession();
+  if (!sess) return;
+  _sessionReturn = true;
+  closeModal('m-session');
+  openSubjectModal(null, sess.personId);
+}
+
+function endSession() {
+  const sess = liveSession();
+  if (!sess) return;
+  const agenda       = sessionAgenda(sess);
+  const treatedCount = agenda.filter(s => sess.treated.includes(s.id)).length;
+  if (treatedCount === 0 && !confirm('No topics marked as covered. End the meeting anyway?')) return;
+
+  sess.endedAt = new Date().toISOString();
+  sess.entries = sess.treated.map(id => {
+    const s = findSubject(id);
+    if (!s) return null;
+    return { subjectId: id, title: s.title, status: s.assignments?.[sess.personId]?.status ?? null };
+  }).filter(Boolean);
+
+  _liveSessionId = null;
+  save();
+  closeModal('m-session');
+  render();
+  toast(`Meeting saved — ${sess.entries.length} topic(s) covered ✓`);
+}
+
+// Close the window without ending: the meeting stays "in progress" and resumable
+function cancelLiveSession() { closeModal('m-session'); }
+
+function deleteInProgressSession() {
+  const sess = liveSession();
+  if (!sess) return;
+  if (!confirm('Cancel this meeting? It will not be saved.')) return;
+  state.sessions = state.sessions.filter(s => s.id !== sess.id);
+  _liveSessionId = null;
+  save();
+  closeModal('m-session');
+  render();
+  toast('Meeting cancelled');
+}
+
+// ── Meetings view: blocks grouped by date ──
+function renderBySessions(board) {
+  board.classList.add('feed');
+
+  const sessions = (_filterPersonId
+    ? state.sessions.filter(s => s.personId === _filterPersonId)
+    : state.sessions
+  ).slice().sort((a, b) => new Date(b.endedAt || b.startedAt) - new Date(a.endedAt || a.startedAt));
+
+  if (!sessions.length) {
+    board.innerHTML = `
+      <div class="welcome">
+        <div class="welcome-icon">🗓️</div>
+        <h2>No meetings recorded yet</h2>
+        <p>Start a meeting with “▶ Start a 1:1”. Each meeting you finish will appear here, grouped by date — one block per meeting.</p>
+        <div class="welcome-btns"><button class="btn btn-primary" onclick="startSessionEntry()">▶ Start a 1:1</button></div>
+      </div>`;
+    return;
+  }
+
+  const feed = el('div', 'sessions-feed');
+  let lastLabel = null;
+  sessions.forEach(sess => {
+    const label = formatDateLabel(sess.date);
+    if (label !== lastLabel) {
+      const h = el('div', 'sessions-date');
+      h.textContent = label;
+      feed.appendChild(h);
+      lastLabel = label;
+    }
+    feed.appendChild(sessionBlock(sess));
+  });
+  board.appendChild(feed);
+}
+
+function sessionBlock(sess) {
+  const person = findPerson(sess.personId);
+  const name   = person ? person.name : 'Removed person';
+  const inProg = !sess.endedAt;
+
+  // in-progress session → recompute live; ended session → frozen snapshot
+  const entries = inProg
+    ? sess.treated.map(id => { const s = findSubject(id); return s ? { title: s.title, status: s.assignments?.[sess.personId]?.status } : null; }).filter(Boolean)
+    : (sess.entries || []);
+
+  const card = el('div', 'session-block' + (inProg ? ' in-progress' : ''));
+  card.innerHTML = `
+    <div class="session-block-hd">
+      <div class="pick-avatar">${esc(initials(name))}</div>
+      <div style="flex:1">
+        <div class="session-block-name">1:1 with ${esc(name)}</div>
+        <div class="session-block-time">${inProg ? '🔴 In progress' : '🕐 ' + formatHistDate(sess.endedAt)}</div>
+      </div>
+      <span class="col-badge">${entries.length} topic${entries.length > 1 ? 's' : ''}</span>
+    </div>
+    <div class="session-block-body">
+      ${entries.length ? entries.map(e => `
+        <div class="session-entry">
+          <span class="hist-dot" style="background:${S[e.status]?.dot ?? '#ccc'}"></span>
+          <span class="session-entry-title">${esc(e.title)}</span>
+          <span class="spill ${e.status || ''} mini" style="cursor:default">${S[e.status]?.label ?? '—'}</span>
+        </div>`).join('') : `<div class="session-empty">No topics covered</div>`}
+    </div>
+    ${inProg ? `<div class="session-block-foot"><button class="btn btn-primary btn-sm" onclick="resumeSession('${sess.id}')">Resume meeting</button></div>` : ''}`;
+  return card;
+}
+
+// Friendly date label: Today / Yesterday / day month (year if different)
+function formatDateLabel(ymd) {
+  try {
+    const d     = ymd && ymd.includes('-') ? new Date(ymd + 'T00:00:00') : new Date(ymd);
+    const today = todayISODate();
+    if (ymd === today) return "Today · " + d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yISO = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
+    if (ymd === yISO) return 'Yesterday · ' + d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+    const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('en-US', opts);
+  } catch { return ymd; }
+}
+
+// ════════════════════════════════════════════════════
+// DRAG & DROP — cards between columns
+// ════════════════════════════════════════════════════
+let _dragging  = null; // { subId, fromStatus }
+let _pendingMove = null; // { sub, fromStatus, targetStatus, people[] }
+
+function setupColumnDrop(body, targetStatus) {
+  body.addEventListener('dragover', e => {
+    if (!_dragging) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.col-body').forEach(b => b.classList.remove('drag-over'));
+    body.classList.add('drag-over');
+  });
+
+  body.addEventListener('dragleave', e => {
+    if (!body.contains(e.relatedTarget)) body.classList.remove('drag-over');
+  });
+
+  body.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    body.classList.remove('drag-over');
+
+    if (!_dragging || _dragging.fromStatus === targetStatus) { _dragging = null; return; }
+
+    const sub = findSubject(_dragging.subId);
+    if (!sub) { _dragging = null; return; }
+
+    // Capture fromStatus before reset
+    const fromStatus = _dragging.fromStatus;
+
+    // People affected (those with the source status)
+    const affected = Object.entries(sub.assignments || {})
+      .filter(([, a]) => a.status === fromStatus)
+      .map(([pid]) => findPerson(pid))
+      .filter(Boolean);
+
+    _dragging = null;
+    if (!affected.length) return;
+
+    // If only one person → move directly, no modal
+    if (affected.length === 1) {
+      sub.assignments[affected[0].id].status = targetStatus;
+      logStatus(sub.assignments[affected[0].id], targetStatus);
+      save(); render();
+      toast(`${affected[0].name} → ${S[targetStatus].label} ✓`);
+      return;
+    }
+
+    // Multiple people → selection modal
+    openMoveModal(sub, fromStatus, targetStatus, affected);
+  });
+}
+
+// ── Selective move modal ─────────────────
+function openMoveModal(sub, fromStatus, targetStatus, people) {
+  _pendingMove = { sub, fromStatus, targetStatus, people };
+
+  document.getElementById('m-move-title').textContent =
+    `"${sub.title}"`;
+  document.getElementById('m-move-sub').innerHTML =
+    `<span class="spill ${fromStatus}" style="cursor:default">${S[fromStatus]?.icon} ${S[fromStatus]?.label}</span>` +
+    ` → ` +
+    `<span class="spill ${targetStatus}" style="cursor:default">${S[targetStatus]?.icon} ${S[targetStatus]?.label}</span>`;
+
+  const container = document.getElementById('m-move-people');
+  container.innerHTML = '';
+
+  people.forEach(p => {
+    const row = el('div', 'move-person-row checked');
+    row.dataset.pid = p.id;
+    row.innerHTML = `
+      <div class="mcheck">✓</div>
+      <div class="move-person-name">${esc(p.name)}</div>`;
+    row.addEventListener('click', () => {
+      row.classList.toggle('checked');
+      row.querySelector('.mcheck').textContent = row.classList.contains('checked') ? '✓' : '';
+    });
+    container.appendChild(row);
+  });
+
+  openModal('m-move');
+}
+
+function toggleAllMoveRows() {
+  const rows = [...document.querySelectorAll('.move-person-row')];
+  const allChecked = rows.every(r => r.classList.contains('checked'));
+  rows.forEach(r => {
+    if (allChecked) { r.classList.remove('checked'); r.querySelector('.mcheck').textContent = ''; }
+    else            { r.classList.add('checked');    r.querySelector('.mcheck').textContent = '✓'; }
+  });
+}
+
+function applyMove() {
+  if (!_pendingMove) return;
+  const { sub, targetStatus } = _pendingMove;
+
+  const selected = [...document.querySelectorAll('.move-person-row.checked')]
+    .map(r => r.dataset.pid);
+
+  if (!selected.length) { closeModal('m-move'); return; }
+
+  selected.forEach(pid => {
+    if (sub.assignments?.[pid]) {
+      sub.assignments[pid].status = targetStatus;
+      logStatus(sub.assignments[pid], targetStatus);
+    }
+  });
+
+  _pendingMove = null;
+  save(); render(); closeModal('m-move');
+  toast(`${selected.length} people → ${S[targetStatus].label} ✓`);
+}
+
+// ════════════════════════════════════════════════════
+// DRAG & DROP — EML files from Outlook
+// ════════════════════════════════════════════════════
+let _dropHintTimer = null;
+
+function isModalOpen(id) {
+  const m = document.getElementById(id);
+  return !!m && m.style.display && m.style.display !== 'none';
+}
+
+function _isFileDrag(e) {
+  if (!e.dataTransfer) return false;
+  if (e.dataTransfer.items && [...e.dataTransfer.items].some(i => i.kind === 'file')) return true;
+  if (e.dataTransfer.types && [...e.dataTransfer.types].includes('Files')) return true;
+  return false;
+}
+
+function _isTextDrag(e) {
+  if (!e.dataTransfer || !e.dataTransfer.types) return false;
+  const t = [...e.dataTransfer.types];
+  return t.includes('text/plain') || t.includes('text/uri-list');
+}
+
+function _isImportDrag(e) { return _isFileDrag(e) || _isTextDrag(e); }
+
+function showDropHint() { document.getElementById('drop-hint').classList.add('active'); }
+function hideDropHint() {
+  document.getElementById('drop-hint').classList.remove('active');
+  if (_dropHintTimer) { clearTimeout(_dropHintTimer); _dropHintTimer = null; }
+}
+
+// While dragging a file: small non-blocking hint, auto-cleared
+// if the drag is abandoned (safety net: can never get stuck).
+document.addEventListener('dragover', e => {
+  if (_dragging) { e.preventDefault(); return; }     // drag interne d'une carte
+  if (!_isImportDrag(e)) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  if (!isModalOpen('m-email')) showDropHint();
+  if (_dropHintTimer) clearTimeout(_dropHintTimer);
+  _dropHintTimer = setTimeout(hideDropHint, 1200);   // self-healing
+});
+
+// Safety nets: end/cancel of drag → clear the hint
+document.addEventListener('dragend', hideDropHint);
+window.addEventListener('blur', hideDropHint);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideDropHint(); });
+
+document.addEventListener('drop', e => {
+  if (_dragging) return;                              // internal drags handled by the columns
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const isFile = (dt.files && dt.files.length) || (dt.types && [...dt.types].includes('Files'));
+
+  if (isFile) {
+    e.preventDefault();
+    hideDropHint();
+    const eml = pickEmlFile(dt.files);
+    if (eml) { handleEmlFile(eml); return; }
+    // file announced but not usable → manual import
+    toast('Email was not received as a file — use “Import an Email” instead');
+    openEmailModal();
+    return;
+  }
+
+  // Dragged text (selection from an email / a web page)
+  const text = (dt.getData && (dt.getData('text/plain') || dt.getData('text/uri-list') || dt.getData('text'))) || '';
+  if (text.trim()) {
+    e.preventDefault();
+    hideDropHint();
+    createFromText(text.trim());
+  }
+});
+
+// Creates a topic from dragged text: 1st line = title, the rest = notes
+function createFromText(text) {
+  const lines = text.split(/\r?\n/);
+  let title = '', rest = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim()) {
+      title = lines[i].trim().replace(/^((fwd?|re|fw)\s*:\s*)+/i, '').trim();
+      rest = lines.slice(i + 1);
+      break;
+    }
+  }
+  openSubjectModalFromEmail(title || text.slice(0, 80), rest.join('\n').trim());
+}
+
+// Quick add: paste an email subject (or type a topic), Enter → task
+function quickAdd() {
+  const inp = document.getElementById('quickadd-input');
+  if (!inp) return;
+  const raw = (inp.value || '').trim();
+  if (!raw) return;
+  const title = raw.replace(/^((fwd?|re|fw)\s*:\s*)+/i, '').trim() || raw;
+
+  if (_filterPersonId && findPerson(_filterPersonId)) {
+    // direct creation, assigned to the filtered person, status "to sort"
+    const asg = { status: 'to-sort' };
+    logStatus(asg, 'to-sort');
+    const sub = { id: uid(), title, notes: '', assignments: { [_filterPersonId]: asg }, createdAt: new Date().toISOString() };
+    state.subjects.unshift(sub);
+    save();
+    render();
+    inp.value = '';
+    toast('Topic added ✓');
+  } else {
+    // no person filtered → open the pre-filled modal to choose the person/people
+    inp.value = '';
+    openSubjectModalFromEmail(title, '');
+  }
+}
+
+function pickEmlFile(fileList) {
+  const files = [...(fileList || [])];
+  return files.find(f => /\.eml$/i.test(f.name) || f.type === 'message/rfc822') || files[0] || null;
+}
+
+// Reads an .eml file, parses it, and opens the pre-filled topic modal
+function handleEmlFile(file) {
+  if (!file) return;
+  closeModal('m-email');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const bytes  = new Uint8Array(ev.target.result);
+      const latin1 = new TextDecoder('latin1').decode(bytes);
+      const parsed = parseEml(latin1, bytes);
+      openSubjectModalFromEmail(parsed.subject, parsed.body);
+    } catch (err) {
+      toast('Could not read this email');
+    }
+  };
+  reader.onerror = () => toast('Could not read this email');
+  reader.readAsArrayBuffer(file);
+}
+
+// ── "Import Email" modal: reliable fallback across browsers ──
+function openEmailModal() {
+  hideDropHint();
+  const ta = document.getElementById('email-paste');
+  if (ta) ta.value = '';
+  openModal('m-email');
+
+  const zone = document.getElementById('email-drop');
+  if (zone && !zone._wired) {
+    zone._wired = true;
+    ['dragover', 'dragenter'].forEach(ev => zone.addEventListener(ev, e => {
+      e.preventDefault(); e.stopPropagation(); zone.classList.add('over');
+    }));
+    ['dragleave', 'dragend'].forEach(ev => zone.addEventListener(ev, () => zone.classList.remove('over')));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation();
+      zone.classList.remove('over');
+      const eml = pickEmlFile(e.dataTransfer.files);
+      if (eml) handleEmlFile(eml);
+      else toast('No .eml file detected here');
+    });
+  }
+}
+
+function onEmlFilePicked(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (f) handleEmlFile(f);
+}
+
+// Creates a topic from pasted text: 1st non-empty line = title, the rest = notes
+function createFromPaste() {
+  const ta = document.getElementById('email-paste');
+  const raw = (ta && ta.value || '').trim();
+  if (!raw) { toast('Paste the email text first'); return; }
+  const lines = raw.split(/\r?\n/);
+  let title = '', rest = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim()) {
+      title = lines[i].trim().replace(/^((fwd?|re|fw)\s*:\s*)+/i, '').trim();
+      rest = lines.slice(i + 1);
+      break;
+    }
+  }
+  closeModal('m-email');
+  openSubjectModalFromEmail(title || raw.slice(0, 80), rest.join('\n').trim());
+}
+
+// ── EML Parser ─────────────────────────────────────
+function parseEml(raw) {
+  // Normalize line endings
+  const text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Split headers / body at first blank line
+  const blankIdx = text.indexOf('\n\n');
+  const headerBlock = blankIdx >= 0 ? text.slice(0, blankIdx) : text;
+  const bodyBlock   = blankIdx >= 0 ? text.slice(blankIdx + 2) : '';
+
+  // Parse headers (handle folded lines)
+  const headers = {};
+  const lines = headerBlock.split('\n');
+  let key = '';
+  for (const line of lines) {
+    if (/^\s/.test(line) && key) {
+      headers[key] += ' ' + line.trim();
+    } else {
+      const c = line.indexOf(':');
+      if (c > 0) {
+        key = line.slice(0, c).toLowerCase().trim();
+        headers[key] = line.slice(c + 1).trim();
+      }
+    }
+  }
+
+  // Decode subject
+  let subject = decodeRfc2047(headers['subject'] || '');
+  // Strip Fwd:/Re:/TR:/FW: prefixes (any combo)
+  subject = subject.replace(/^((fwd?|re|tr|fw)\s*:\s*)+/i, '').trim();
+
+  // Get content-type, boundary and charset
+  const ct = headers['content-type'] || '';
+  const boundary = (ct.match(/boundary="?([^";\n]+)"?/i) || [])[1];
+  const charset  = (ct.match(/charset="?([^";\s]+)"?/i) || [])[1] || 'utf-8';
+  const encoding = headers['content-transfer-encoding'] || '';
+
+  let body = '';
+
+  if (boundary) {
+    body = extractPlainFromMultipart(bodyBlock, boundary);
+  } else if (/base64/i.test(encoding)) {
+    body = decodeBase64WithCharset(bodyBlock, charset);
+  } else if (/quoted-printable/i.test(encoding)) {
+    body = decodeQuotedPrintable(bodyBlock, charset);
+  } else {
+    // The text was read as latin1, re-decode with the correct charset
+    body = reDecodeBytes(bodyBlock, charset);
+  }
+
+  body = cleanBody(body);
+
+  return { subject, body };
+}
+
+function extractPlainFromMultipart(body, boundary, depth) {
+  if ((depth || 0) > 5) return ''; // safety net against infinite loops
+  const parts = body.split(new RegExp('--' + escapeRegex(boundary) + '(?:--)?'));
+  for (const part of parts) {
+    const blankIdx = part.indexOf('\n\n');
+    if (blankIdx < 0) continue;
+    const partHeaderRaw = part.slice(0, blankIdx);
+    const partHeaders   = partHeaderRaw.toLowerCase();
+    const partBody      = part.slice(blankIdx + 2);
+
+    // Cas 1 : text/plain → extraire directement
+    if (partHeaders.includes('text/plain')) {
+      const enc     = (partHeaders.match(/content-transfer-encoding:\s*(\S+)/) || [])[1] || '';
+      const charset = (partHeaderRaw.match(/charset="?([^";\s]+)"?/i) || [])[1] || 'utf-8';
+      if (/base64/i.test(enc)) {
+        return decodeBase64WithCharset(partBody, charset);
+      } else if (/quoted-printable/i.test(enc)) {
+        return decodeQuotedPrintable(partBody, charset);
+      }
+      return reDecodeBytes(partBody, charset);
+    }
+
+    // Case 2: nested multipart (alternative, related, mixed…) → recurse
+    if (partHeaders.includes('multipart/')) {
+      const nestedBoundary = (partHeaderRaw.match(/boundary="?([^";\n\r]+)"?/i) || [])[1];
+      if (nestedBoundary) {
+        const result = extractPlainFromMultipart(partBody, nestedBoundary.trim(), (depth || 0) + 1);
+        if (result) return result;
+      }
+    }
+  }
+  return ''; // nothing found
+}
+
+// Decodes base64 while respecting the charset
+function decodeBase64WithCharset(str, charset) {
+  try {
+    const bytes = Uint8Array.from(atob(str.replace(/\s/g, '')), c => c.charCodeAt(0));
+    return new TextDecoder(charset).decode(bytes);
+  } catch { return str; }
+}
+
+// Decodes quoted-printable while respecting the charset
+function decodeQuotedPrintable(str, charset) {
+  charset = charset || 'utf-8';
+  // Remove the soft line breaks
+  const clean = str.replace(/=\r?\n/g, '');
+  // Collect the bytes
+  const out = [];
+  let i = 0;
+  while (i < clean.length) {
+    if (clean[i] === '=' && i + 2 < clean.length) {
+      const hex = clean.slice(i + 1, i + 3);
+      if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+        out.push(parseInt(hex, 16));
+        i += 3;
+        continue;
+      }
+    }
+    out.push(clean.charCodeAt(i));
+    i++;
+  }
+  try {
+    return new TextDecoder(charset).decode(new Uint8Array(out));
+  } catch {
+    return new TextDecoder('utf-8').decode(new Uint8Array(out));
+  }
+}
+
+// Re-decodes a latin1 string (read from FileReader) with the correct charset
+function reDecodeBytes(str, charset) {
+  try {
+    if (!charset || /utf-?8/i.test(charset)) return str; // already fine if utf-8
+    const bytes = Uint8Array.from(str, c => c.charCodeAt(0));
+    return new TextDecoder(charset).decode(bytes);
+  } catch { return str; }
+}
+
+// RFC 2047 encoded-word: =?charset?encoding?text?=
+function decodeRfc2047(str) {
+  return str.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_, charset, enc, text) => {
+    try {
+      let bytes;
+      if (/^B$/i.test(enc)) {
+        bytes = Uint8Array.from(atob(text), c => c.charCodeAt(0));
+      } else {
+        const qp = text.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+        bytes = new TextEncoder().encode(qp);
+      }
+      return new TextDecoder(charset).decode(bytes);
+    } catch { return text; }
+  }).replace(/\?= =\?[^?]+\?[BbQq]\?/g, ''); // merge adjacent encoded words
+}
+
+function cleanBody(body) {
+  const lines = body.split('\n');
+  const cutPatterns = [
+    /^--\s*$/,                                      // email signature separator
+    /^_{5,}/,                                       // Outlook separator
+    /^-{5,}\s*(original message)/i,
+    /^(from|sent|to|subject)\s*:/i,
+    /^>{1}/,                                        // quoted reply lines
+  ];
+
+  const cleaned = [];
+  for (const line of lines) {
+    if (cutPatterns.some(p => p.test(line.trim()))) break;
+    cleaned.push(line);
+  }
+
+  return cleaned
+    .join('\n')
+    .trim()
+    .replace(/\n{3,}/g, '\n\n')   // collapse multiple blank lines
+    .slice(0, 1000);               // cap at 1000 chars
+}
+
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// Open subject modal pre-filled with email data
+function openSubjectModalFromEmail(subject, body) {
+  _fromEmail = true;
+  openSubjectModal(null);
+  setTimeout(() => {
+    document.getElementById('f-title').value = subject || '';
+    document.getElementById('f-notes').value = body  || '';
+  }, 90);
+}
+
+// ════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ════════════════════════════════════════════════════
+function exportData() {
+  const payload = {
+    version: '2',
+    exportedAt: new Date().toISOString(),
+    people: state.people,
+    subjects: state.subjects,
+    sessions: state.sessions,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `1on1-manager-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export downloaded ✓');
+}
+
+function triggerImport() {
+  const inp = document.getElementById('import-file');
+  inp.value = '';   // reset so the same file can be re-imported
+  inp.click();
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Minimal validation
+      if (!Array.isArray(data.people) || !Array.isArray(data.subjects)) {
+        alert('Invalid file: format not recognized.');
+        return;
+      }
+      const nb = data.subjects.length;
+      const existing = state.subjects.length + realPeople().length;
+      const msg = existing > 0
+        ? `Importing this file will replace all your current data (${state.subjects.length} topic(s), ${realPeople().length} people).\n\nContinue?`
+        : `Import ${nb} topic(s) and ${data.people.length} people?`;
+      if (!confirm(msg)) return;
+      state.people   = data.people   ?? [];
+      state.subjects = data.subjects ?? [];
+      state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      migrateState(); // fix up any legacy status codes and re-add the Personal To-Dos lane
+      // Keep the current view
+      save();
+      render();
+      toast(`Import successful — ${nb} topic(s) loaded ✓`);
+    } catch {
+      alert('Read error: the JSON file is corrupted or invalid.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Close modals with Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') ['m-subject','m-detail','m-people','m-move','m-focus','m-session','m-pick','m-email','m-sync'].forEach(closeModal);
+});
+
+// ════════════════════════════════════════════════════
+// FILE SYNC — share data between your Mac Mini and laptop via OneDrive
+// ════════════════════════════════════════════════════
+// The app can read and write its data straight to a JSON file that lives in
+// your own OneDrive folder. OneDrive silently keeps that file in sync
+// between your two Macs — there is no public link and no third-party
+// server involved beyond your own OneDrive account. This uses the File
+// System Access API, which only Chrome and Edge support today; in other
+// browsers the Sync button hides itself and you fall back to the existing
+// Export / Import buttons.
+
+const FS_SUPPORTED = typeof window.showOpenFilePicker === 'function';
+let _syncHandle       = null;  // FileSystemFileHandle currently connected
+let _syncPermState    = null;  // 'granted' | 'prompt' | 'denied' | null
+let _syncLastWritten  = null;  // last file.lastModified we saw (to detect outside changes)
+let _syncLastSyncedAt = null;  // Date of the last successful read or write
+let _syncBusy         = false;
+
+// ── tiny IndexedDB key/value store, just to remember the file handle across reloads ──
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('1on1-sync-db', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('kv', 'readonly').objectStore('kv').get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(val, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbDel(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function updateSyncButton() {
+  const btn = document.getElementById('btn-sync');
+  if (!btn) return;
+  if (!_syncHandle) { btn.textContent = '🔗 Sync'; btn.title = 'Connect a shared OneDrive file'; return; }
+  if (_syncPermState === 'granted') { btn.textContent = '✅ Synced'; btn.title = 'Connected — click for details'; return; }
+  btn.textContent = '⚠️ Reconnect Sync';
+  btn.title = 'Click to reconnect your OneDrive sync file';
+}
+
+// Called from save() on every change; debounced so rapid edits don't
+// hammer the disk (and so OneDrive doesn't see a flood of tiny writes).
+let _syncWriteTimer = null;
+function scheduleFileSync() {
+  if (!FS_SUPPORTED || !_syncHandle) return;
+  clearTimeout(_syncWriteTimer);
+  _syncWriteTimer = setTimeout(writeToSyncFile, 500);
+}
+
+async function writeToSyncFile() {
+  if (!_syncHandle || _syncBusy) return;
+  try {
+    _syncBusy = true;
+    const perm = await _syncHandle.queryPermission({ mode: 'readwrite' });
+    _syncPermState = perm;
+    if (perm !== 'granted') { updateSyncButton(); return; }
+    const writable = await _syncHandle.createWritable();
+    const payload = {
+      version: '2', exportedAt: new Date().toISOString(),
+      people: state.people, subjects: state.subjects, sessions: state.sessions,
+    };
+    await writable.write(JSON.stringify(payload, null, 2));
+    await writable.close();
+    const f = await _syncHandle.getFile();
+    _syncLastWritten = f.lastModified;
+    _syncLastSyncedAt = new Date();
+    updateSyncButton();
+  } catch {
+    // OneDrive can transiently lock the file while it syncs — fail quietly
+    // and retry on the next change or the next poll.
+  } finally {
+    _syncBusy = false;
+  }
+}
+
+async function readFromSyncFile(handle) {
+  const file = await handle.getFile();
+  const text = await file.text();
+  const data = JSON.parse(text);
+  if (!Array.isArray(data.people) || !Array.isArray(data.subjects)) throw new Error('Not a 1:1 Manager file');
+  state.people   = data.people   ?? [];
+  state.subjects = data.subjects ?? [];
+  state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+  migrateState();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // keep the local cache in step too
+  _syncLastWritten = file.lastModified;
+  _syncLastSyncedAt = new Date();
+}
+
+// Checks whether the file changed on disk (e.g. written by the other Mac
+// through OneDrive) and reloads it into view if so. Cheap: just compares
+// modification times, so it's safe to call often.
+async function checkForExternalChanges() {
+  if (!_syncHandle || _syncBusy || !FS_SUPPORTED) return;
+  try {
+    const perm = await _syncHandle.queryPermission({ mode: 'readwrite' });
+    _syncPermState = perm;
+    if (perm !== 'granted') { updateSyncButton(); return; }
+    const f = await _syncHandle.getFile();
+    if (_syncLastWritten !== null && f.lastModified === _syncLastWritten) return; // unchanged
+    await readFromSyncFile(_syncHandle);
+    render();
+    updateSyncButton();
+    toast('Synced from OneDrive ✓');
+  } catch {
+    // file might be mid-sync / briefly unavailable — try again on the next poll
+  }
+}
+
+// ── Connect flow ──
+async function useExistingSyncFile() {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: '1:1 Manager Data', accept: { 'application/json': ['.json'] } }],
+    });
+    await readFromSyncFile(handle);
+    _syncHandle = handle;
+    _syncPermState = 'granted';
+    await idbSet('fileHandle', handle);
+    render();
+    renderSyncModal();
+    updateSyncButton();
+    toast('Connected to your sync file ✓');
+  } catch (err) {
+    if (err?.name !== 'AbortError') toast('Could not open that file');
+  }
+}
+
+async function createNewSyncFile() {
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: '1on1-manager-data.json',
+      types: [{ description: '1:1 Manager Data', accept: { 'application/json': ['.json'] } }],
+    });
+    _syncHandle = handle;
+    _syncPermState = 'granted';
+    await idbSet('fileHandle', handle);
+    await writeToSyncFile();
+    renderSyncModal();
+    updateSyncButton();
+    toast('Sync file created ✓');
+  } catch (err) {
+    if (err?.name !== 'AbortError') toast('Could not create the file');
+  }
+}
+
+async function reconnectSyncPermission() {
+  if (!_syncHandle) return;
+  try {
+    _syncPermState = await _syncHandle.requestPermission({ mode: 'readwrite' });
+    if (_syncPermState === 'granted') { await readFromSyncFile(_syncHandle); render(); toast('Reconnected ✓'); }
+  } catch { /* user dismissed the prompt */ }
+  updateSyncButton();
+  renderSyncModal();
+}
+
+async function disconnectSync() {
+  if (!confirm('Stop syncing?\nYour data stays on this computer, it just won\'t update the shared OneDrive file anymore.')) return;
+  _syncHandle = null;
+  _syncPermState = null;
+  _syncLastWritten = null;
+  await idbDel('fileHandle');
+  updateSyncButton();
+  renderSyncModal();
+  toast('Sync disconnected');
+}
+
+async function syncNow() {
+  if (!_syncHandle) return;
+  await checkForExternalChanges();
+  await writeToSyncFile();
+  renderSyncModal();
+}
+
+// ── Modal UI ──
+async function openSyncModal() {
+  if (_syncHandle) { try { _syncPermState = await _syncHandle.queryPermission({ mode: 'readwrite' }); } catch {} }
+  renderSyncModal();
+  openModal('m-sync');
+}
+
+function renderSyncModal() {
+  const body = document.getElementById('sync-body');
+  if (!body) return;
+
+  if (!FS_SUPPORTED) {
+    body.innerHTML = `
+      <p style="font-size:13px;line-height:1.6;color:var(--text-muted)">
+        Your browser doesn't support direct file sync — this needs Chrome or Edge.
+        Use the <strong>⬇ Export</strong> / <strong>⬆ Import</strong> buttons instead to move
+        data between your Mac Mini and your laptop.
+      </p>`;
+    return;
+  }
+
+  if (_syncHandle && _syncPermState !== 'granted') {
+    body.innerHTML = `
+      <p style="font-size:13px;line-height:1.6;color:var(--text-muted)">
+        This browser needs you to re-approve access to your sync file (this can happen after a
+        restart). Your file and settings are still remembered.
+      </p>
+      <button class="btn btn-primary btn-sm" onclick="reconnectSyncPermission()">🔌 Reconnect</button>`;
+    return;
+  }
+
+  if (!_syncHandle) {
+    body.innerHTML = `
+      <p style="font-size:13px;line-height:1.6;color:var(--text-muted)">
+        Connect a data file inside your <strong>OneDrive</strong> folder. OneDrive keeps it in sync
+        between your Mac Mini and laptop automatically — no service other than your own OneDrive
+        account is involved.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <button class="btn btn-primary btn-sm" onclick="useExistingSyncFile()">📂 Use existing sync file (already set up on your other Mac)</button>
+        <button class="btn btn-ghost btn-sm" onclick="createNewSyncFile()">🆕 Create a new sync file in OneDrive (first-time setup)</button>
+      </div>`;
+    return;
+  }
+
+  const name = _syncHandle.name || 'sync file';
+  const when = _syncLastSyncedAt ? _syncLastSyncedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—';
+  body.innerHTML = `
+    <p style="font-size:13px;line-height:1.6">
+      Connected to <strong>${esc(name)}</strong><br>
+      <span style="color:var(--text-muted)">Last synced: ${when}</span>
+    </p>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary btn-sm" onclick="syncNow()">🔄 Sync now</button>
+      <button class="btn btn-danger btn-sm" onclick="disconnectSync()">🔌 Disconnect</button>
+    </div>`;
+}
+
+// ── Startup: silently reconnect if permission is already granted from a previous visit ──
+async function initFileSync() {
+  const btn = document.getElementById('btn-sync');
+  if (!FS_SUPPORTED) { if (btn) btn.style.display = 'none'; return; }
+  try {
+    const handle = await idbGet('fileHandle');
+    if (!handle) { updateSyncButton(); return; }
+    _syncHandle = handle;
+    _syncPermState = await handle.queryPermission({ mode: 'readwrite' });
+    if (_syncPermState === 'granted') {
+      await readFromSyncFile(handle);
+      render();
+    }
+  } catch {
+    // stored handle may be stale (file moved/deleted) — leave it as "needs reconnect"
+  }
+  updateSyncButton();
+}
+
+// Pick up changes made by the other Mac while this tab stays open.
+window.addEventListener('focus', checkForExternalChanges);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForExternalChanges(); });
+setInterval(checkForExternalChanges, 20000);
+
+// ════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════
+load();
+restoreCompact();
+render();
+initFileSync();
+</script>
+</body>
+</html>
