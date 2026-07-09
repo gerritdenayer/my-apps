@@ -1,5 +1,17 @@
 # Changelog
 
+## [v3.30] - 2026-07-03 - Excel export and multi-quarter filters
+
+### Added
+- Data tab: Export to Excel, with separate buttons for budget lines and for campaigns / events.
+  Pick a year and tick the quarters to include (no quarter ticked means the whole year).
+
+### Changed
+- The Quarter filter on the Budget tab and the Campaigns & events tab is now a multi-select
+  (Q1-Q4 checkboxes), so you can view, for example, Q1 and Q2 together. No quarter ticked shows
+  all quarters. On the timeline, the visible window spans the selected quarters and only events
+  in those quarters show.
+
 ## [v3.29] - 2026-07-03 - Campaign form tidy-up and timeline labels
 
 ### Changed

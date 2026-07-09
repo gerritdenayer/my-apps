@@ -24,6 +24,7 @@
         </div>
         <input type="file" id="dm-file-input" accept=".json,application/json" style="display:none" />
       </div>
+      ${xlsxExportHtml()}
       ${datasetGridHtml()}
       ${shareCardHtml()}
     `;
@@ -83,7 +84,78 @@
     };
 
     wireShare(root);
+    wireXlsxExport(root);
     renderDatasetGrid();
+  }
+
+  // ---- Excel export (budget lines and campaigns/events), filtered by year + quarters ----
+  function xlsxExportHtml() {
+    const yrs = new Set();
+    (S.state.data.activities || []).forEach((a) => { if (a.date) { const y = new Date(a.date).getFullYear(); if (!isNaN(y)) yrs.add(y); } });
+    (S.state.data.events || []).forEach((e) => { if (e.start) { const y = new Date(e.start).getFullYear(); if (!isNaN(y)) yrs.add(y); } });
+    yrs.add(new Date().getFullYear());
+    const years = [...yrs].sort();
+    const cur = new Date().getFullYear();
+    return `
+      <div class="card">
+        <h2>Export to Excel</h2>
+        <p class="muted small">Export budget lines and campaigns / events as separate Excel files. Pick a year and tick the quarters to include. No quarter ticked means the whole year.</p>
+        <div style="display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap; margin-bottom:10px;">
+          <div><label class="muted small">Year</label><br/><select id="xe-year"><option value="all">All years</option>${years.map((y) => `<option ${y === cur ? "selected" : ""} value="${y}">${y}</option>`).join("")}</select></div>
+          <div><label class="muted small">Quarters</label>${S.quarterChecks("xe", [])}</div>
+        </div>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="primary" id="xe-budget">Export budget lines</button>
+          <button class="primary" id="xe-events">Export campaigns &amp; events</button>
+        </div>
+      </div>`;
+  }
+  function wireXlsxExport(root) {
+    const getSel = () => ({ year: root.querySelector("#xe-year").value, quarters: [...root.querySelectorAll(".xe-q:checked")].map((x) => x.value) });
+    const b = root.querySelector("#xe-budget");
+    if (b) b.onclick = () => { const s = getSel(); exportBudgetXlsx(s.year, s.quarters); };
+    const ev = root.querySelector("#xe-events");
+    if (ev) ev.onclick = () => { const s = getSel(); exportEventsXlsx(s.year, s.quarters); };
+  }
+  function writeSheet(kind, sheetName, header, rows) {
+    if (!window.XLSX) return S.toast("Excel library not loaded.", "error");
+    if (!rows.length) return S.toast("No rows match the selected period.", "error");
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `marketing-${kind}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    S.toast(`Exported ${rows.length} row(s) to Excel.`, "success");
+  }
+  function exportBudgetXlsx(year, quarters) {
+    const D = S.state.data;
+    const gc = (id) => ((D.settings.globalCampaigns || []).find((g) => g.id === id) || {}).name || "";
+    const ap = (id) => ((D.settings.apCategories || []).find((c) => c.id === id) || {}).name || "";
+    const rows = (D.activities || []).filter((a) => S.inPeriodQ(a.date, year, quarters, "")).map((a) => {
+      const e = S.entityById(a.entityId) || {};
+      return [a.date || "", a.name || "", e.group || "", e.name || "",
+        (S.actTypeById(a.activityTypeId) || {}).name || "", ap(a.apCategoryId),
+        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "", gc(a.globalCampaignId),
+        (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
+        a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
+        a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
+    });
+    writeSheet("budget-lines", "Budget lines",
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP", "Global campaign", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      rows);
+  }
+  function exportEventsXlsx(year, quarters) {
+    const D = S.state.data;
+    const gc = (id) => ((D.settings.globalCampaigns || []).find((g) => g.id === id) || {}).name || "";
+    const rows = (D.events || []).filter((e) => S.inPeriodQ(e.start, year, quarters, "")).map((e) => {
+      const en = S.entityById(e.entityId) || {};
+      return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
+        (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
+        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", gc(e.globalCampaignId),
+        S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
+    });
+    writeSheet("campaigns-events", "Events",
+      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP", "Global campaign", "Countries", "Campaign code", "Notes"],
+      rows);
   }
 
   // ---- Budget & events table with multi-row edit ----

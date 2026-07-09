@@ -11,7 +11,7 @@
                    "#ff5e8a", "#00c1b2", "#9ad14b", "#e8762b", "#7d8fff"];
   const LABELW = 230, PXDAY = 3.6, ROWH = 30;
 
-  const view = { groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarter: "", month: "", country: "" };
+  const view = { groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
 
   function ensureStyles() {
     if (document.getElementById("tl-styles")) return;
@@ -180,7 +180,7 @@
           <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
         <div><label>Year</label>
           <select id="tl-year"><option value="">All</option>${tlYears(events).map(y=>`<option ${String(view.year)===String(y)?"selected":""} value="${y}">${y}</option>`).join("")}</select></div>
-        <div><label>Quarter</label><select id="tl-quarter">${S.quarterOptions(view.quarter)}</select></div>
+        <div><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
         <div><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
         ${S.scopeFilterHtml("tl", view.scope)}
         ${(data.settings.countries||[]).length ? `<div><label>Country</label>
@@ -209,7 +209,7 @@
     root.querySelector("#tl-color").onchange=e=>{view.colorBy=e.target.value;render();};
     root.querySelector("#tl-kind").onchange=e=>{view.kind=e.target.value;render();};
     root.querySelector("#tl-year").onchange=e=>{view.year=e.target.value;render();};
-    root.querySelector("#tl-quarter").onchange=e=>{view.quarter=e.target.value;render();};
+    root.querySelectorAll(".tlq-q").forEach(cb=>{ cb.onchange=()=>{ view.quarters=[...root.querySelectorAll(".tlq-q:checked")].map(x=>x.value); render(); }; });
     root.querySelector("#tl-month").onchange=e=>{view.month=e.target.value;render();};
     const tlCountry=root.querySelector("#tl-country");
     if(tlCountry) tlCountry.onchange=e=>{view.country=e.target.value;render();};
@@ -228,16 +228,28 @@
   function opt(pairs,sel){ return pairs.map(([v,l])=>`<option ${sel===v?"selected":""} value="${v}">${l}</option>`).join(""); }
 
   // The zoom window from the Year/Quarter/Month filters, or null (whole timeline).
+  // Bounding window for drawing the timeline (min start to max end of the selection).
   function periodWindow(){
     const y=view.year?+view.year:null;
-    const q=view.quarter!==""?+view.quarter:null;
+    const qs=(view.quarters||[]).map(Number).filter(Boolean);
     const mo=view.month!==""?+view.month:null;
-    if(!y && q===null && mo===null) return null;
+    if(!y && !qs.length && mo===null) return null;
     const year=y||new Date().getFullYear();
     let sM=0,eM=11;
     if(mo!==null){ sM=mo; eM=mo; }
-    else if(q!==null){ sM=(q-1)*3; eM=sM+2; }
+    else if(qs.length){ sM=Math.min(...qs.map(q=>(q-1)*3)); eM=Math.max(...qs.map(q=>(q-1)*3+2)); }
     return { start:new Date(year,sM,1), end:new Date(year,eM+1,0) };
+  }
+  // Exact allowed date ranges for filtering: each selected quarter (or month, or whole year).
+  function periodRanges(){
+    const y=view.year?+view.year:null;
+    const qs=(view.quarters||[]).map(Number).filter(Boolean);
+    const mo=view.month!==""?+view.month:null;
+    if(!y && !qs.length && mo===null) return null; // no period filter
+    const year=y||new Date().getFullYear();
+    if(mo!==null) return [{start:new Date(year,mo,1), end:new Date(year,mo+1,0)}];
+    if(qs.length) return qs.map(q=>({start:new Date(year,(q-1)*3,1), end:new Date(year,(q-1)*3+3,0)}));
+    return [{start:new Date(year,0,1), end:new Date(year,11,31)}];
   }
   function geom(events){
     const yb=periodWindow()||yearBounds(events);
@@ -298,15 +310,15 @@
   }
   function filtered(events){
     const q=view.q.trim().toLowerCase();
-    const win=periodWindow();
+    const ranges=periodRanges();
     return events.filter(e=>{
       if(view.kind!=="all"&&(e.kind||"Event")!==view.kind) return false;
       if(!matchesScope(e)) return false;
       if(!matchesCountry(e)) return false;
-      if(win){
-        // Show anything ACTIVE in the window: it may start before or end after it.
+      if(ranges){
+        // Show anything ACTIVE in any selected quarter/month: it may start before or end after it.
         const es=parseISO(e.start), ee=parseISO(e.end||e.start);
-        if(!(es && ee && es<=win.end && ee>=win.start)) return false;
+        if(!(es && ee && ranges.some(r=>es<=r.end && ee>=r.start))) return false;
       }
       if(q){
         const tname=e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):"";

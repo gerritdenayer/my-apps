@@ -5,7 +5,7 @@
 
   const view = {
     year: new Date().getFullYear(),
-    quarterFilter: "",
+    quarters: [],
     monthFilter: "",
     scope: { m1: "", cluster: "", entityId: "" },
     svpFilter: "",
@@ -100,8 +100,8 @@
           <select id="f-year">${years.sort().map(y => `<option ${y===view.year?"selected":""} value="${y}">${y}</option>`).join("")}</select>
         </div>
         <div>
-          <label>Quarter</label>
-          <select id="f-quarter">${S.quarterOptions(view.quarterFilter)}</select>
+          <label>Quarters</label>
+          ${S.quarterChecks("f", view.quarters)}
         </div>
         <div>
           <label>Month</label>
@@ -153,7 +153,7 @@
 
     // bind filters
     root.querySelector("#f-year").onchange = (e) => { view.year = +e.target.value; render(); };
-    root.querySelector("#f-quarter").onchange = (e) => { view.quarterFilter = e.target.value; renderRows(); };
+    root.querySelectorAll(".f-q").forEach((cb) => { cb.onchange = () => { view.quarters = [...root.querySelectorAll(".f-q:checked")].map((x) => x.value); renderRows(); }; });
     root.querySelector("#f-month").onchange = (e) => { view.monthFilter = e.target.value; renderRows(); };
     S.wireScopeFilter(root, "f", view.scope, renderRows, entityFilterLabel);
     root.querySelector("#f-search").oninput = (e) => { view.search = e.target.value; renderRows(); };
@@ -301,7 +301,7 @@
     const q = view.search.trim().toLowerCase();
     const colKeys = Object.keys(view.colFilters || {});
     return data.activities.filter((a) => {
-      if (!S.inPeriod(a.date, view.year, view.quarterFilter, view.monthFilter)) return false;
+      if (!S.inPeriodQ(a.date, view.year, view.quarters, view.monthFilter)) return false;
       if (!S.entityMatchesScope(a.entityId, view.scope)) return false;
       if (view.svpFilter && a.svpId !== view.svpFilter) return false;
       if (view.globalFilter && a.globalCampaignId !== view.globalFilter) return false;

@@ -126,6 +126,21 @@
   const QUARTERS = [["1", "Q1"], ["2", "Q2"], ["3", "Q3"], ["4", "Q4"]];
   const MONTHS_OPT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => [String(i), m]);
   function quarterOptions(sel) { return '<option value="">All</option>' + QUARTERS.map(([v, l]) => `<option ${String(sel) === v ? "selected" : ""} value="${v}">${l}</option>`).join(""); }
+  // Period check where quarters is an array of quarter numbers (empty = any quarter).
+  function inPeriodQ(dateStr, year, quarters, month) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return false;
+    if (year !== "" && year !== undefined && year !== null && year !== "all" && d.getFullYear() !== +year) return false;
+    if (month !== "" && month !== undefined && month !== null && d.getMonth() !== +month) return false;
+    if (quarters && quarters.length) { const q = Math.floor(d.getMonth() / 3) + 1; if (!quarters.map(Number).includes(q)) return false; }
+    return true;
+  }
+  // HTML for a row of Q1-Q4 checkboxes. Elements get class "<prefix>-q" and value 1..4.
+  function quarterChecks(prefix, selected) {
+    const sel = new Set((selected || []).map(String));
+    return `<div class="qsel" style="display:flex; gap:10px; align-items:center; padding-top:6px;">${[1, 2, 3, 4].map((q) => `<label style="display:inline-flex; align-items:center; gap:3px; font-weight:400; cursor:pointer; margin:0;"><input type="checkbox" class="${prefix}-q" value="${q}" ${sel.has(String(q)) ? "checked" : ""}/> Q${q}</label>`).join("")}</div>`;
+  }
   function monthOptions(sel) { return '<option value="">All</option>' + MONTHS_OPT.map(([v, l]) => `<option ${String(sel) === v ? "selected" : ""} value="${v}">${l}</option>`).join(""); }
   function escapeHtml(str) {
     if (str === null || str === undefined) return "";
@@ -296,7 +311,7 @@
   window.MB_STATE = {
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
-    inPeriod, quarterOptions, monthOptions,
+    inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     entityById, svpById, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     globalCampaignById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
