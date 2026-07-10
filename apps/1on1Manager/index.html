@@ -1071,6 +1071,13 @@
         <label class="field-label">People involved</label>
         <div class="people-grid" id="f-people"></div>
       </div>
+      <div class="field">
+        <label class="field-label">Group <em>(optional)</em></label>
+        <div style="display:flex;gap:8px">
+          <select class="field-input" id="f-group" style="flex:1"></select>
+          <button class="btn btn-ghost btn-sm" onclick="openGroupsModal()" title="Add, rename or delete groups">🗂️ Manage</button>
+        </div>
+      </div>
     </div>
     <div class="mfoot">
       <button class="btn btn-danger btn-sm" id="btn-del-subject" onclick="confirmDeleteSubject()" style="display:none">🗑 Delete</button>
@@ -1134,17 +1141,6 @@
       <button class="mhd-close" onclick="closeModal('m-people')">✕</button>
     </div>
     <div class="mbody">
-      <div class="field-label" style="margin-bottom:-4px">Groups <em>(optional — used for the "By Group" board)</em></div>
-      <div class="plist" id="glist"></div>
-      <div class="add-row">
-        <input class="field-input" id="new-group" placeholder="Group name, e.g. Team A…"
-          onkeydown="if(event.key==='Enter')addGroup()">
-        <button class="btn btn-ghost btn-sm" onclick="addGroup()">Add</button>
-      </div>
-
-      <div style="height:1px;background:var(--border);margin:2px 0"></div>
-
-      <div class="field-label" style="margin-bottom:-4px">People</div>
       <div class="plist" id="plist"></div>
       <div class="add-row">
         <input class="field-input" id="new-person" placeholder="Team member's name…"
@@ -1155,6 +1151,31 @@
     <div class="mfoot">
       <div class="mfoot-spacer"></div>
       <button class="btn btn-primary btn-sm" onclick="closeModal('m-people')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: Manage Groups ══════════ -->
+<div class="overlay" id="m-groups" style="display:none" onclick="if(event.target===this)closeModal('m-groups')">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mhd-title">Manage Groups</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">A group is a category you can tag a topic with, e.g. "Budget" or "Hiring"</div>
+      </div>
+      <button class="mhd-close" onclick="closeModal('m-groups')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="plist" id="glist"></div>
+      <div class="add-row">
+        <input class="field-input" id="new-group" placeholder="Group name, e.g. Budget…"
+          onkeydown="if(event.key==='Enter')addGroup()">
+        <button class="btn btn-primary btn-sm" onclick="addGroup()">Add</button>
+      </div>
+    </div>
+    <div class="mfoot">
+      <div class="mfoot-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="closeModal('m-groups')">Close</button>
     </div>
   </div>
 </div>
@@ -1231,7 +1252,8 @@
 // DATA MODEL
 // ════════════════════════════════════════════════════
 // state.people   = [{ id, name }]
-// state.subjects = [{ id, title, notes, assignments: { personId: { status } } }]
+// state.groups   = [{ id, name }] — an optional category a topic can belong to (e.g. "Budget")
+// state.subjects = [{ id, title, notes, groupId, assignments: { personId: { status } } }]
 // state.sessions = [{ id, personId, startedAt, endedAt, date:'YYYY-MM-DD', treated:[subjectId], entries:[{subjectId,title,status}] }]
 // statuses: 'to-ask' | 'to-follow-up' | 'done'
 
@@ -1282,12 +1304,12 @@ function migrateState() {
     state.people.unshift(p);
   }
 
-  // Groups (swimlanes): make sure the array exists and drop dangling
-  // references to groups that no longer exist (e.g. after a group was
-  // deleted, or after importing an older backup with no groups at all).
+  // Groups (swimlanes): a topic-level category, e.g. "Budget". Make sure the
+  // array exists and drop dangling references on topics whose group was
+  // deleted (or on data imported from before groups existed).
   if (!Array.isArray(state.groups)) state.groups = [];
   const groupIds = new Set(state.groups.map(g => g.id));
-  state.people.forEach(p => { if (p.groupId && !groupIds.has(p.groupId)) p.groupId = null; });
+  (state.subjects || []).forEach(sub => { if (sub.groupId && !groupIds.has(sub.groupId)) sub.groupId = null; });
 }
 
 function load() {
@@ -1450,7 +1472,7 @@ function statusCard(sub, colStatus) {
   card.addEventListener('dragstart', e => {
     _dragging = { subId: sub.id, fromStatus: colStatus };
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', sub.id); // requis Firefox
+    e.dataTransfer.setData('text/plain', sub.id); // required for Firefox
     setTimeout(() => card.classList.add('dragging'), 0);
   });
 
@@ -1514,43 +1536,66 @@ function personColumn(person) {
 function renderByGroup(board) {
   board.classList.add('grouped');
 
-  if (!state.groups.length && realPeople().length === 0) {
+  if (!state.groups.length) {
     board.innerHTML = `
       <div class="welcome">
         <div class="welcome-icon">🗂️</div>
         <h2>No groups yet</h2>
-        <p>Create groups (e.g. teams) from ⚙️ People, then assign each person to one — they'll show up here as swimlanes.</p>
-        <div class="welcome-btns"><button class="btn btn-ghost" onclick="openPeopleModal()">⚙️ Manage People &amp; Groups</button></div>
+        <p>Groups are an optional category you tag a topic with, e.g. "Budget" or "Hiring". Create some, then tag a topic with one from its edit screen — it'll show up here as a swimlane.</p>
+        <div class="welcome-btns"><button class="btn btn-ghost" onclick="openGroupsModal()">🗂️ Manage Groups</button></div>
       </div>`;
     return;
   }
 
-  // The Personal To-Dos lane always gets its own band at the top.
-  const personal = findPerson(PERSONAL_ID);
-  if (personal) board.appendChild(swimlane('📥 Personal', [personal]));
-
   state.groups.forEach(g => {
-    const members = realPeople().filter(p => p.groupId === g.id);
-    board.appendChild(swimlane(esc(g.name), members, g.id));
+    const subs = state.subjects.filter(s => s.groupId === g.id);
+    board.appendChild(swimlane(esc(g.name), subs, g.id));
   });
 
-  const ungrouped = realPeople().filter(p => !p.groupId);
+  const ungrouped = state.subjects.filter(s => !s.groupId);
   if (ungrouped.length) board.appendChild(swimlane('Ungrouped', ungrouped));
 }
 
-function swimlane(title, members, groupId) {
+// One swimlane band = a mini status board (To Sort / To Ask / To Follow Up /
+// Done) scoped to the topics in that group. Reuses the same card + drag
+// logic as the main "By Status" board, so dragging a topic between statuses
+// works the same way here too.
+function swimlane(title, subs, groupId) {
   const band = el('div', 'swimlane');
   band.innerHTML = `
     <div class="swimlane-hd">
       <span>${title}</span>
-      <span class="col-badge">${members.length}</span>
-      ${groupId ? `<div style="flex:1"></div><button class="asgn-hist-toggle" onclick="openPeopleModal()" title="Manage groups">⚙️ Edit</button>` : ''}
+      <span class="col-badge">${subs.length}</span>
+      ${groupId ? `<div style="flex:1"></div><button class="asgn-hist-toggle" onclick="openGroupsModal()" title="Manage groups">⚙️ Edit</button>` : ''}
     </div>`;
   const body = el('div', 'swimlane-body');
-  if (!members.length) {
-    body.innerHTML = `<div class="empty">No one in this group yet — add people to it from ⚙️ People</div>`;
+  if (!subs.length) {
+    body.innerHTML = `<div class="empty">No topics in this group yet — tag one from its edit screen</div>`;
   } else {
-    members.forEach(person => body.appendChild(personColumn(person)));
+    ORDER.forEach(status => {
+      const inStatus = subs.filter(s => {
+        const asgns = Object.values(s.assignments || {});
+        if (!asgns.length) return status === 'to-sort';
+        return asgns.some(a => a.status === status);
+      });
+      const cfg = S[status];
+      const col = el('div', 'column');
+      col.innerHTML = `
+        <div class="col-header">
+          <div class="col-dot" style="background:${cfg.dot}"></div>
+          <div class="col-title">${cfg.label}</div>
+          <div class="col-badge">${inStatus.length}</div>
+        </div>`;
+      const colBody = el('div', 'col-body');
+      if (!inStatus.length) {
+        colBody.innerHTML = `<div class="empty">No topics</div>`;
+      } else {
+        inStatus.forEach(sub => colBody.appendChild(statusCard(sub, status)));
+      }
+      setupColumnDrop(colBody, status);
+      col.appendChild(colBody);
+      body.appendChild(col);
+    });
   }
   band.appendChild(body);
   return band;
@@ -1616,13 +1661,15 @@ function openDetailModal(subId) {
     nw.style.display = 'none';
   }
 
-  // Creation date
+  // Creation date + group
   const createdEl = document.getElementById('d-created');
   if (createdEl) {
-    createdEl.textContent = sub.createdAt
-      ? '📅 Created on ' + formatHistDate(sub.createdAt)
-      : '';
-    createdEl.style.display = sub.createdAt ? '' : 'none';
+    const bits = [];
+    if (sub.createdAt) bits.push('📅 Created on ' + formatHistDate(sub.createdAt));
+    const g = sub.groupId ? findGroup(sub.groupId) : null;
+    if (g) bits.push('🗂️ ' + g.name);
+    createdEl.textContent = bits.join('   ');
+    createdEl.style.display = bits.length ? '' : 'none';
   }
 
   refreshDetailAssignments(sub);
@@ -1760,6 +1807,11 @@ function openSubjectModal(subId = null, preselectPersonId = null) {
     grid.appendChild(btn);
   });
 
+  const groupSel = document.getElementById('f-group');
+  groupSel.innerHTML = `<option value="">No group</option>` +
+    state.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+  groupSel.value = sub?.groupId || '';
+
   // Pre-check the person: explicit person passed in, else the active filter,
   // else (only for brand-new topics) default to the Personal To-Dos lane.
   const pre = preselectPersonId || (!subId ? (_filterPersonId || PERSONAL_ID) : null);
@@ -1782,12 +1834,14 @@ function saveSubject() {
   titleEl.classList.remove('error');
 
   const notes = document.getElementById('f-notes').value.trim();
+  const groupId = document.getElementById('f-group').value || null;
   const selected = [...document.querySelectorAll('.ptoggle.on')].map(b => b.dataset.pid);
 
   if (_editId) {
     const sub = findSubject(_editId);
     sub.title = title;
     sub.notes = notes;
+    sub.groupId = groupId;
     const newAsgn = {};
     selected.forEach(pid => {
       if (sub.assignments?.[pid]) {
@@ -1807,7 +1861,7 @@ function saveSubject() {
       logStatus(a, defaultStatus);
       asgn[pid] = a;
     });
-    state.subjects.unshift({ id: uid(), title, notes, assignments: asgn, createdAt: new Date().toISOString() });
+    state.subjects.unshift({ id: uid(), title, notes, groupId, assignments: asgn, createdAt: new Date().toISOString() });
   }
   _fromEmail = false;
 
@@ -1839,10 +1893,15 @@ function confirmDeleteSubject() {
 // PEOPLE MODAL
 // ════════════════════════════════════════════════════
 function openPeopleModal() {
-  renderGroupsList();
   renderPeopleList();
   openModal('m-people');
   setTimeout(() => document.getElementById('new-person').focus(), 80);
+}
+
+function openGroupsModal() {
+  renderGroupsList();
+  openModal('m-groups');
+  setTimeout(() => document.getElementById('new-group').focus(), 80);
 }
 
 function renderGroupsList() {
@@ -1853,7 +1912,7 @@ function renderGroupsList() {
   if (!state.groups.length) {
     const hint = el('div');
     hint.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;padding:8px';
-    hint.textContent = 'No groups yet. Add one below to start using the "By Group" board.';
+    hint.textContent = 'No groups yet. Add one below, then tag it on a topic.';
     list.appendChild(hint);
   }
 
@@ -1890,15 +1949,11 @@ function renderPeopleList() {
           onkeydown="if(event.key==='Enter')this.blur()">
         <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;padding:0 4px">fixed</span>`;
     } else {
-      const groupOptions = `<option value="">No group</option>` +
-        state.groups.map(g => `<option value="${g.id}"${p.groupId === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
       row.innerHTML = `
         <span style="color:var(--text-muted);font-size:13px">👤</span>
         <input value="${esc(p.name)}"
           onblur="renamePerson('${p.id}',this.value)"
           onkeydown="if(event.key==='Enter')this.blur()">
-        <select class="field-input" style="width:auto;max-width:120px;padding:4px 6px;font-size:11px;flex:0 0 auto"
-          onchange="setPersonGroup('${p.id}', this.value)" title="Group">${groupOptions}</select>
         <button class="pitem-del" onclick="removePerson('${p.id}')" title="Delete">🗑</button>`;
     }
     list.appendChild(row);
@@ -1962,22 +2017,13 @@ function renameGroup(gid, newName) {
 
 function removeGroup(gid) {
   const g = findGroup(gid);
-  if (!g || !confirm(`Remove the "${g.name}" group?\nPeople in it will become ungrouped (nothing else changes).`)) return;
+  if (!g || !confirm(`Remove the "${g.name}" group?\nTopics in it will become ungrouped (nothing else changes).`)) return;
   state.groups = state.groups.filter(x => x.id !== gid);
-  state.people.forEach(p => { if (p.groupId === gid) p.groupId = null; });
+  state.subjects.forEach(s => { if (s.groupId === gid) s.groupId = null; });
   save();
   renderGroupsList();
-  renderPeopleList();
   render();
   toast(`${g.name} removed`);
-}
-
-function setPersonGroup(pid, gid) {
-  const p = findPerson(pid);
-  if (!p) return;
-  p.groupId = gid || null;
-  save();
-  render();
 }
 
 // ════════════════════════════════════════════════════
@@ -2980,7 +3026,7 @@ function importData(input) {
 
 // Close modals with Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ['m-subject','m-detail','m-people','m-move','m-focus','m-session','m-pick','m-email','m-sync'].forEach(closeModal);
+  if (e.key === 'Escape') ['m-subject','m-detail','m-people','m-groups','m-move','m-focus','m-session','m-pick','m-email','m-sync'].forEach(closeModal);
 });
 
 // ════════════════════════════════════════════════════
