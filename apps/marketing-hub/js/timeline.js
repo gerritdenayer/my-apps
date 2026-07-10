@@ -549,6 +549,8 @@
     const bFG=managed?(managed.forecastGross||0):0, bFP=managed?(managed.forecastPartner||0):0;
     const bAG=managed?(managed.actualGross||0):0, bAP=managed?(managed.actualPartner||0):0;
     const bPO=managed?(managed.poNumber||""):"";
+    const presetApCatId=(managed&&managed.apCategoryId)||((S.actTypeById(presetTypeId)||{}).apCategoryId)||"";
+    const presetVendor=managed?(managed.vendor||""):"";
 
     // Outcomes prefill
     const oc=e.outcomes||{};
@@ -635,13 +637,7 @@
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
 
       <h3 style="margin:14px 0 4px">Budget *</h3>
-      <p class="muted small" style="margin:0 0 8px">Every campaign needs a budget line. Either link existing budget line(s), or create a new line from this campaign's details.</p>
-      <div class="row-3">
-        <div><label>Type (activity type) *</label>
-          <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
-        <div></div>
-        <div></div>
-      </div>
+      <p class="muted small" style="margin:0 0 8px">Either link existing budget line(s), or create a new one. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner, SVP and global campaign are taken from the event above.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
@@ -649,12 +645,17 @@
       </select>
       <div id="c-bnew" ${bMode==="existing"?"hidden":""}>
         <div class="row-3">
-          <div><label>Cluster</label>
-            <select id="c-bcluster">${optByName(clusters, initialCluster)}</select></div>
-          <div><label>Entity *</label>
-            <select id="c-bentity">${entOptions(initialCluster, presetEntityId)}</select></div>
+          <div><label>Type (activity type) *</label>
+            <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
+          <div><label>A&amp;P category</label>
+            <select id="c-bapcat"><option value="">Select...</option>${(data.settings.apCategories||[]).map(c=>`<option ${presetApCatId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}</select></div>
           <div><label>Status</label>
             <select id="c-bstatus"><option value="">Select...</option>${(data.settings.statuses||[]).map(s=>`<option ${presetStatusId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+        </div>
+        <div class="row-3">
+          <div><label>Vendor / Partner</label><input id="c-bvendor" type="text" value="${S.escapeHtml(presetVendor)}" /></div>
+          <div><label>PO number</label><input id="c-bpo" type="text" value="${S.escapeHtml(bPO)}" /></div>
+          <div></div>
         </div>
         <div class="row-3">
           <div><label>Forecast gross (EUR)</label><input id="c-bfg" type="number" step="0.01" value="${bFG}" /></div>
@@ -664,9 +665,8 @@
         <div class="row-3">
           <div><label>Actual gross (EUR)</label><input id="c-bag" type="number" step="0.01" value="${bAG}" /></div>
           <div><label>Actual partner (EUR)</label><input id="c-bap" type="number" step="0.01" value="${bAP}" /></div>
-          <div><label>PO number</label><input id="c-bpo" type="text" value="${S.escapeHtml(bPO)}" /></div>
+          <div></div>
         </div>
-        <p class="muted small">The new line takes this campaign's Type, SVP, Global campaign, entity, status, PO number and amounts, and is added to the Budget dataset.</p>
       </div>
       <div id="c-bexisting" ${bMode==="existing"?"":"hidden"}>
         <label>Existing budget lines</label>
@@ -791,6 +791,9 @@
       modal.querySelector("#c-bexisting").hidden = (m!=="existing");
       if(m==="new") recomputePartnerBudget();
     };
+    // Default the A&P category to the chosen type's category (still editable).
+    const cTypeSel=modal.querySelector("#c-type"), cApcatSel=modal.querySelector("#c-bapcat");
+    if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{ const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId; });
 
     // Countries picker: group chips tick their members, search filters the list, clear/copy helpers.
     const coListBox=modal.querySelector("#c-country-list");
@@ -866,14 +869,21 @@
     modal.querySelector("#c-save").onclick=async()=>{
       const name=modal.querySelector("#c-name").value.trim();
       const start=modal.querySelector("#c-start").value;
-      const activityTypeId=modal.querySelector("#c-type").value;
       const bmode=modal.querySelector("#c-bmode").value;
-      const bEntityId=modal.querySelector("#c-bentity").value;
+      const orgEntityId=modal.querySelector("#c-entity").value;
+      const typeFromField=modal.querySelector("#c-type").value;
       const selectedExisting=[...modal.querySelectorAll("#c-bexlist input.bx-chk:checked")].map(cb=>cb.value);
+      // Activity type lives on the budget line. For a new line it comes from the Type field; when
+      // linking existing lines the event inherits the type of the first linked line.
+      let activityTypeId=typeFromField;
+      if(bmode==="existing"){
+        const fl=(data.activities||[]).find(x=>x.id===selectedExisting[0]);
+        activityTypeId = fl ? (fl.activityTypeId||"") : (e.activityTypeId||"");
+      }
       if(!name) return S.toast("Name is required","error");
       if(!start) return S.toast("Start date is required","error");
-      if(!activityTypeId) return S.toast("Type (activity type) is required","error");
-      if(bmode==="new" && !bEntityId) return S.toast("A budget entity is required to create a new line.","error");
+      if(bmode==="new" && !typeFromField) return S.toast("Activity type is required for the budget line.","error");
+      if(bmode==="new" && !orgEntityId) return S.toast("Set the organising entity above to create a budget line.","error");
       if(bmode==="existing" && selectedExisting.length===0) return S.toast("Pick at least one existing budget line, or switch to create a new one.","error");
       const end=modal.querySelector("#c-end").value;
       if(end && end<start) return S.toast("End date cannot be before the start date","error");
@@ -908,6 +918,8 @@
         const ag=parseFloat(modal.querySelector("#c-bag").value)||0;
         const ap=parseFloat(modal.querySelector("#c-bap").value)||0;
         const bpo=modal.querySelector("#c-bpo").value.trim();
+        const bapc=modal.querySelector("#c-bapcat").value;
+        const bvendor=modal.querySelector("#c-bvendor").value.trim();
         let line=primaryId ? (data.activities||[]).find(x=>x.id===primaryId) : null;
         const isNewLine=!line;
         if(isNewLine){
@@ -919,9 +931,10 @@
         const beforeSig=isNewLine?null:contentSig(line);
         const links=new Set(line.eventIds||[]); links.add(e.id);
         Object.assign(line,{
-          name, date:start, eventIds:Array.from(links), entityId:bEntityId, svpId, globalCampaignId,
-          activityTypeId, apCategoryId:(line.apCategoryId||typeCatId), statusId:bStatus,
-          ownerId:line.ownerId||S.state.currentUserId||"", poNumber:bpo,
+          name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId, globalCampaignId,
+          activityTypeId:typeFromField, apCategoryId:(bapc||typeCatId), statusId:bStatus,
+          ownerId:(modal.querySelector("#c-owner").value||line.ownerId||S.state.currentUserId||""),
+          vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
         });
         // Stamp the managed line's update only if it already existed and its content changed.
@@ -950,7 +963,6 @@
 
       // Cluster comes from the organising entity (the same entity list budget lines use), so the
       // two can never diverge. Fall back to the manually picked cluster only when there is no entity.
-      const orgEntityId=modal.querySelector("#c-entity").value;
       const orgEntity=orgEntityId?S.entityById(orgEntityId):null;
       const cluster=orgEntity?(orgEntity.group||""):modal.querySelector("#c-cluster").value;
 

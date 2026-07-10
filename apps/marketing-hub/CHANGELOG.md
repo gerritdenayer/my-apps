@@ -1,6 +1,15 @@
 # Changelog
 
-## [v3.30] - 2026-07-03 - Excel export and multi-quarter filters
+## [v3.31] - 2026-07-03 - Budget line fields inside the campaign form
+
+### Changed
+- The budget part of the campaign / event form now behaves like a real budget line. When you
+  link an existing budget line, the activity type is not asked again, because it already lives on
+  that line and the event inherits it. When you create a new line, the fields to fill are the
+  budget line's own fields (activity type, A&P category, status, vendor, PO number, forecast and
+  actual amounts). Everything already on the event (name, dates, organising entity, owner, SVP,
+  global campaign) is filled in automatically, so it is not typed twice. A&P category defaults
+  from the chosen activity type.
 
 ### Added
 - Data tab: Export to Excel, with separate buttons for budget lines and for campaigns / events.
