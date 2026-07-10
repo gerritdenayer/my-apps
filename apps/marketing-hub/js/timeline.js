@@ -595,7 +595,7 @@
 
     // Existing budget lines (for linking) and the budget-section mode
     const linkedExisting=(data.activities||[]).filter(a=>(a.eventIds||[]).includes(e.id));
-    const bMode=(isEdit && !managed && linkedExisting.length>0) ? "existing" : "new";
+    const bMode = managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new"));
     const existingLinesHtml=(data.activities||[]).slice()
       .sort((x,y)=>(x.name||"").localeCompare(y.name||""))
       .map(a=>{
@@ -644,14 +644,15 @@
 
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
 
-      <h3 style="margin:14px 0 4px">Budget *</h3>
-      <p class="muted small" style="margin:0 0 8px">Either link existing budget line(s), or create a new one. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner, SVP and global campaign are taken from the event above.</p>
+      <h3 style="margin:14px 0 4px">Budget</h3>
+      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP are taken from the event above.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
         <option value="existing" ${bMode==="existing"?"selected":""}>Link existing budget line(s)</option>
+        <option value="none" ${bMode==="none"?"selected":""}>No budget line (agenda only)</option>
       </select>
-      <div id="c-bnew" ${bMode==="existing"?"hidden":""}>
+      <div id="c-bnew" ${bMode==="new"?"":"hidden"}>
         <div class="row-3">
           <div><label>Type (activity type) *</label>
             <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
@@ -952,7 +953,7 @@
         if(!isNewLine && contentSig(line)!==beforeSig){
           line.updatedBy=S.state.currentUserId; line.updatedAt=new Date().toISOString();
         }
-      } else {
+      } else if(bmode==="existing"){
         // Link this campaign into the selected existing lines; unlink from any deselected.
         const sel=new Set(selectedExisting);
         (data.activities||[]).forEach(a=>{
@@ -962,6 +963,7 @@
         });
         primaryId=""; // no dedicated managed line when linking existing
       }
+      // bmode "none": agenda-only, no budget line created or linked. Any existing links are left as they are.
 
       // Outcomes
       const outcomes={};

@@ -1,5 +1,12 @@
 # Changelog
 
+## [v4.1] - 2026-07-10 - Events and campaigns without a budget
+
+### Added
+- The campaign / event form now has a "No budget line (agenda only)" option. An event or
+  campaign can exist purely on the agenda, with no budget line created or linked. Budget is no
+  longer required. When an item has no budget, the type and entity fields are not forced either.
+
 ## [v4.0] - 2026-07-03 - Campaigns are real, global campaigns are gone
 
 ### Changed
