@@ -1547,13 +1547,13 @@ function renderByGroup(board) {
     return;
   }
 
-  state.groups.forEach(g => {
+  sortedGroups().forEach(g => {
     const subs = state.subjects.filter(s => s.groupId === g.id);
     board.appendChild(swimlane(esc(g.name), subs, g.id));
   });
 
   const ungrouped = state.subjects.filter(s => !s.groupId);
-  if (ungrouped.length) board.appendChild(swimlane('Ungrouped', ungrouped));
+  if (ungrouped.length) board.appendChild(swimlane('Ungrouped', ungrouped, null));
 }
 
 // One swimlane band = a mini status board (To Sort / To Ask / To Follow Up /
@@ -1569,10 +1569,10 @@ function swimlane(title, subs, groupId) {
       ${groupId ? `<div style="flex:1"></div><button class="asgn-hist-toggle" onclick="openGroupsModal()" title="Manage groups">⚙️ Edit</button>` : ''}
     </div>`;
   const body = el('div', 'swimlane-body');
-  if (!subs.length) {
-    body.innerHTML = `<div class="empty">No topics in this group yet — tag one from its edit screen</div>`;
-  } else {
-    ORDER.forEach(status => {
+  // Always render the 4 status columns, even for an empty group — they
+  // double as drop targets, so an empty group still needs to be a place you
+  // can drag a topic into.
+  ORDER.forEach(status => {
       const inStatus = subs.filter(s => {
         const asgns = Object.values(s.assignments || {});
         if (!asgns.length) return status === 'to-sort';
@@ -1592,11 +1592,10 @@ function swimlane(title, subs, groupId) {
       } else {
         inStatus.forEach(sub => colBody.appendChild(statusCard(sub, status)));
       }
-      setupColumnDrop(colBody, status);
+      setupColumnDrop(colBody, status, groupId);
       col.appendChild(colBody);
       body.appendChild(col);
-    });
-  }
+  });
   band.appendChild(body);
   return band;
 }
@@ -1809,7 +1808,7 @@ function openSubjectModal(subId = null, preselectPersonId = null) {
 
   const groupSel = document.getElementById('f-group');
   groupSel.innerHTML = `<option value="">No group</option>` +
-    state.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+    sortedGroups().map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
   groupSel.value = sub?.groupId || '';
 
   // Pre-check the person: explicit person passed in, else the active filter,
@@ -1916,7 +1915,7 @@ function renderGroupsList() {
     list.appendChild(hint);
   }
 
-  state.groups.forEach(g => {
+  sortedGroups().forEach(g => {
     const row = el('div', 'pitem');
     row.innerHTML = `
       <span style="color:var(--text-muted);font-size:13px">🗂️</span>
@@ -1995,6 +1994,7 @@ function removePerson(pid) {
 // GROUPS (swimlanes) — an optional way to cluster people in the "By Group" view
 // ════════════════════════════════════════════════════
 function findGroup(id) { return state.groups.find(g => g.id === id); }
+function sortedGroups() { return [...state.groups].sort((a, b) => a.name.localeCompare(b.name)); }
 
 function addGroup() {
   const inp = document.getElementById('new-group');
@@ -2483,7 +2483,10 @@ function formatDateLabel(ymd) {
 let _dragging  = null; // { subId, fromStatus }
 let _pendingMove = null; // { sub, fromStatus, targetStatus, people[] }
 
-function setupColumnDrop(body, targetStatus) {
+// targetGroupId: undefined = this column isn't inside a swimlane, don't touch
+// the topic's group. A group id (or null for the "Ungrouped" swimlane) means
+// dropping here should retag the topic with that group.
+function setupColumnDrop(body, targetStatus, targetGroupId) {
   body.addEventListener('dragover', e => {
     if (!_dragging) return;
     e.preventDefault();
@@ -2502,13 +2505,24 @@ function setupColumnDrop(body, targetStatus) {
     e.stopPropagation();
     body.classList.remove('drag-over');
 
-    if (!_dragging || _dragging.fromStatus === targetStatus) { _dragging = null; return; }
-
+    if (!_dragging) return;
     const sub = findSubject(_dragging.subId);
     if (!sub) { _dragging = null; return; }
 
-    // Capture fromStatus before reset
     const fromStatus = _dragging.fromStatus;
+    const statusChanged = fromStatus !== targetStatus;
+    const groupChanged = targetGroupId !== undefined && (sub.groupId || null) !== (targetGroupId || null);
+    _dragging = null;
+
+    if (!statusChanged && !groupChanged) return;
+
+    if (groupChanged) sub.groupId = targetGroupId || null;
+
+    if (!statusChanged) {
+      save(); render();
+      toast(`Moved to ${targetGroupId ? (findGroup(targetGroupId)?.name ?? 'group') : 'Ungrouped'} ✓`);
+      return;
+    }
 
     // People affected (those with the source status)
     const affected = Object.entries(sub.assignments || {})
@@ -2516,8 +2530,7 @@ function setupColumnDrop(body, targetStatus) {
       .map(([pid]) => findPerson(pid))
       .filter(Boolean);
 
-    _dragging = null;
-    if (!affected.length) return;
+    if (!affected.length) { save(); render(); return; } // group change (if any) still needs saving
 
     // If only one person → move directly, no modal
     if (affected.length === 1) {
