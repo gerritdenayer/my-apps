@@ -128,33 +128,32 @@
   }
   function exportBudgetXlsx(year, quarters) {
     const D = S.state.data;
-    const gc = (id) => ((D.settings.globalCampaigns || []).find((g) => g.id === id) || {}).name || "";
     const ap = (id) => ((D.settings.apCategories || []).find((c) => c.id === id) || {}).name || "";
     const rows = (D.activities || []).filter((a) => S.inPeriodQ(a.date, year, quarters, "")).map((a) => {
       const e = S.entityById(a.entityId) || {};
       return [a.date || "", a.name || "", e.group || "", e.name || "",
         (S.actTypeById(a.activityTypeId) || {}).name || "", ap(a.apCategoryId),
-        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "", gc(a.globalCampaignId),
+        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "",
         (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
         a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
         a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
     });
     writeSheet("budget-lines", "Budget lines",
-      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP", "Global campaign", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
       rows);
   }
   function exportEventsXlsx(year, quarters) {
     const D = S.state.data;
-    const gc = (id) => ((D.settings.globalCampaigns || []).find((g) => g.id === id) || {}).name || "";
+    const campN = (e) => (e.kind === "Campaign") ? "" : (e.campaignId ? ((S.eventById(e.campaignId) || {}).name || "") : "");
     const rows = (D.events || []).filter((e) => S.inPeriodQ(e.start, year, quarters, "")).map((e) => {
       const en = S.entityById(e.entityId) || {};
       return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
         (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
-        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", gc(e.globalCampaignId),
+        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", campN(e),
         S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
     });
     writeSheet("campaigns-events", "Events",
-      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP", "Global campaign", "Countries", "Campaign code", "Notes"],
+      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP", "Campaign", "Countries", "Campaign code", "Notes"],
       rows);
   }
 
@@ -177,7 +176,7 @@
     const typeN = (id) => (S.actTypeById(id) || {}).name || "";
     const statN = (id) => (S.statusById(id) || {}).name || "";
     const userN = (id) => (S.userById(id) || {}).name || "";
-    const glN = (id) => ((D.settings.globalCampaigns || []).find((g) => g.id === id) || {}).name || "";
+    const campN = (e) => (e.kind === "Campaign") ? "" : (e.campaignId ? ((S.eventById(e.campaignId) || {}).name || "") : "");
     if (ds === "activities") return [
       { key: "date", label: "Date", text: (a) => a.date || "", sort: (a) => a.date || "" },
       { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
@@ -186,7 +185,6 @@
       { key: "type", label: "Type", text: (a) => typeN(a.activityTypeId), sort: (a) => typeN(a.activityTypeId).toLowerCase() },
       { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
       { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
-      { key: "global", label: "Global", text: (a) => glN(a.globalCampaignId), sort: (a) => glN(a.globalCampaignId).toLowerCase() },
       { key: "fN", label: "Forecast net", num: true, text: (a) => S.fmtMoney((a.forecastGross || 0) - (a.forecastPartner || 0)), sort: (a) => (a.forecastGross || 0) - (a.forecastPartner || 0) },
       { key: "aN", label: "Actual net", num: true, text: (a) => S.fmtMoney((a.actualGross || 0) - (a.actualPartner || 0)), sort: (a) => (a.actualGross || 0) - (a.actualPartner || 0) },
     ];
@@ -198,7 +196,7 @@
       { key: "type", label: "Type", text: (e) => typeN(e.activityTypeId), sort: (e) => typeN(e.activityTypeId).toLowerCase() },
       { key: "owner", label: "Owner", text: (e) => userN(e.ownerId), sort: (e) => userN(e.ownerId).toLowerCase() },
       { key: "svp", label: "SVP", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
-      { key: "global", label: "Global", text: (e) => glN(e.globalCampaignId), sort: (e) => glN(e.globalCampaignId).toLowerCase() },
+      { key: "campaign", label: "Campaign", text: (e) => campN(e), sort: (e) => campN(e).toLowerCase() },
       { key: "countries", label: "Countries", text: (e) => S.countryNamesOf(e.countryIds).join(", "), sort: (e) => S.countryNamesOf(e.countryIds).join(", ").toLowerCase() },
     ];
   }
@@ -212,7 +210,6 @@
       { field: "ownerId", label: "Owner", opts: users },
       { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
       { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
-      { field: "globalCampaignId", label: "Global campaign", opts: () => opt(D.settings.globalCampaigns || []) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "date", label: "Date", date: true },
     ];
@@ -220,7 +217,7 @@
       { field: "ownerId", label: "Owner", opts: users },
       { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
       { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
-      { field: "globalCampaignId", label: "Global campaign", opts: () => opt(D.settings.globalCampaigns || []) },
+      { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "kind", label: "Kind", opts: () => [{ v: "Event", l: "Event" }, { v: "Campaign", l: "Campaign" }] },
     ];

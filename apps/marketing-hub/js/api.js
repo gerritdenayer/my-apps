@@ -33,7 +33,6 @@
         m1Levels: M1_SEED.slice(),
         apCategories: apCats,
         svps: [{ id: uid(), name: "None" }, { id: uid(), name: "All" }],
-        globalCampaigns: [{ id: uid(), name: "None" }, { id: uid(), name: "All" }],
         activityTypes: [
           { id: uid(), name: "Event", apCategoryId: catId("Enhance market awareness and perception") },
           { id: uid(), name: "Digital campaign", apCategoryId: catId("Lead generation campaigns") },
@@ -215,7 +214,6 @@
     result.events = result.events || [];
     result.settings.partners = result.settings.partners || [];
     result.settings.apCategories = result.settings.apCategories || [];
-    result.settings.globalCampaigns = result.settings.globalCampaigns || [];
     result.settings.m1Levels = result.settings.m1Levels || [];
 
     const stats = { entities: 0, svps: 0, types: 0, statuses: 0, users: 0, activities: 0, events: 0, budgets: 0, codes: 0, skipped: 0 };
@@ -246,9 +244,8 @@
 
     mergeList(result.settings.entities, incoming.settings.entities, idMap.entity, "entities");
     mergeList(result.settings.svps, incoming.settings.svps, idMap.svp, "svps");
-    // New name-lists (no id remap needed elsewhere): A&P categories, global campaigns
+    // New name-lists (no id remap needed elsewhere): A&P categories
     mergeList(result.settings.apCategories, (incoming.settings || {}).apCategories, {}, "skipped");
-    mergeList(result.settings.globalCampaigns, (incoming.settings || {}).globalCampaigns, {}, "skipped");
     ((incoming.settings || {}).m1Levels || []).forEach((m) => {
       if (m && !result.settings.m1Levels.includes(m)) result.settings.m1Levels.push(m);
     });

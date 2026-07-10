@@ -9,7 +9,6 @@
     monthFilter: "",
     scope: { m1: "", cluster: "", entityId: "" },
     svpFilter: "",
-    globalFilter: "",
     typeFilter: "",
     statusFilter: "",
     ownerFilter: "",
@@ -31,7 +30,6 @@
     { key: "type", label: "Type", def: 130 },
     { key: "status", label: "Status", def: 110 },
     { key: "owner", label: "Owner", def: 120 },
-    { key: "global", label: "Global campaign", def: 140 },
     { key: "vendor", label: "Vendor", def: 120 },
     { key: "po", label: "PO #", def: 100 },
     { key: "fG", label: "Forecast gross", def: 120, num: true },
@@ -213,7 +211,6 @@
       case "type": return ((S.actTypeById(a.activityTypeId) || {}).name || "").toLowerCase();
       case "status": return ((S.statusById(a.statusId) || {}).name || "").toLowerCase();
       case "owner": return ((S.userById(a.ownerId) || {}).name || "").toLowerCase();
-      case "global": return (((S.state.data.settings.globalCampaigns || []).find((g) => g.id === a.globalCampaignId) || {}).name || "").toLowerCase();
       case "vendor": return (a.vendor || "").toLowerCase();
       case "po": return (a.poNumber || "").toLowerCase();
       case "fG": return a.forecastGross || 0;
@@ -260,7 +257,6 @@
       case "type": return (S.actTypeById(a.activityTypeId) || {}).name || "";
       case "status": return (S.statusById(a.statusId) || {}).name || "";
       case "owner": return (S.userById(a.ownerId) || {}).name || "";
-      case "global": return ((S.state.data.settings.globalCampaigns || []).find((g) => g.id === a.globalCampaignId) || {}).name || "";
       case "vendor": return a.vendor || "";
       case "po": return a.poNumber || "";
       case "fG": return a.forecastGross ? String(a.forecastGross) : "";
@@ -304,7 +300,6 @@
       if (!S.inPeriodQ(a.date, view.year, view.quarters, view.monthFilter)) return false;
       if (!S.entityMatchesScope(a.entityId, view.scope)) return false;
       if (view.svpFilter && a.svpId !== view.svpFilter) return false;
-      if (view.globalFilter && a.globalCampaignId !== view.globalFilter) return false;
       if (view.typeFilter && a.activityTypeId !== view.typeFilter) return false;
       if (view.statusFilter && a.statusId !== view.statusFilter) return false;
       if (view.ownerFilter && a.ownerId !== view.ownerFilter) return false;
@@ -348,7 +343,6 @@
         const at = S.actTypeById(a.activityTypeId);
         const st = S.statusById(a.statusId);
         const own = S.userById(a.ownerId);
-        const gc = a.globalCampaignId ? (S.state.data.settings.globalCampaigns || []).find((g) => g.id === a.globalCampaignId) : null;
         const statusName = (st && st.name) ? st.name : "";
         const statusSlug = statusName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const nameHtml = a.name && String(a.name).trim() ? S.escapeHtml(a.name) : "<span class='muted'>(no name)</span>";
@@ -365,7 +359,6 @@
             <td class="bc-type">${at ? S.escapeHtml(at.name) : "<span class='muted'>-</span>"}</td>
             <td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>
             <td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-global">${gc ? S.escapeHtml(gc.name) : "<span class='muted'>-</span>"}</td>
             <td class="bc-vendor">${S.escapeHtml(a.vendor || "")}</td>
             <td class="bc-po">${S.escapeHtml(a.poNumber || "")}</td>
             <td class="num bc-fG">${S.fmtMoney(a.forecastGross)}</td>
@@ -395,7 +388,7 @@
     tfoot.innerHTML = `
       <tr class="total-row">
         <td class="bc-actions"></td>
-        <td colspan="10">Total (${rows.length})</td>
+        <td colspan="9">Total (${rows.length})</td>
         <td class="num bc-fG">${S.fmtMoney(fG)}</td>
         <td class="num bc-fP">${S.fmtMoney(fP)}</td>
         <td class="num bc-fN">${S.fmtMoney(fG - fP)}</td>
@@ -425,7 +418,6 @@
       name: "",
       date: new Date().toISOString().slice(0, 10),
       eventIds: [],
-      globalCampaignId: "",
       apCategoryId: "",
       entityId: "",
       svpId: "",
@@ -519,19 +511,13 @@
       </div>
       <div class="row-3">
         <div>
-          <label>Global campaign</label>
-          <select id="m-global">
-            <option value="">Select...</option>
-            ${(data.settings.globalCampaigns||[]).map(g => `<option ${a.globalCampaignId===g.id?"selected":""} value="${g.id}">${S.escapeHtml(g.name)}</option>`).join("")}
-          </select>
-        </div>
-        <div>
           <label>A&amp;P category <span class="muted small">(defaults from type)</span></label>
           <select id="m-apcat">
             <option value="">Select...</option>
             ${(data.settings.apCategories||[]).map(c => `<option ${a.apCategoryId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
           </select>
         </div>
+        <div></div>
         <div></div>
       </div>
       <div class="row-3">
@@ -650,7 +636,6 @@
         name,
         date,
         eventIds,
-        globalCampaignId: modal.querySelector("#m-global").value,
         apCategoryId: modal.querySelector("#m-apcat").value,
         entityId,
         svpId: modal.querySelector("#m-svp").value,
@@ -696,7 +681,7 @@
     };
     // Drill-downs from Reporting now land as column filters, so they show on the headers and
     // can be cleared like any other filter.
-    view.svpFilter = view.globalFilter = view.typeFilter = view.statusFilter = view.ownerFilter = "";
+    view.svpFilter = view.typeFilter = view.statusFilter = view.ownerFilter = "";
     view.colFilters = {};
     const addEq = (key, name) => { if (name) view.colFilters[key] = { op: "eq", value: name }; };
     if (f.svpId) addEq("svp", (S.svpById(f.svpId) || {}).name);

@@ -87,13 +87,6 @@
           <div><label>New SVP</label><input id="new-svp" type="text" placeholder="e.g. AI everywhere" /></div>
           <div style="display:flex; align-items:end;"><button class="primary" id="add-svp">Add</button></div>
         </div>
-        <h3 style="margin-top:16px">Global campaigns</h3>
-        <p class="muted small">Separate from SVPs. Includes None and All.</p>
-        <div id="globals-list" class="chip-list"></div>
-        <div class="row">
-          <div><label>New global campaign</label><input id="new-global" type="text" placeholder="e.g. Reinvent" /></div>
-          <div style="display:flex; align-items:end;"><button class="primary" id="add-global">Add</button></div>
-        </div>
       </div>
 
       <div class="card">
@@ -162,7 +155,6 @@
     renderEntities();
     renderM1();
     renderSvps();
-    renderGlobals();
     renderCountries();
     renderCountryGroups();
     renderTypes();
@@ -221,14 +213,6 @@
       if (!name) return;
       S.state.data.settings.svps.push({ id: API.uid(), name });
       root.querySelector("#new-svp").value = "";
-      persistAndRefresh();
-    };
-    root.querySelector("#add-global").onclick = () => {
-      const name = root.querySelector("#new-global").value.trim();
-      if (!name) return;
-      S.state.data.settings.globalCampaigns = S.state.data.settings.globalCampaigns || [];
-      S.state.data.settings.globalCampaigns.push({ id: API.uid(), name });
-      root.querySelector("#new-global").value = "";
       persistAndRefresh();
     };
     root.querySelector("#add-country").onclick = () => {
@@ -403,12 +387,6 @@
       const used = S.state.data.activities.filter((a) => a.svpId === id).length;
       return used;
     }, "SVP / Campaign");
-  }
-  function renderGlobals() {
-    renderChipList("globals-list", S.state.data.settings.globalCampaigns || [], (id) => {
-      return (S.state.data.events || []).filter((e) => e.globalCampaignId === id).length +
-             (S.state.data.activities || []).filter((a) => a.globalCampaignId === id).length;
-    }, "Global campaign");
   }
   function renderCountries() {
     const host = document.getElementById("countries-list");

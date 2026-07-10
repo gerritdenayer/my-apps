@@ -96,6 +96,9 @@
       migrateResetUpdatedStamps(data);
       // One-time: seed a starter list of countries and a few groups so tagging works out of the box.
       migrateSeedCountries(data);
+      // v4.0: the "global campaign" concept is gone. Campaigns are now timeline items and events
+      // link to them. Drop the old lookup and the globalCampaignId references.
+      migrateDropGlobalCampaigns(data);
       normalizeSortLists(data);
 
       if (!data.settings.yearlyBudgets) data.settings.yearlyBudgets = {};
@@ -291,12 +294,10 @@
     }
     const catId = (name) => (s.apCategories.find((c) => (c.name || "").toLowerCase() === name.toLowerCase()) || {}).id || "";
 
-    // Ensure None + All exist in both SVP and Global campaign lists
+    // Ensure None + All exist in the SVP list
     s.svps = s.svps || [];
-    s.globalCampaigns = s.globalCampaigns || [];
     ["None", "All"].forEach((nm) => {
       if (!s.svps.some((x) => (x.name || "").toLowerCase() === nm.toLowerCase())) s.svps.push({ id: API.uid(), name: nm });
-      if (!s.globalCampaigns.some((x) => (x.name || "").toLowerCase() === nm.toLowerCase())) s.globalCampaigns.push({ id: API.uid(), name: nm });
     });
 
     // Activity types -> A&P category (seed mapping where empty)
@@ -310,11 +311,10 @@
     // Entities get an M1 field
     (s.entities || []).forEach((e) => { if (e.m1 === undefined) e.m1 = ""; });
 
-    // Events: activityTypeId from free-text type by name; globalCampaignId; outcomes
+    // Events: activityTypeId from free-text type by name; outcomes
     const typeByName = (nm) => (s.activityTypes || []).find((t) => (t.name || "").trim().toLowerCase() === (nm || "").trim().toLowerCase());
     (data.events || []).forEach((ev) => {
       if (!ev.activityTypeId && ev.type) { const m = typeByName(ev.type); if (m) ev.activityTypeId = m.id; }
-      if (ev.globalCampaignId === undefined) ev.globalCampaignId = "";
       if (!ev.outcomes) ev.outcomes = {};
       // Fold the old standalone website link into Content & assets (links live in one place).
       if (ev.weblink) {
@@ -326,11 +326,10 @@
       }
     });
 
-    // Budget lines: eventId -> eventIds[]; apCategoryId default; globalCampaignId default
+    // Budget lines: eventId -> eventIds[]; apCategoryId default
     (data.activities || []).forEach((a) => {
       if (!Array.isArray(a.eventIds)) a.eventIds = a.eventId ? [a.eventId] : [];
       if (a.apCategoryId === undefined) a.apCategoryId = "";
-      if (a.globalCampaignId === undefined) a.globalCampaignId = "";
     });
   }
 
@@ -355,7 +354,7 @@
   function normalizeSortLists(data) {
     const s = data.settings || {};
     const byName = (a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
-    ["svps", "activityTypes", "statuses", "globalCampaigns", "apCategories", "users", "partners", "entities"].forEach((k) => {
+    ["svps", "activityTypes", "statuses", "apCategories", "users", "partners", "entities"].forEach((k) => {
       if (Array.isArray(s[k])) s[k].sort(byName);
     });
     if (Array.isArray(s.m1Levels)) s.m1Levels.sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: "base" }));
@@ -409,6 +408,18 @@
       { id: uid(), name: "DACH", countryIds: [idOf.de, idOf.ch] },
       { id: uid(), name: "Nordics", countryIds: [idOf.no, idOf.se, idOf.dk] },
     ];
+    S.scheduleSave();
+  }
+
+  // v4.0 one-time: remove the global-campaign lookup and its references. Events keep an optional
+  // campaignId (set later in the form); nothing here creates campaigns, per the clean-slate choice.
+  function migrateDropGlobalCampaigns(data) {
+    const s = data.settings || (data.settings = {});
+    if (s._dropGlobalV40) return;
+    delete s.globalCampaigns;
+    (data.events || []).forEach((ev) => { delete ev.globalCampaignId; if (ev.campaignId === undefined) ev.campaignId = ""; });
+    (data.activities || []).forEach((a) => { delete a.globalCampaignId; });
+    s._dropGlobalV40 = true;
     S.scheduleSave();
   }
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## [v4.0] - 2026-07-03 - Campaigns are real, global campaigns are gone
+
+### Changed
+- The "global campaign" concept is removed. There is no Global campaigns list in Settings, and
+  no global-campaign field, column or filter anywhere.
+- A campaign is now simply a timeline item of type Campaign. You create and edit campaigns in the
+  Campaigns & events area, like events.
+- An event can optionally link to a campaign, using the new "Part of campaign" field in the event
+  form. Events and campaigns can each exist on their own; the link is optional.
+- The timeline can group and color by Campaign, so events linked to a campaign appear grouped
+  under it. The hover tooltip shows an event's campaign.
+- Exports and the Data grid show a Campaign column (the linked campaign) for events instead of a
+  global campaign. Budget lines no longer carry a global campaign.
+
+### Migration
+- One-time, on first open of 4.0: the old global campaigns and all their references are dropped,
+  per the clean-slate choice. Every event gets an empty campaign link you can set in the form.
+  Your budget lines, events and settings are otherwise untouched.
+
 ## [v3.31] - 2026-07-03 - Budget line fields inside the campaign form
 
 ### Changed

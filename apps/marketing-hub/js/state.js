@@ -173,7 +173,7 @@
     return list.map((u) => `<option ${selectedId === u.id ? "selected" : ""} value="${u.id}">${escapeHtml(u.name)}${u.active === false ? " (inactive)" : ""}</option>`).join("");
   }
   function statusById(id) { return (state.data.settings.statuses || []).find((x) => x.id === id); }
-  function globalCampaignById(id) { return (state.data.settings.globalCampaigns || []).find((x) => x.id === id); }
+  function eventById(id) { return (state.data.events || []).find((x) => x.id === id); }
   function apCategoryById(id) { return (state.data.settings.apCategories || []).find((x) => x.id === id); }
   // Campaign reference resolvers (events store entityId/ownerId; fall back to legacy text).
   function eventEntityName(ev) {
@@ -313,7 +313,7 @@
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     entityById, svpById, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
-    globalCampaignById, apCategoryById, apCategoryForActivity,
+    eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
     uniqueEntities, canonicalEntityId,
     clusterList, entityListFor, entityMatchesScope, scopeFilterHtml, wireScopeFilter,

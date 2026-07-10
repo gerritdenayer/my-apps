@@ -112,7 +112,14 @@
     if(dim==="owner") return S.eventOwnerName(e)||"Unspecified";
     if(dim==="type"){ const t=e.activityTypeId?S.actTypeById(e.activityTypeId):null; return t?t.name:"Unspecified"; }
     if(dim==="cluster") return clusterOf(e);
+    if(dim==="campaign") return campaignNameOf(e);
     return e[dim]||"Unspecified";
+  }
+  // The campaign an item belongs to: a campaign is itself; an event uses its linked campaign.
+  function campaignNameOf(e){
+    if((e.kind||"Event")==="Campaign") return e.name||"(unnamed campaign)";
+    const c=e.campaignId?S.eventById(e.campaignId):null;
+    return c?(c.name||"(unnamed campaign)"):"No campaign";
   }
   function catList(events,dim){ return uniq(events.map(e=>dimValue(e,dim))); }
   function colorFor(events,e){
@@ -170,11 +177,11 @@
       <div class="tl-toolbar filter-bar">
         <div><label>Group</label>
           <select id="tl-group">
-            ${opt([["cluster","Cluster"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None"]],view.groupBy)}
+            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None"]],view.groupBy)}
           </select></div>
         <div><label>Color</label>
           <select id="tl-color">
-            ${opt([["kind","Event / Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
+            ${opt([["kind","Event / Campaign"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
           </select></div>
         <div><label>Kind</label>
           <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
@@ -285,7 +292,7 @@
     const leg=document.getElementById("tl-legend");
     if(!leg) return;
     const cats=catList(events,view.colorBy);
-    const colorLabel={kind:"Event / Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
+    const colorLabel={kind:"Event / Campaign",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
     leg.innerHTML=`<span>Color by ${colorLabel}:</span>`+
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:#999"></span>single-day</span>`+
@@ -371,8 +378,9 @@
       `Entity: ${S.eventEntityName(e)||"-"}`,
       `Owner: ${S.eventOwnerName(e)||"-"}`,
       `SVP: ${svp||"-"}`,
+      ((e.kind||"Event")==="Event"?`Campaign: ${campaignNameOf(e)}`:null),
       `Countries: ${S.countryNamesOf(e.countryIds).join(", ")||"-"}`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
   }
 
   // The bar/diamond shows the event name. The left row label shows the next level down from the
@@ -510,10 +518,10 @@
     if(dAdd) dAdd.onclick=()=>{
       S.closeModal();
       window.MB_APP.switchTab("budget");
-      // Inherit the campaign's entity, SVP and global campaign so a new line matches its campaign by default (still editable).
+      // Inherit the campaign's entity and SVP so a new line matches its campaign by default (still editable).
       window.MB_BUDGET.newActivity({
         eventIds:[id], name:e.name, date:e.start, activityTypeId:e.activityTypeId||"",
-        entityId:e.entityId||"", svpId:e.svpId||"", globalCampaignId:e.globalCampaignId||"",
+        entityId:e.entityId||"", svpId:e.svpId||"",
       });
     };
   }
@@ -527,7 +535,7 @@
     const e=isEdit ? data.events.find(x=>x.id===id) : {
       id:API.uid(), name:"", kind:"Event", activityTypeId:"",
       start:new Date().toISOString().slice(0,10), end:"",
-      entityId:"", cluster:"", ownerId:"", campaignCode:"", svpId:"", globalCampaignId:"",
+      entityId:"", cluster:"", ownerId:"", campaignCode:"", svpId:"", campaignId:"",
       domains:[], scope:[], info:"",
       partners:[], content:[], outcomes:{},
       createdBy:S.state.currentUserId, createdAt:new Date().toISOString(),
@@ -616,8 +624,8 @@
           <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${e.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
       </div>
       <div class="row-3">
-        <div><label>Global campaign</label>
-          <select id="c-global"><option value="">Select...</option>${(data.settings.globalCampaigns||[]).map(g=>`<option ${e.globalCampaignId===g.id?"selected":""} value="${g.id}">${S.escapeHtml(g.name)}</option>`).join("")}</select></div>
+        <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
+          <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
         <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
         <div></div>
       </div>
@@ -753,6 +761,8 @@
           ? typeIdBy(["digital campaign","lead generation campaigns","lead generation campaign"])
           : typeIdBy(["event"]);
         if(id) typeSelEl.value=id;
+        // A campaign is not "part of" another campaign, so hide that field for campaigns.
+        const cw=modal.querySelector("#c-campaign-wrap"); if(cw) cw.style.display=(kindSel.value==="Campaign")?"none":"";
       };
     }
 
@@ -908,7 +918,8 @@
       const at=S.actTypeById(activityTypeId);
       const typeCatId=(at&&at.apCategoryId)||"";
       const svpId=modal.querySelector("#c-svp").value;
-      const globalCampaignId=modal.querySelector("#c-global").value;
+      const kindVal=modal.querySelector("#c-kind").value;
+      const campaignId=(kindVal==="Campaign")?"":((modal.querySelector("#c-campaign")||{}).value||"");
       let primaryId=e.primaryActivityId||"";
       if(bmode==="new"){
         // Create or update the campaign's dedicated line from this campaign's details.
@@ -923,7 +934,7 @@
         let line=primaryId ? (data.activities||[]).find(x=>x.id===primaryId) : null;
         const isNewLine=!line;
         if(isNewLine){
-          line={ id:API.uid(), eventIds:[], svpId:"", globalCampaignId:"", apCategoryId:"", vendor:"", poNumber:"", notes:"",
+          line={ id:API.uid(), eventIds:[], svpId:"", apCategoryId:"", vendor:"", poNumber:"", notes:"",
                  createdBy:S.state.currentUserId, createdAt:new Date().toISOString() };
           (data.activities=data.activities||[]).push(line);
           primaryId=line.id;
@@ -931,7 +942,7 @@
         const beforeSig=isNewLine?null:contentSig(line);
         const links=new Set(line.eventIds||[]); links.add(e.id);
         Object.assign(line,{
-          name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId, globalCampaignId,
+          name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId,
           activityTypeId:typeFromField, apCategoryId:(bapc||typeCatId), statusId:bStatus,
           ownerId:(modal.querySelector("#c-owner").value||line.ownerId||S.state.currentUserId||""),
           vendor:bvendor, poNumber:bpo,
@@ -969,19 +980,19 @@
       const countryIds=[...modal.querySelectorAll("#c-country-list input.cco:checked")].map(x=>x.value);
       try { localStorage.setItem("mb_last_country_ids", JSON.stringify(countryIds)); lastCountryIds=countryIds.slice(); } catch(err) {}
       const base={
-        ...e, name, kind:modal.querySelector("#c-kind").value,
+        ...e, name, kind:kindVal,
         activityTypeId,
         start, end: end||"",
         entityId:orgEntityId,
         cluster,
         ownerId:modal.querySelector("#c-owner").value,
-        svpId, globalCampaignId,
+        svpId, campaignId,
         campaignCode:modal.querySelector("#c-code").value.trim(),
         info:modal.querySelector("#c-info").value,
         countryIds,
         partners, content, outcomes,
         primaryActivityId:primaryId,
-        entity:undefined, owner:undefined, type:undefined, // drop legacy name fields
+        entity:undefined, owner:undefined, type:undefined, globalCampaignId:undefined, // drop legacy fields
       };
       // Stamp "updated by/on" only when the campaign content really changed (not a no-op save).
       let updated=base;
