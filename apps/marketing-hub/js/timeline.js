@@ -962,8 +962,18 @@
           else if(!sel.has(a.id) && has) a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id);
         });
         primaryId=""; // no dedicated managed line when linking existing
+      } else {
+        // bmode "none" (agenda only): detach any budget. Unlink this event from all budget lines,
+        // and delete the campaign's own dedicated line if it is now orphaned. Shared lines that
+        // still serve other campaigns are only unlinked, never deleted.
+        const primaryLineId=e.primaryActivityId;
+        (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id)) a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id); });
+        if(primaryLineId){
+          const idx=(data.activities||[]).findIndex(x=>x.id===primaryLineId);
+          if(idx>=0 && ((data.activities[idx].eventIds||[]).length===0)) data.activities.splice(idx,1);
+        }
+        primaryId="";
       }
-      // bmode "none": agenda-only, no budget line created or linked. Any existing links are left as they are.
 
       // Outcomes
       const outcomes={};

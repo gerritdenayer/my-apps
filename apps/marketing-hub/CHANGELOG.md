@@ -1,5 +1,13 @@
 # Changelog
 
+## [v4.2] - 2026-07-10 - Fix: switching an item to "No budget line"
+
+### Fixed
+- Setting an existing campaign or event to "No budget line" now actually detaches its budget. It
+  unlinks the item from all budget lines, deletes the campaign's own dedicated line if it is left
+  orphaned (shared lines are only unlinked), and clears the primary-line pointer. The budget icon
+  on the timeline disappears, and reopening the item correctly shows "No budget line".
+
 ## [v4.1] - 2026-07-10 - Events and campaigns without a budget
 
 ### Added
