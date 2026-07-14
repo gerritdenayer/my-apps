@@ -1320,7 +1320,9 @@ function load() {
   migrateState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // persist the migrated codes right away
 }
+let _lastLocalSaveAt = null; // when this machine last changed real data (used to break merge ties)
 function save() {
+  _lastLocalSaveAt = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   scheduleFileSync(); // write-through to the connected sync file, if any (defined below)
 }
@@ -1341,7 +1343,11 @@ const ORDER = ['to-sort', 'to-ask', 'to-follow-up', 'done'];
 // ════════════════════════════════════════════════════
 function setView(v) {
   state.view = v;
-  save();
+  // View is a local display preference, not shared data — persist it to
+  // this machine's own cache only. It must NEVER trigger a write to the
+  // shared sync file: a plain tab click on a machine that hasn't caught up
+  // with the other machine's latest edits could otherwise clobber them.
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
   document.getElementById('btn-by-status').classList.toggle('active', v === 'status');
   document.getElementById('btn-by-person').classList.toggle('active', v === 'person');
   document.getElementById('btn-by-group').classList.toggle('active', v === 'group');
@@ -2983,6 +2989,7 @@ function exportData() {
     version: '2',
     exportedAt: new Date().toISOString(),
     people: state.people,
+    groups: state.groups,
     subjects: state.subjects,
     sessions: state.sessions,
   };
@@ -3023,6 +3030,7 @@ function importData(input) {
         : `Import ${nb} topic(s) and ${data.people.length} people?`;
       if (!confirm(msg)) return;
       state.people   = data.people   ?? [];
+      state.groups   = Array.isArray(data.groups) ? data.groups : [];
       state.subjects = data.subjects ?? [];
       state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
       migrateState(); // fix up any legacy status codes and re-add the Personal To-Dos lane
@@ -3114,6 +3122,114 @@ function scheduleFileSync() {
   _syncWriteTimer = setTimeout(writeToSyncFile, 500);
 }
 
+// ════════════════════════════════════════════════════
+// MERGE — never let a sync read or write silently drop data
+// ════════════════════════════════════════════════════
+// Two machines can each hold changes the other hasn't seen yet. Blindly
+// overwriting one side with the other (what earlier versions of this app
+// did) can permanently erase whatever the "losing" side had. Instead, every
+// read AND every write goes through a union merge: a person, group, topic,
+// or meeting that exists on only one side is always kept, never dropped.
+// Only truly conflicting scalar fields (e.g. a topic renamed on both
+// machines) fall back to "whichever side saved most recently wins" — and
+// even then, nothing is deleted, just not shown.
+function mergeById(localArr, remoteArr, resolve) {
+  const byId = new Map();
+  (remoteArr || []).forEach(item => byId.set(item.id, item));
+  (localArr || []).forEach(item => {
+    const existing = byId.get(item.id);
+    byId.set(item.id, existing ? resolve(item, existing) : item);
+  });
+  return [...byId.values()];
+}
+
+function mergeHistory(histA, histB) {
+  const seen = new Set();
+  return [...(histA || []), ...(histB || [])]
+    .filter(h => {
+      const k = (h && h.status) + '|' + (h && h.at);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .sort((x, y) => new Date(x.at) - new Date(y.at));
+}
+
+function mergeAssignment(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const history = mergeHistory(a.history, b.history);
+  const latest = history[history.length - 1];
+  return { status: latest ? latest.status : (a.status || b.status), history };
+}
+
+function mergeSubject(local, remote, localNewer) {
+  const pids = new Set([...Object.keys(local.assignments || {}), ...Object.keys(remote.assignments || {})]);
+  const assignments = {};
+  pids.forEach(pid => { assignments[pid] = mergeAssignment(local.assignments?.[pid], remote.assignments?.[pid]); });
+
+  const preferLocal = localNewer;
+  return {
+    ...remote, ...local,
+    title:   preferLocal ? (local.title   ?? remote.title)   : (remote.title   ?? local.title),
+    notes:   preferLocal ? (local.notes   ?? remote.notes)   : (remote.notes   ?? local.notes),
+    groupId: preferLocal ? (local.groupId ?? remote.groupId) : (remote.groupId ?? local.groupId),
+    createdAt: local.createdAt || remote.createdAt,
+    assignments,
+  };
+}
+
+// local  = { people, groups, subjects, sessions, savedAt }
+// remote = parsed contents of the sync file (has its own exportedAt)
+function mergeStates(local, remote) {
+  const localNewer = new Date(local.savedAt || 0) >= new Date(remote.exportedAt || 0);
+  const preferNewer = (a, b) => (localNewer ? a : b);
+
+  return {
+    people:   mergeById(local.people,   remote.people,   preferNewer),
+    groups:   mergeById(local.groups,   remote.groups,   preferNewer),
+    sessions: mergeById(local.sessions, remote.sessions, preferNewer),
+    subjects: mergeById(local.subjects, remote.subjects, (l, r) => mergeSubject(l, r, localNewer)),
+  };
+}
+
+// ── Local safety-net backups ──────────────────────────
+// A snapshot is taken right before any merge-driven change to local state,
+// so a bad sync is always recoverable from here even if something upstream
+// (OneDrive, a bug) goes wrong. Open via the Sync panel.
+const BACKUP_PREFIX = '1on1-backup-';
+const MAX_BACKUPS = 10;
+function snapshotBackup(reason) {
+  try {
+    const key = BACKUP_PREFIX + new Date().toISOString();
+    localStorage.setItem(key, JSON.stringify({
+      reason, people: state.people, groups: state.groups, subjects: state.subjects, sessions: state.sessions,
+    }));
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(BACKUP_PREFIX)).sort();
+    while (keys.length > MAX_BACKUPS) { localStorage.removeItem(keys.shift()); }
+  } catch { /* storage full or unavailable — non-fatal, just skip the safety net this once */ }
+}
+function listBackups() {
+  return Object.keys(localStorage).filter(k => k.startsWith(BACKUP_PREFIX)).sort().reverse();
+}
+function restoreBackup(key) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  if (!confirm('Restore this backup? Your current data will be merged with it (nothing is deleted), then synced.')) return;
+  const snap = JSON.parse(raw);
+  const merged = mergeStates(
+    { people: state.people, groups: state.groups, subjects: state.subjects, sessions: state.sessions, savedAt: _lastLocalSaveAt },
+    { people: snap.people, groups: snap.groups, subjects: snap.subjects, sessions: snap.sessions, exportedAt: key.slice(BACKUP_PREFIX.length) }
+  );
+  state.people = merged.people; state.groups = merged.groups;
+  state.subjects = merged.subjects; state.sessions = merged.sessions;
+  migrateState();
+  save();
+  render();
+  renderSyncModal();
+  toast('Backup restored ✓');
+}
+
 async function writeToSyncFile() {
   if (!_syncHandle || _syncBusy) return;
   try {
@@ -3121,10 +3237,33 @@ async function writeToSyncFile() {
     const perm = await _syncHandle.queryPermission({ mode: 'readwrite' });
     _syncPermState = perm;
     if (perm !== 'granted') { updateSyncButton(); return; }
+
+    // Merge in whatever is currently on disk before writing, so this
+    // machine can never overwrite a change the other one made in the
+    // meantime — even a plain "write my current state" always merges first.
+    try {
+      const before = await _syncHandle.getFile();
+      const text = await before.text();
+      if (text.trim()) {
+        const remote = JSON.parse(text);
+        if (Array.isArray(remote.people) && Array.isArray(remote.subjects)) {
+          snapshotBackup('before-write-merge');
+          const merged = mergeStates(
+            { people: state.people, groups: state.groups, subjects: state.subjects, sessions: state.sessions, savedAt: _lastLocalSaveAt },
+            remote
+          );
+          state.people = merged.people; state.groups = merged.groups;
+          state.subjects = merged.subjects; state.sessions = merged.sessions;
+          migrateState();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+      }
+    } catch { /* couldn't pre-read (new/empty file, or a transient lock) — write local state as-is */ }
+
     const writable = await _syncHandle.createWritable();
     const payload = {
       version: '2', exportedAt: new Date().toISOString(),
-      people: state.people, subjects: state.subjects, sessions: state.sessions,
+      people: state.people, groups: state.groups, subjects: state.subjects, sessions: state.sessions,
     };
     await writable.write(JSON.stringify(payload, null, 2));
     await writable.close();
@@ -3132,6 +3271,7 @@ async function writeToSyncFile() {
     _syncLastWritten = f.lastModified;
     _syncLastSyncedAt = new Date();
     updateSyncButton();
+    render(); // in case the pre-write merge pulled in something new
   } catch {
     // OneDrive can transiently lock the file while it syncs — fail quietly
     // and retry on the next change or the next poll.
@@ -3145,13 +3285,29 @@ async function readFromSyncFile(handle) {
   const text = await file.text();
   const data = JSON.parse(text);
   if (!Array.isArray(data.people) || !Array.isArray(data.subjects)) throw new Error('Not a 1:1 Manager file');
-  state.people   = data.people   ?? [];
-  state.subjects = data.subjects ?? [];
-  state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+
+  snapshotBackup('before-sync-read');
+  const merged = mergeStates(
+    { people: state.people, groups: state.groups, subjects: state.subjects, sessions: state.sessions, savedAt: _lastLocalSaveAt },
+    data
+  );
+
+  // If the merge produced anything beyond what the file already had, this
+  // machine was holding data the file didn't — write the merged result
+  // back so the other machine picks it up too.
+  const before = JSON.stringify({ people: data.people, groups: data.groups || [], subjects: data.subjects, sessions: data.sessions || [] });
+  const after  = JSON.stringify({ people: merged.people, groups: merged.groups, subjects: merged.subjects, sessions: merged.sessions });
+
+  state.people   = merged.people;
+  state.groups   = merged.groups;
+  state.subjects = merged.subjects;
+  state.sessions = merged.sessions;
   migrateState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); // keep the local cache in step too
   _syncLastWritten = file.lastModified;
   _syncLastSyncedAt = new Date();
+
+  if (before !== after) await writeToSyncFile();
 }
 
 // Checks whether the file changed on disk (e.g. written by the other Mac
@@ -3180,9 +3336,9 @@ async function useExistingSyncFile() {
     const [handle] = await window.showOpenFilePicker({
       types: [{ description: '1:1 Manager Data', accept: { 'application/json': ['.json'] } }],
     });
-    await readFromSyncFile(handle);
-    _syncHandle = handle;
+    _syncHandle = handle;    // set first so a write-back triggered by the merge below can actually run
     _syncPermState = 'granted';
+    await readFromSyncFile(handle);
     await idbSet('fileHandle', handle);
     render();
     renderSyncModal();
@@ -3280,7 +3436,8 @@ function renderSyncModal() {
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
         <button class="btn btn-primary btn-sm" onclick="useExistingSyncFile()">📂 Use existing sync file (already set up on your other Mac)</button>
         <button class="btn btn-ghost btn-sm" onclick="createNewSyncFile()">🆕 Create a new sync file in OneDrive (first-time setup)</button>
-      </div>`;
+      </div>
+      ${backupsSectionHtml()}`;
     return;
   }
 
@@ -3294,7 +3451,26 @@ function renderSyncModal() {
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn btn-primary btn-sm" onclick="syncNow()">🔄 Sync now</button>
       <button class="btn btn-danger btn-sm" onclick="disconnectSync()">🔌 Disconnect</button>
+    </div>
+    ${backupsSectionHtml()}`;
+}
+
+// Local safety-net backups, taken automatically before every sync merge.
+// Lets you recover on this machine even if something upstream went wrong.
+function backupsSectionHtml() {
+  const backups = listBackups();
+  if (!backups.length) return '';
+  const rows = backups.slice(0, 6).map(key => {
+    const when = formatHistDate(key.slice(BACKUP_PREFIX.length));
+    return `<div class="asgn-row" style="flex-direction:row;align-items:center;gap:8px">
+      <span style="flex:1;font-size:12px">${esc(when)}</span>
+      <button class="asgn-btn" onclick="restoreBackup('${key}')">Restore</button>
     </div>`;
+  }).join('');
+  return `
+    <div style="height:1px;background:var(--border);margin:14px 0 10px"></div>
+    <div class="field-label" style="margin-bottom:6px">Local backups <em>(auto-saved before every sync)</em></div>
+    <div style="display:flex;flex-direction:column;gap:6px">${rows}</div>`;
 }
 
 // ── Startup: silently reconnect if permission is already granted from a previous visit ──
