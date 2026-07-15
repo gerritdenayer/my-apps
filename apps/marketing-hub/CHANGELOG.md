@@ -1,5 +1,17 @@
 # Changelog
 
+## [v4.3] - 2026-07-10 - Self-healing country tags and an app icon
+
+### Fixed
+- Country tags now sync between people even when their setups used different internal ids. The
+  shared budget & events file now carries the country names, and on pull the app re-points each
+  incoming event's country tags to your own countries by matching names, creating any country you
+  do not have. No more empty country boxes on a colleague's event. (Everyone needs 4.3, and the
+  colleague republishes once so the file carries the names.)
+
+### Added
+- An app icon (favicon): an orange tile with white bars, so the Marketing Hub tab is easy to spot.
+
 ## [v4.2] - 2026-07-10 - Fix: switching an item to "No budget line"
 
 ### Fixed

@@ -424,7 +424,7 @@
     try {
       const ok = await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
       if (!ok) return false;
-      const remote = await SH.readJson(dir, DATA_FILE);
+      const remote = reconcileIncomingCountries(await SH.readJson(dir, DATA_FILE));
       let baseline = null;
       try { baseline = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { baseline = null; }
       const localA = S.state.data.activities || [], localE = S.state.data.events || [];
@@ -606,7 +606,31 @@
     S.toast("Setup replaced from file", "success");
   }
 
+  // Self-healing country tags: incoming events carry the sender's country ids, which may differ
+  // from ours. Using the sender's id->name map (countriesRef), re-point each incoming event's
+  // country tags to our own country ids by matching names, creating any country we do not have.
+  function reconcileIncomingCountries(incoming) {
+    if (!incoming || !Array.isArray(incoming.events)) return incoming;
+    const ref = incoming.countriesRef;
+    if (!Array.isArray(ref) || !ref.length) return incoming; // older file, nothing to map with
+    const senderName = {}; ref.forEach((c) => { if (c && c.id) senderName[c.id] = c.name || ""; });
+    const local = S.state.data.settings.countries = S.state.data.settings.countries || [];
+    const byName = {}; local.forEach((c) => { byName[(c.name || "").trim().toLowerCase()] = c.id; });
+    const mapId = (id) => {
+      if (!(id in senderName)) return id;           // sender did not describe this id; keep as-is
+      const nm = senderName[id]; const key = (nm || "").trim().toLowerCase();
+      if (!key) return id;
+      if (byName[key]) return byName[key];          // we already have this country
+      const nc = { id: API.uid(), name: nm };       // create it locally so the tag resolves
+      local.push(nc); byName[key] = nc.id;
+      return nc.id;
+    };
+    incoming.events.forEach((ev) => { if (Array.isArray(ev.countryIds)) ev.countryIds = ev.countryIds.map(mapId); });
+    return incoming;
+  }
+
   function mergeBudgetEventsFile(incoming, name) {
+    reconcileIncomingCountries(incoming);
     const diff = API.diffBudgetEvents(S.state.data, incoming);
     const ev = diff.events, ac = diff.activities;
     const section = (title, items, chkClass) => {
@@ -669,6 +693,7 @@
     try { incoming = await SH.readJson(dir, DATA_FILE); }
     catch (e) { if (!opts.auto) S.toast("Could not read the shared file: " + e.message, "error"); return; }
     if (!incoming) { if (!opts.auto) S.toast("No budget & events file in the shared folder yet.", "error"); return; }
+    reconcileIncomingCountries(incoming);
 
     const diff = API.diffBudgetEvents(S.state.data, incoming);
     const addN = diff.events.adds.length + diff.activities.adds.length;

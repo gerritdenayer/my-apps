@@ -124,7 +124,10 @@
   function pickBudgetEvents(data) {
     return { version: data.version || 1, meta: { ...(data.meta || {}) },
              events: JSON.parse(JSON.stringify(data.events || [])),
-             activities: JSON.parse(JSON.stringify(data.activities || [])) };
+             activities: JSON.parse(JSON.stringify(data.activities || [])),
+             // Country id -> name map so the receiver can re-point country tags to its own ids by
+             // name, even if the two setups used different internal ids (self-healing).
+             countriesRef: ((data.settings || {}).countries || []).map((c) => ({ id: c.id, name: c.name })) };
   }
   // Decide what a loaded file is.
   function detectKind(d) {
