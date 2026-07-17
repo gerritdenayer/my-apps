@@ -122,6 +122,10 @@
         </div>
         <div>
           <label>&nbsp;</label>
+          <button id="bud-check" class="secondary" style="display:none" title="Check for updates">Check for updates</button>
+        </div>
+        <div>
+          <label>&nbsp;</label>
           <button id="bud-publish" class="primary" style="display:none; background:#0a7d33;" title="Publish changes">Publish changes</button>
         </div>
         <div>
@@ -148,6 +152,7 @@
     `;
 
     if (window.MB_DATA && window.MB_DATA.wirePublishButton) window.MB_DATA.wirePublishButton(root.querySelector("#bud-publish"));
+    if (window.MB_DATA && window.MB_DATA.wireCheckButton) window.MB_DATA.wireCheckButton(root.querySelector("#bud-check"));
 
     // bind filters
     root.querySelector("#f-year").onchange = (e) => { view.year = +e.target.value; render(); };

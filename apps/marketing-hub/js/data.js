@@ -373,6 +373,42 @@
     btn.title = dirty ? "You have unpublished budget & events changes. Click to publish them to the shared folder." : "No unpublished changes.";
     btn.onclick = async () => { const ok = await publishBudgetEvents(); if (ok) wirePublishButton(btn); };
   }
+  // A "Check for updates" button: shows whether the shared file is newer than your last sync,
+  // without pulling anything, and offers to refresh from there.
+  async function wireCheckButton(btn) {
+    if (!btn) return;
+    if (!(await shareFolderConfigured())) { btn.style.display = "none"; return; }
+    btn.style.display = "";
+    btn.title = "See if a newer shared version exists, without changing your copy.";
+    btn.onclick = () => checkForShared();
+  }
+  async function checkForShared() {
+    if (!SH || !SH.supported()) return S.toast("Shared folder is not available in this browser.", "error");
+    const dir = await SH.savedFolder();
+    if (!dir) return S.toast("Choose the shared folder first (Data tab).", "error");
+    if (!(await SH.ensurePerm(dir, "readwrite"))) return S.toast("Access to the shared folder was not granted.", "error");
+    let remote;
+    try { remote = await SH.readJson(dir, DATA_FILE); }
+    catch (e) { return S.toast("Could not read the shared file: " + e.message, "error"); }
+    if (!remote) return S.toast("No budget & events file in the shared folder yet.", "error");
+    const seen = localStorage.getItem(SEEN_KEY) || "";
+    const stamp = (remote.meta && remote.meta.exportedAt) || "";
+    const who = (remote.meta && remote.meta.exportedBy) || "a teammate";
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-GB") : "unknown";
+    if (!stamp || stamp === seen) {
+      return S.toast("You have the latest shared version" + (stamp ? ` (from ${fmt(stamp)})` : "") + ".", "success");
+    }
+    const m = S.openModal(`
+      <h2>A newer shared version is available</h2>
+      <p>The shared budget &amp; events file was published by <strong>${S.escapeHtml(who)}</strong> on ${S.escapeHtml(fmt(stamp))}.</p>
+      <p class="muted small">Your copy last synced: ${S.escapeHtml(seen ? fmt(seen) : "never")}. Refresh pulls the new and changed rows into your copy. Nothing you have is deleted.</p>
+      <div class="actions">
+        <button class="secondary" id="ck-close">Not now</button>
+        <button class="primary" id="ck-refresh">Refresh now</button>
+      </div>`);
+    m.querySelector("#ck-close").onclick = S.closeModal;
+    m.querySelector("#ck-refresh").onclick = () => { S.closeModal(); refreshFromShared({ auto: false }); };
+  }
   // Guarded publish of budget & events, reused by the Data tab and the tab buttons.
   // Signature of a single row's content, ignoring audit fields, to compare versions.
   function rowSig(o) {
@@ -750,5 +786,5 @@
     if (await SH.hasPerm(dir, "readwrite")) refreshFromShared({ auto: true });
   }
 
-  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, wirePublishButton, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

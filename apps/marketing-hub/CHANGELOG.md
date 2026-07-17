@@ -1,5 +1,13 @@
 # Changelog
 
+## [v4.4] - 2026-07-10 - Check for updates before refreshing
+
+### Added
+- A "Check for updates" button on the Budget tab and the Campaigns & events tab. It reads the
+  shared file and tells you whether a newer version exists (who published it and when) without
+  changing your copy. If there is one, it offers a "Refresh now" button; if not, it confirms you
+  already have the latest. The button appears once a shared folder is set.
+
 ## [v4.3] - 2026-07-10 - Self-healing country tags and an app icon
 
 ### Fixed

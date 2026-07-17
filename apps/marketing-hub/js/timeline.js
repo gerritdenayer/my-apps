@@ -198,6 +198,7 @@
           </select></div>` : ""}
         <div class="grow"><label>Search</label>
           <input id="tl-search" type="text" value="${S.escapeHtml(view.q)}" placeholder="Name, owner, domain, type" /></div>
+        <div><label>&nbsp;</label><div><button id="tl-check" class="secondary" style="display:none" title="Check for updates">Check for updates</button></div></div>
         <div><label>&nbsp;</label><div><button id="tl-publish" class="primary" style="display:none; background:#0a7d33;" title="Publish changes">Publish changes</button></div></div>
         <div><label>&nbsp;</label><div><button id="tl-add" class="primary">New</button></div></div>
       </div>
@@ -227,6 +228,7 @@
     if(canEdit) addBtn.onclick=()=>openCampaignModal(null);
     else addBtn.style.display="none";
     if(window.MB_DATA && window.MB_DATA.wirePublishButton) window.MB_DATA.wirePublishButton(root.querySelector("#tl-publish"));
+    if(window.MB_DATA && window.MB_DATA.wireCheckButton) window.MB_DATA.wireCheckButton(root.querySelector("#tl-check"));
 
     buildMonths(events);
     drawRows();
