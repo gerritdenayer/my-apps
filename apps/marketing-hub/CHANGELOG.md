@@ -1,5 +1,15 @@
 # Changelog
 
+## [v4.5] - 2026-08-08 - Download agenda as a roadmap slide
+
+### Added
+- A "Download agenda" button on the Campaigns & events tab. It turns your current filtered and
+  grouped view into an Orange-branded PowerPoint roadmap slide (swimlanes by your grouping, a
+  month/quarter axis, campaigns in orange and events in grey, positioned by their dates). The
+  title reflects the active scope and year. Good for sharing the plan with sales teams. The slide
+  shows one year; pick a year (or it uses the earliest year in view) and filter first to the view
+  you want.
+
 ## [v4.4] - 2026-07-10 - Check for updates before refreshing
 
 ### Added

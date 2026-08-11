@@ -12,5 +12,5 @@ window.MB_CONFIG = {
   // SHA-256 of (pinSalt + PIN). Default PIN is 2468.
   adminPinHash: "94c4d698ea9ed65b0e8a4f73b107d6bb7ea3169836657e5d983c36e1421dfc10",
   // Single source of truth for the version shown in the header. Bump this on each change set.
-  appVersion: "4.4",
+  appVersion: "4.5",
 };

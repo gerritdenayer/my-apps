@@ -198,6 +198,7 @@
           </select></div>` : ""}
         <div class="grow"><label>Search</label>
           <input id="tl-search" type="text" value="${S.escapeHtml(view.q)}" placeholder="Name, owner, domain, type" /></div>
+        <div><label>&nbsp;</label><div><button id="tl-ppt" class="secondary" title="Download the current filtered view as a roadmap slide (PowerPoint)">Download agenda</button></div></div>
         <div><label>&nbsp;</label><div><button id="tl-check" class="secondary" style="display:none" title="Check for updates">Check for updates</button></div></div>
         <div><label>&nbsp;</label><div><button id="tl-publish" class="primary" style="display:none; background:#0a7d33;" title="Publish changes">Publish changes</button></div></div>
         <div><label>&nbsp;</label><div><button id="tl-add" class="primary">New</button></div></div>
@@ -229,6 +230,13 @@
     else addBtn.style.display="none";
     if(window.MB_DATA && window.MB_DATA.wirePublishButton) window.MB_DATA.wirePublishButton(root.querySelector("#tl-publish"));
     if(window.MB_DATA && window.MB_DATA.wireCheckButton) window.MB_DATA.wireCheckButton(root.querySelector("#tl-check"));
+    const pptBtn=root.querySelector("#tl-ppt");
+    if(pptBtn) pptBtn.onclick=()=>{
+      if(!window.MB_PPT) return S.toast("Export not available.","error");
+      const model=buildRoadmapModel();
+      if(!model.lanes.length) return S.toast("No campaigns or events in the current view.","error");
+      window.MB_PPT.exportRoadmap(model);
+    };
 
     buildMonths(events);
     drawRows();
@@ -316,6 +324,35 @@
     if(ids.includes(view.country)) return true;
     const globalIds=new Set((S.state.data.settings.countries||[]).filter(c=>c.global).map(c=>c.id));
     return ids.some(id=>globalIds.has(id));
+  }
+  // Build the roadmap model (lanes + dated items) from the current filtered, grouped view.
+  function buildRoadmapModel(){
+    const data=S.state.data;
+    const events=filtered(data.events||[]);
+    let year=view.year?+view.year:0;
+    if(!year){
+      const ys=events.map(e=>{const d=parseISO(e.start);return d?d.getFullYear():null;}).filter(Boolean).sort();
+      year=ys.length?ys[0]:new Date().getFullYear();
+    }
+    const inYear=events.filter(e=>{ const s=parseISO(e.start), en=parseISO(e.end||e.start); return s&&en&&s.getFullYear()<=year&&en.getFullYear()>=year; });
+    const map={};
+    inYear.forEach(e=>{ const k=dimValue(e,view.groupBy); (map[k]=map[k]||[]).push(e); });
+    const lanes=Object.keys(map).sort().map(k=>({
+      label:k,
+      items: map[k].map(e=>{
+        const typeName=e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):"";
+        const ownerName=S.eventOwnerName(e)||"";
+        let lines = e.info ? String(e.info).split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0,3) : [];
+        if(!lines.length) lines=[typeName, ownerName].filter(Boolean);
+        return { name:e.name, lines, start:e.start, end:e.end||e.start, kind:e.kind||"Event" };
+      })
+    }));
+    let scope="";
+    if(view.country && view.country!=="__untagged"){ const c=S.countryById(view.country); if(c) scope=c.name; }
+    else if(view.scope && view.scope.cluster) scope=view.scope.cluster;
+    else if(view.scope && view.scope.entityId){ const en=S.entityById(view.scope.entityId); if(en) scope=en.name; }
+    const title="Campaign roadmap"+(scope?" - "+scope:"")+" ("+year+")";
+    return { title, year, lanes };
   }
   function filtered(events){
     const q=view.q.trim().toLowerCase();
