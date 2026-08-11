@@ -340,10 +340,11 @@
     const lanes=Object.keys(map).sort().map(k=>({
       label:k,
       items: map[k].map(e=>{
+        // Only non-financial, structured fields go on the slide. Free-text notes are deliberately
+        // left out so no budget figure typed into a note can ever appear. No amounts anywhere.
         const typeName=e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):"";
         const ownerName=S.eventOwnerName(e)||"";
-        let lines = e.info ? String(e.info).split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0,3) : [];
-        if(!lines.length) lines=[typeName, ownerName].filter(Boolean);
+        const lines=[typeName, ownerName].filter(Boolean);
         return { name:e.name, lines, start:e.start, end:e.end||e.start, kind:e.kind||"Event" };
       })
     }));

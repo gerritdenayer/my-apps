@@ -1,5 +1,12 @@
 # Changelog
 
+## [v4.6] - 2026-08-08 - Roadmap slide carries no budget wording
+
+### Changed
+- The Download agenda roadmap slide now shows only structured, non-financial fields in each box
+  (activity type and owner). It no longer uses the free-text Notes, so no budget figure written
+  into a note can appear. The slide already had no amounts, forecast or actual figures.
+
 ## [v4.5] - 2026-08-08 - Download agenda as a roadmap slide
 
 ### Added
