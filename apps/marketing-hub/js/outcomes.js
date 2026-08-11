@@ -12,10 +12,12 @@
     scope: { m1: "", cluster: "", entityId: "" },
     svpFilter: "",
     kind: "all",                     // all | Event | Campaign
+    chartMetric: "revenue",          // revenue | attendees | registrations | mql | sql | engagement
     chart: null,
   };
 
   const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP", month: "Month", quarter: "Quarter" };
+  const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"]];
 
   // ---- helpers ----
   function parseYMD(s) { if (!s) return null; const [y, m, d] = s.split("-").map(Number); return { y, m: m - 1, d }; }
@@ -104,7 +106,9 @@
   function blankAgg(label, key) {
     const metrics = {};
     S.OUTCOME_METRICS.forEach((m) => { metrics[m.key] = m.kind === "pa" ? { p: 0, a: 0 } : { t: 0, a: 0 }; });
-    return { key, label, count: 0, metrics, fNet: 0, aNet: 0 };
+    // spendMql/spendSql/spendAtt: actual spend of only the records that have that metric filled in,
+    // so cost-per-metric never counts spend from records with no MQL / SQL / attendee number.
+    return { key, label, count: 0, metrics, fNet: 0, aNet: 0, spendMql: 0, spendSql: 0, spendAtt: 0 };
   }
 
   function buildRows() {
@@ -120,6 +124,9 @@
       });
       const sp = eventSpend(ev);
       agg.fNet += sp.fNet; agg.aNet += sp.aNet;
+      if (oc(ev, "mql", "a") > 0) agg.spendMql += sp.aNet;
+      if (oc(ev, "sql", "a") > 0) agg.spendSql += sp.aNet;
+      if (oc(ev, "attendees", "a") > 0) agg.spendAtt += sp.aNet;
     });
     let rows = Object.values(map);
     if (view.dim === "month" || view.dim === "quarter") rows.sort((a, b) => a.key.localeCompare(b.key));
@@ -131,6 +138,7 @@
     const t = blankAgg("Total", "_total");
     rows.forEach((r) => {
       t.count += r.count; t.fNet += r.fNet; t.aNet += r.aNet;
+      t.spendMql += r.spendMql; t.spendSql += r.spendSql; t.spendAtt += r.spendAtt;
       S.OUTCOME_METRICS.forEach((m) => {
         if (m.kind === "pa") { t.metrics[m.key].p += r.metrics[m.key].p; t.metrics[m.key].a += r.metrics[m.key].a; }
         else { t.metrics[m.key].t += r.metrics[m.key].t; t.metrics[m.key].a += r.metrics[m.key].a; }
@@ -158,6 +166,7 @@
         ${S.scopeFilterHtml("o", view.scope)}
         <div><label>SVP</label><select id="o-svp"><option value="">All</option>${(data.settings.svps || []).map((s) => `<option ${view.svpFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
         <div><label>Kind</label><select id="o-kind">${[["all", "All"], ["Event", "Events"], ["Campaign", "Campaigns"]].map(([v, l]) => `<option ${view.kind === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
+        <div><label>Chart</label><select id="o-chart-metric">${CHART_METRICS.map(([v, l]) => `<option ${view.chartMetric === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         <div class="grow"></div>
         <div><button id="o-export" class="secondary">Export to Excel</button></div>
       </div>
@@ -171,6 +180,7 @@
     S.wireScopeFilter(root, "o", view.scope, renderBody);
     root.querySelector("#o-svp").onchange = (e) => { view.svpFilter = e.target.value; renderBody(); };
     root.querySelector("#o-kind").onchange = (e) => { view.kind = e.target.value; renderBody(); };
+    root.querySelector("#o-chart-metric").onchange = (e) => { view.chartMetric = e.target.value; drawChart(buildRows()); };
     root.querySelector("#o-export").onclick = exportExcel;
 
     renderBody();
@@ -222,9 +232,9 @@
   }
 
   function effCells(r) {
-    const cpm = costPer(r.aNet, r.metrics.mql.a);
-    const cps = costPer(r.aNet, r.metrics.sql.a);
-    const cpa = costPer(r.aNet, r.metrics.attendees.a);
+    const cpm = costPer(r.spendMql, r.metrics.mql.a);
+    const cps = costPer(r.spendSql, r.metrics.sql.a);
+    const cpa = costPer(r.spendAtt, r.metrics.attendees.a);
     const roi = roiOf(r.metrics.revenue.a, r.aNet);
     const roiCls = roi === null ? "muted" : (roi >= 1 ? "pos" : "warn");
     return `
@@ -273,7 +283,7 @@
             <th class="num">Cost / attendee</th>
             <th class="num">ROI</th>
           </tr>
-          <tr><th colspan="15" class="sub" style="font-weight:400">Outcome cells show actual / target. Revenue shows potential and actual.</th></tr>
+          <tr><th colspan="15" class="sub" style="font-weight:400">Outcome cells show actual / target. Revenue shows potential and actual. Cost per MQL / SQL / attendee counts only the spend of records that have that number filled in.</th></tr>
         </thead>
         <tbody>
           ${rows.map((r) => `<tr><td class="dim">${S.escapeHtml(r.label)}</td>${rowCells(r)}</tr>`).join("")}
@@ -289,19 +299,32 @@
     const ctx = document.getElementById("o-chart");
     if (!ctx || typeof Chart === "undefined") return;
     if (view.chart) { view.chart.destroy(); view.chart = null; }
+    const byDim = " by " + DIM_LABELS[view.dim].toLowerCase();
+    const metric = view.chartMetric || "revenue";
+    let datasets, title, yTicks;
+    if (metric === "revenue") {
+      datasets = [
+        { label: "Actual revenue", data: rows.map((r) => r.metrics.revenue.a), backgroundColor: "#50be87" },
+        { label: "Actual spend", data: rows.map((r) => r.aNet), backgroundColor: "#ff6a00" },
+      ];
+      title = "Actual revenue vs spend" + byDim;
+      yTicks = { callback: (v) => "EUR " + new Intl.NumberFormat("en-US").format(v) };
+    } else {
+      const label = (CHART_METRICS.find((m) => m[0] === metric) || [metric, metric])[1];
+      datasets = [
+        { label: "Actual", data: rows.map((r) => (r.metrics[metric] || {}).a || 0), backgroundColor: "#ff6a00" },
+        { label: "Target", data: rows.map((r) => (r.metrics[metric] || {}).t || 0), backgroundColor: "#9aa4ad" },
+      ];
+      title = label + " (actual vs target)" + byDim;
+      yTicks = { callback: (v) => new Intl.NumberFormat("en-US").format(v) };
+    }
     view.chart = new Chart(ctx, {
       type: "bar",
-      data: {
-        labels: rows.map((r) => r.label),
-        datasets: [
-          { label: "Actual revenue", data: rows.map((r) => r.metrics.revenue.a), backgroundColor: "#50be87" },
-          { label: "Actual spend", data: rows.map((r) => r.aNet), backgroundColor: "#ff6a00" },
-        ],
-      },
+      data: { labels: rows.map((r) => r.label), datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: "top" }, title: { display: true, text: "Actual revenue vs spend by " + DIM_LABELS[view.dim].toLowerCase() } },
-        scales: { y: { ticks: { callback: (v) => "EUR " + new Intl.NumberFormat("en-US").format(v) } } },
+        plugins: { legend: { position: "top" }, title: { display: true, text: title } },
+        scales: { y: { ticks: yTicks } },
       },
     });
   }
@@ -316,7 +339,7 @@
       "Cost per MQL", "Cost per SQL", "Cost per attendee", "Revenue ROI"];
     const rowArr = (r) => {
       const m = r.metrics;
-      const cpm = costPer(r.aNet, m.mql.a), cps = costPer(r.aNet, m.sql.a), cpa = costPer(r.aNet, m.attendees.a);
+      const cpm = costPer(r.spendMql, m.mql.a), cps = costPer(r.spendSql, m.sql.a), cpa = costPer(r.spendAtt, m.attendees.a);
       const roi = roiOf(m.revenue.a, r.aNet);
       return [r.label, r.count,
         m.attendees.a, m.attendees.t, m.registrations.a, m.registrations.t,

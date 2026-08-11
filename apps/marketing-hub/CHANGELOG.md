@@ -1,5 +1,16 @@
 # Changelog
 
+## [v4.7] - 2026-08-08 - Outcomes: fair cost-per and a chart switcher
+
+### Fixed
+- Cost per MQL, cost per SQL and cost per attendee now count only the spend of records that
+  actually have that number filled in. Records with no MQL / SQL / attendee no longer inflate the
+  cost. (Both the table and the Excel export.)
+
+### Added
+- A "Chart" switch on the Outcomes tab. The graph can now show Revenue vs spend (as before), or
+  Attendees, Registrations, MQL, SQL or Engagement (actual vs target), by the chosen grouping.
+
 ## [v4.6] - 2026-08-08 - Roadmap slide carries no budget wording
 
 ### Changed
