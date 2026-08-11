@@ -17,7 +17,8 @@
   };
 
   const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP", month: "Month", quarter: "Quarter" };
-  const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"]];
+  const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"], ["roi", "Revenue ROI"], ["costmql", "Cost per MQL"], ["costsql", "Cost per SQL"], ["costatt", "Cost per attendee"]];
+  const COST_MAP = { costmql: ["spendMql", "mql", "Cost per MQL"], costsql: ["spendSql", "sql", "Cost per SQL"], costatt: ["spendAtt", "attendees", "Cost per attendee"] };
 
   // ---- helpers ----
   function parseYMD(s) { if (!s) return null; const [y, m, d] = s.split("-").map(Number); return { y, m: m - 1, d }; }
@@ -302,13 +303,24 @@
     const byDim = " by " + DIM_LABELS[view.dim].toLowerCase();
     const metric = view.chartMetric || "revenue";
     let datasets, title, yTicks;
+    const money = { callback: (v) => "EUR " + new Intl.NumberFormat("en-US").format(v) };
+    const plain = { callback: (v) => new Intl.NumberFormat("en-US").format(v) };
     if (metric === "revenue") {
       datasets = [
         { label: "Actual revenue", data: rows.map((r) => r.metrics.revenue.a), backgroundColor: "#50be87" },
         { label: "Actual spend", data: rows.map((r) => r.aNet), backgroundColor: "#ff6a00" },
       ];
       title = "Actual revenue vs spend" + byDim;
-      yTicks = { callback: (v) => "EUR " + new Intl.NumberFormat("en-US").format(v) };
+      yTicks = money;
+    } else if (metric === "roi") {
+      datasets = [{ label: "Revenue ROI", data: rows.map((r) => { const v = roiOf(r.metrics.revenue.a, r.aNet); return v === null ? 0 : +v.toFixed(2); }), backgroundColor: "#6a5acd" }];
+      title = "Revenue ROI" + byDim;
+      yTicks = { callback: (v) => v + "x" };
+    } else if (COST_MAP[metric]) {
+      const [spendKey, cntKey, lbl] = COST_MAP[metric];
+      datasets = [{ label: lbl, data: rows.map((r) => { const v = costPer(r[spendKey], r.metrics[cntKey].a); return v === null ? 0 : Math.round(v); }), backgroundColor: "#ff6a00" }];
+      title = lbl + byDim;
+      yTicks = money;
     } else {
       const label = (CHART_METRICS.find((m) => m[0] === metric) || [metric, metric])[1];
       datasets = [
@@ -316,7 +328,7 @@
         { label: "Target", data: rows.map((r) => (r.metrics[metric] || {}).t || 0), backgroundColor: "#9aa4ad" },
       ];
       title = label + " (actual vs target)" + byDim;
-      yTicks = { callback: (v) => new Intl.NumberFormat("en-US").format(v) };
+      yTicks = plain;
     }
     view.chart = new Chart(ctx, {
       type: "bar",

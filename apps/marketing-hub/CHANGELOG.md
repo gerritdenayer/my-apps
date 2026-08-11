@@ -1,5 +1,12 @@
 # Changelog
 
+## [v4.8] - 2026-08-08 - More outcome chart types
+
+### Added
+- The Outcomes chart switch now also offers Revenue ROI, Cost per MQL, Cost per SQL and Cost per
+  attendee as bar charts by the chosen grouping, alongside the revenue, attendee, registration,
+  MQL, SQL and engagement views.
+
 ## [v4.7] - 2026-08-08 - Outcomes: fair cost-per and a chart switcher
 
 ### Fixed
