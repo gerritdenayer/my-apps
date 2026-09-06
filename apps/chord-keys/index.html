@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Keys</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --paper:#ECE4D3;
+    --panel:#F8F3E7;
+    --ink:#211D19;
+    --ink-soft:#6B6152;
+    --line:#D9CFB8;
+    --key-white:#FBF7EC;
+    --key-black:#221D19;
+    --key-line:#CBBE9C;
+    --brass:#8F631F;
+    --brass-strong:#6E4C16;
+    --wine:#8B3A3A;
+    --on-accent:#F8F3E7;
+    --focus:#3D6E63;
+    --shadow:0 1px 2px rgba(33,29,25,.10), 0 8px 24px -16px rgba(33,29,25,.35);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#17140F;
+      --panel:#221D16;
+      --ink:#EFE7D6;
+      --ink-soft:#B3A88F;
+      --line:#3A3226;
+      --key-white:#E4D9BE;
+      --key-black:#0D0B08;
+      --key-line:#050403;
+      --brass:#D9A544;
+      --brass-strong:#F0BE68;
+      --wine:#C97575;
+      --on-accent:#1B1712;
+      --focus:#7FBDAF;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#17140F;
+    --panel:#221D16;
+    --ink:#EFE7D6;
+    --ink-soft:#B3A88F;
+    --line:#3A3226;
+    --key-white:#E4D9BE;
+    --key-black:#0D0B08;
+    --key-line:#050403;
+    --brass:#D9A544;
+    --brass-strong:#F0BE68;
+    --wine:#C97575;
+    --on-accent:#1B1712;
+    --focus:#7FBDAF;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.6);
+  }
+
+  *{ box-sizing:border-box; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Work Sans', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{
+    max-width:1040px;
+    margin:0 auto;
+    padding:.85rem 1.1rem 1rem;
+    display:flex;
+    flex-direction:column;
+    gap:.65rem;
+    min-height:100vh;
+  }
+  @media (max-height:760px){ .tagline{ display:none; } }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0; padding:0; margin:-1px;
+  }
+
+  header.head{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:.15rem .7rem;
+  }
+  .eyebrow{
+    margin:0;
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:.66rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--brass);
+    font-weight:600;
+    order:2;
+  }
+  h1{
+    margin:0;
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:700;
+    font-size:clamp(1.3rem, 2.4vw, 1.6rem);
+    letter-spacing:-.01em;
+    order:1;
+  }
+  .tagline{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:.78rem;
+    max-width:70ch;
+    order:3;
+    flex-basis:100%;
+  }
+
+  .tool-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-top:3px solid var(--brass);
+    border-radius:14px;
+    padding:.9rem 1.1rem;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:.7rem;
+  }
+  @media (max-width:520px){ .tool-card{ padding:.9rem; } }
+
+  .workspace{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    gap:1.25rem;
+    align-items:start;
+  }
+  @media (max-width:860px){
+    .workspace{ grid-template-columns:1fr; }
+    .builder{
+      max-height:none;
+      overflow:visible;
+      border-right:none;
+      border-bottom:1px solid var(--line);
+      padding:0 0 1rem;
+    }
+  }
+
+  .input-row{
+    display:flex;
+    gap:.6rem;
+  }
+  #chordInput{
+    flex:1;
+    min-width:0;
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    font-size:1.1rem;
+    padding:.7rem .9rem;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--ink);
+  }
+  #chordInput:focus-visible{
+    outline:2px solid var(--focus);
+    outline-offset:1px;
+  }
+  button{
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:1rem;
+    cursor:pointer;
+  }
+  #chordForm button{
+    padding:.7rem 1.4rem;
+    background:var(--brass);
+    color:var(--on-accent);
+    border:none;
+    border-radius:8px;
+  }
+  #chordForm button:hover{ background:var(--brass-strong); }
+  #chordForm button:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  .presets{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+    margin-top:-.75rem;
+  }
+  .preset-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    align-self:center;
+    margin-right:.15rem;
+  }
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.82rem;
+    padding:.32rem .7rem;
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:100px;
+    color:var(--ink);
+  }
+  .chip:hover{ border-color:var(--brass); color:var(--brass-strong); }
+  .chip:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .chip.ghost{ color:var(--ink-soft); font-family:'Work Sans', sans-serif; font-weight:500; font-size:.8rem; }
+
+  .builder{
+    display:flex;
+    flex-direction:column;
+    gap:.85rem;
+    padding-right:1.1rem;
+    border-right:1px solid var(--line);
+    max-height:min(460px, 60vh);
+    overflow-y:auto;
+  }
+  .builder-row{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:.4rem;
+  }
+  .builder-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.7rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    min-width:72px;
+  }
+  .builder-label em{ font-style:normal; opacity:.7; }
+
+  .pill-group{ display:flex; flex-wrap:wrap; gap:.3rem; }
+  .pill{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    line-height:1;
+    padding:.3rem .55rem;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:transparent;
+    color:var(--ink);
+  }
+  .pill:hover{ border-color:var(--brass); }
+  .pill:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .pill.active{
+    background:var(--brass);
+    border-color:var(--brass-strong);
+    color:var(--on-accent);
+    font-weight:600;
+  }
+  .pill.jazz{ font-family:'Fraunces', serif; font-size:.98rem; font-weight:500; padding:.28rem .6rem; }
+
+  .quality-section{
+    display:flex;
+    flex-direction:column;
+    gap:.3rem;
+    padding-top:.7rem;
+    border-top:1px solid var(--line);
+  }
+  .section-label{
+    margin:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.66rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+
+  #errorBox{
+    font-size:.92rem;
+    color:var(--wine);
+    background:color-mix(in srgb, var(--wine) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--wine) 35%, transparent);
+    padding:.7rem .9rem;
+    border-radius:8px;
+  }
+  #errorBox[hidden]{ display:none; }
+
+  #resultArea{ display:flex; flex-direction:column; gap:.45rem; }
+  #resultArea[hidden]{ display:none; }
+
+  .chord-title-row{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:.4rem .9rem;
+  }
+  #chordSymbol{
+    margin:0;
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:700;
+    font-size:clamp(1.9rem, 5vw, 2.5rem);
+    line-height:1;
+    letter-spacing:-.01em;
+  }
+  #chordLabel{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:1.05rem;
+  }
+  #enharmonicNote{
+    margin:0;
+    font-size:.85rem;
+    color:var(--ink-soft);
+    font-style:italic;
+  }
+
+  .keyboard-frame{
+    background:var(--key-black);
+    border-radius:10px;
+    padding:8px;
+    overflow-x:auto;
+  }
+  #keyboardMount svg{
+    display:block;
+    height:auto;
+    width:max-content;
+    min-width:100%;
+  }
+  .key{ stroke-width:1; }
+  .key.white{ fill:var(--key-white); stroke:var(--key-line); }
+  .key.black{ fill:var(--key-black); stroke:var(--key-line); }
+  .key.active-root{ fill:var(--brass); stroke:var(--brass-strong); }
+  .key.active-tone{ fill:var(--wine); stroke:var(--wine); }
+  .key-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    font-weight:600;
+    text-anchor:middle;
+    fill:var(--ink);
+    pointer-events:none;
+  }
+  .key-label.on-white{ fill:var(--ink); }
+  .key-label.on-accent{ fill:var(--on-accent); }
+  .bass-dot{ fill:var(--on-accent); }
+
+  .notes-line{
+    margin:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.95rem;
+    color:var(--ink-soft);
+  }
+  .notes-line strong{ color:var(--ink); font-weight:600; }
+  .bass-note-line{
+    margin:.15rem 0 0;
+    font-size:.85rem;
+    color:var(--ink-soft);
+  }
+
+  .legend{
+    display:flex;
+    gap:1.1rem;
+    flex-wrap:wrap;
+    font-size:.78rem;
+    color:var(--ink-soft);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:.4rem; }
+  .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  .swatch.root{ background:var(--brass); }
+  .swatch.tone{ background:var(--wine); }
+
+  .detail-grid{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:1.25rem;
+  }
+  @media (max-width:600px){ .detail-grid{ grid-template-columns:1fr; } }
+
+  .panel h3{
+    margin:0 0 .4rem;
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:600;
+    font-size:.95rem;
+  }
+  .blurb{
+    margin:0 0 .6rem;
+    font-size:.85rem;
+    color:var(--ink-soft);
+    line-height:1.45;
+  }
+
+  table#intervalTable{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.82rem;
+  }
+  table#intervalTable th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.64rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    font-weight:600;
+    padding:0 .5rem .3rem 0;
+    border-bottom:1px solid var(--line);
+  }
+  table#intervalTable td{
+    padding:.28rem .5rem .28rem 0;
+    border-bottom:1px solid var(--line);
+    font-variant-numeric:tabular-nums;
+  }
+  table#intervalTable tr:last-child td{ border-bottom:none; }
+  .note-cell{ font-family:'IBM Plex Mono', monospace; font-weight:600; }
+  .degree-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    color:var(--brass-strong);
+  }
+
+  #altNames{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    max-height:196px;
+    overflow-y:auto;
+  }
+  #altNames li{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.85rem;
+    padding:.32rem .55rem;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+  }
+  #altNames li em{
+    font-family:'Work Sans', sans-serif;
+    font-style:normal;
+    color:var(--ink-soft);
+    font-size:.78rem;
+    display:block;
+    margin-top:.15rem;
+  }
+
+  footer.foot{
+    text-align:center;
+    font-size:.78rem;
+    color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <h1>Chord Keys</h1>
+    <p class="eyebrow">Piano &middot; Chord Reference</p>
+    <p class="tagline">Type or click together a chord — pop symbols or jazz lead-sheet notation (Δ7, -7, ø7, ♭9) — and see exactly which keys to press.</p>
+  </header>
+
+  <div class="tool-card">
+    <form id="chordForm" class="input-row">
+      <label for="chordInput" class="visually-hidden">Chord name</label>
+      <input id="chordInput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Cmaj7, C&#916;7, D&oslash;7, A7&#9837;9" value="Cmaj7" />
+      <button type="submit">Show</button>
+    </form>
+
+    <p id="errorBox" hidden></p>
+
+    <div class="workspace">
+      <aside class="builder">
+        <div class="builder-row">
+          <span class="builder-label">Root</span>
+          <div class="pill-group" id="rootLetterGroup"></div>
+          <div class="pill-group accidental-group" id="rootAccGroup"></div>
+        </div>
+        <div class="builder-row">
+          <span class="builder-label">Bass <em>(optional)</em></span>
+          <div class="pill-group" id="bassLetterGroup"></div>
+          <div class="pill-group accidental-group" id="bassAccGroup"></div>
+          <button type="button" class="chip ghost" id="bassClear">No bass</button>
+        </div>
+
+        <div class="quality-section">
+          <p class="section-label">Jazz lead-sheet symbols</p>
+          <div class="pill-group jazz-group" id="jazzGroup"></div>
+        </div>
+
+        <div id="qualityGroups"></div>
+      </aside>
+
+      <div id="resultArea">
+        <div class="chord-title-row">
+          <h2 id="chordSymbol">C</h2>
+          <p id="chordLabel">Major</p>
+        </div>
+        <p id="enharmonicNote"></p>
+
+        <div class="keyboard-frame">
+          <div id="keyboardMount"></div>
+        </div>
+
+        <p class="notes-line" id="notesLine"></p>
+        <p class="bass-note-line" id="bassLine" hidden></p>
+        <div class="legend">
+          <span><i class="swatch root"></i>Root</span>
+          <span><i class="swatch tone"></i>Chord tone</span>
+        </div>
+
+        <div class="detail-grid">
+          <section class="panel">
+            <h3>Built from</h3>
+            <p class="blurb" id="blurb"></p>
+            <table id="intervalTable">
+              <thead>
+                <tr><th>Note</th><th>Function</th><th>Interval</th></tr>
+              </thead>
+              <tbody id="intervalBody"></tbody>
+            </table>
+          </section>
+          <section class="panel">
+            <h3>Also written as</h3>
+            <ul id="altNames"></ul>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const LETTERS = ['C','D','E','F','G','A','B'];
+  const LETTER_SEMI = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  const MAJOR_SCALE_SEMI = {1:0,2:2,3:4,4:5,5:7,6:9,7:11,9:14,11:17,13:21};
+  const DEGREE_WORD = {1:'Root',2:'2nd',3:'3rd',4:'4th',5:'5th',6:'6th',7:'7th',9:'9th',11:'11th',13:'13th'};
+  const INTERVAL_NAME = {0:'Root',2:'Major 2nd',3:'Minor 3rd',4:'Major 3rd',5:'Perfect 4th',6:'Diminished 5th',7:'Perfect 5th',8:'Augmented 5th',9:'Major 6th',10:'Minor 7th',11:'Major 7th',13:'Minor 9th (♭9)',14:'Major 9th',15:'Augmented 9th (♯9)',17:'Perfect 11th',18:'Augmented 11th (♯11)',21:'Major 13th'};
+  const PC_NAMES = [
+    {sharp:'C', flat:'C'}, {sharp:'C♯', flat:'D♭'}, {sharp:'D', flat:'D'},
+    {sharp:'D♯', flat:'E♭'}, {sharp:'E', flat:'E'}, {sharp:'F', flat:'F'},
+    {sharp:'F♯', flat:'G♭'}, {sharp:'G', flat:'G'}, {sharp:'G♯', flat:'A♭'},
+    {sharp:'A', flat:'A'}, {sharp:'A♯', flat:'B♭'}, {sharp:'B', flat:'B'}
+  ];
+
+  const QUALITIES = [
+    { id:'maj', names:['','maj','M'], symbol:'', label:'Major',
+      blurb:'The major triad: root, major 3rd, perfect 5th — the brightest, most stable chord in Western music.',
+      tones:[[1,0],[3,4],[5,7]] },
+    { id:'min', names:['m','min','-'], symbol:'m', label:'Minor',
+      blurb:'Same skeleton as major, with the 3rd lowered a half step — that single note darkens the whole chord.',
+      tones:[[1,0],[3,3],[5,7]] },
+    { id:'dim', names:['dim','o'], symbol:'dim', label:'Diminished',
+      blurb:'Both the 3rd and 5th are lowered, stacking two minor 3rds — an unstable sound that wants to resolve.',
+      tones:[[1,0],[3,3],[5,6]] },
+    { id:'aug', names:['aug','+'], symbol:'aug', label:'Augmented',
+      blurb:'The 5th is raised a half step, stacking two major 3rds — symmetrical and unsettled, with no clear home.',
+      tones:[[1,0],[3,4],[5,8]] },
+    { id:'sus2', names:['sus2'], symbol:'sus2', label:'Suspended 2nd',
+      blurb:'The 3rd is swapped for the 2nd, removing the major/minor quality for an open, ambiguous sound.',
+      tones:[[1,0],[2,2],[5,7]] },
+    { id:'sus4', names:['sus4','sus'], symbol:'sus4', label:'Suspended 4th',
+      blurb:'The 3rd is swapped for the 4th, creating tension that classically resolves back down to the 3rd.',
+      tones:[[1,0],[4,5],[5,7]] },
+    { id:'five', names:['5'], symbol:'5', label:'Power Chord (no 3rd)',
+      blurb:'Just root and 5th — no 3rd means no major or minor quality, the workhorse of rock and metal.',
+      tones:[[1,0],[5,7]] },
+    { id:'six', names:['6','maj6','M6'], symbol:'6', label:'Major 6th',
+      blurb:'A major triad with an added major 6th on top, for a sweet, slightly nostalgic color.',
+      tones:[[1,0],[3,4],[5,7],[6,9]] },
+    { id:'m6', names:['m6','min6','-6'], symbol:'m6', label:'Minor 6th',
+      blurb:'A minor triad with an added major 6th — the 6th brightens what would otherwise be a dark chord.',
+      tones:[[1,0],[3,3],[5,7],[6,9]] },
+    { id:'dom7', names:['7','dom7'], symbol:'7', label:'Dominant 7th',
+      blurb:'A major triad plus a minor 7th — the engine of the blues, and the chord that most wants to resolve down a 5th.',
+      tones:[[1,0],[3,4],[5,7],[7,10]] },
+    { id:'maj7', names:['maj7','M7','ma7','Δ','Δ7'], symbol:'maj7', label:'Major 7th',
+      blurb:'A major triad plus a major 7th — lush and dreamy, a staple of jazz and soul.',
+      tones:[[1,0],[3,4],[5,7],[7,11]] },
+    { id:'min7', names:['m7','min7','-7'], symbol:'m7', label:'Minor 7th',
+      blurb:'A minor triad plus a minor 7th — mellow and rounded, the default minor chord in jazz.',
+      tones:[[1,0],[3,3],[5,7],[7,10]] },
+    { id:'mmaj7', names:['mmaj7','minmaj7','m(maj7)','m/maj7','mM7','-Δ7'], symbol:'m(maj7)', label:'Minor–Major 7th',
+      blurb:'A minor triad with a major 7th on top — the clash between them gives a moody, cinematic edge.',
+      tones:[[1,0],[3,3],[5,7],[7,11]] },
+    { id:'m7b5', names:['m7b5','m7-5','ø','ø7'], symbol:'m7♭5', label:'Half-Diminished 7th',
+      blurb:'A diminished triad plus a minor 7th — common as the ii chord in minor-key jazz progressions.',
+      tones:[[1,0],[3,3],[5,6],[7,10]] },
+    { id:'dim7', names:['dim7','o7'], symbol:'dim7', label:'Diminished 7th',
+      blurb:'Stacks minor 3rds all the way up — every interval is identical, so the chord is fully symmetrical.',
+      tones:[[1,0],[3,3],[5,6],[7,9]] },
+    { id:'aug7', names:['aug7','7#5','7+5'], symbol:'7♯5', label:'Augmented 7th',
+      blurb:'A dominant 7th with a raised 5th, adding extra tension before it resolves.',
+      tones:[[1,0],[3,4],[5,8],[7,10]] },
+    { id:'7b5', names:['7b5','7-5'], symbol:'7♭5', label:'Dominant 7th ♭5',
+      blurb:'A dominant 7th with a lowered 5th, giving it an off-balance, whole-tone color.',
+      tones:[[1,0],[3,4],[5,6],[7,10]] },
+    { id:'dom9', names:['9'], symbol:'9', label:'Dominant 9th',
+      blurb:'A dominant 7th plus a major 9th, adding color above the 7th without softening its bluesy pull.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,14]] },
+    { id:'maj9', names:['maj9','M9','Δ9'], symbol:'maj9', label:'Major 9th',
+      blurb:'A major 7th chord plus a major 9th — smooth and airy, common in jazz and neo-soul.',
+      tones:[[1,0],[3,4],[5,7],[7,11],[9,14]] },
+    { id:'min9', names:['m9','min9','-9'], symbol:'m9', label:'Minor 9th',
+      blurb:'A minor 7th chord plus a major 9th — one of the richest, most consonant minor jazz chords.',
+      tones:[[1,0],[3,3],[5,7],[7,10],[9,14]] },
+    { id:'add9', names:['add9','add2'], symbol:'add9', label:'Add 9',
+      blurb:'A major triad with a 9th added straight on top — no 7th involved, unlike a true 9th chord.',
+      tones:[[1,0],[3,4],[5,7],[9,14]] },
+    { id:'madd9', names:['madd9','madd2','m(add9)'], symbol:'m(add9)', label:'Minor Add 9',
+      blurb:'A minor triad with a 9th added on top, no 7th — brighter and more open than a plain minor.',
+      tones:[[1,0],[3,3],[5,7],[9,14]] },
+    { id:'six9', names:['6/9','69'], symbol:'6/9', label:'Six-Nine',
+      blurb:'A 6th chord with a 9th stacked on as well — dense but consonant, a favorite closing chord in jazz.',
+      tones:[[1,0],[3,4],[5,7],[6,9],[9,14]] },
+    { id:'11', names:['11'], symbol:'11', label:'Dominant 11th',
+      blurb:'A dominant 9th chord plus an 11th, usually voiced with the 3rd thinned out so it doesn’t clash.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,14],[11,17]] },
+    { id:'m11', names:['m11','min11'], symbol:'m11', label:'Minor 11th',
+      blurb:'A minor 9th chord plus an 11th — the 11th sits naturally over a minor 3rd, so this one stays smooth.',
+      tones:[[1,0],[3,3],[5,7],[7,10],[9,14],[11,17]] },
+    { id:'13', names:['13'], symbol:'13', label:'Dominant 13th',
+      blurb:'A dominant 9th chord plus a 13th on top, typically with the 11th left out — the fullest dominant color.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,14],[13,21]] },
+    { id:'m13', names:['m13','min13'], symbol:'m13', label:'Minor 13th',
+      blurb:'A minor 11th chord plus a 13th — dense, but the minor 3rd keeps the added tensions from clashing.',
+      tones:[[1,0],[3,3],[5,7],[7,10],[9,14],[13,21]] },
+    { id:'7sus4', names:['7sus4','7sus'], symbol:'7sus4', label:'Dominant 7sus4',
+      blurb:'A dominant 7th with the 3rd replaced by the 4th — common in gospel and rock as an unresolved dominant.',
+      tones:[[1,0],[4,5],[5,7],[7,10]] },
+    { id:'7sus2', names:['7sus2'], symbol:'7sus2', label:'Dominant 7sus2',
+      blurb:'A dominant 7th with the 3rd replaced by the 2nd — open and ambiguous, still carrying the 7th’s pull.',
+      tones:[[1,0],[2,2],[5,7],[7,10]] },
+    { id:'9sus4', names:['9sus4','9sus'], symbol:'9sus4', label:'9sus4',
+      blurb:'A 7sus4 chord with a 9th added on top — a rich, ambiguous color popular in modern pop and R&B.',
+      tones:[[1,0],[4,5],[5,7],[7,10],[9,14]] },
+    { id:'7b9', names:['7b9'], symbol:'7♭9', label:'Dominant 7th ♭9',
+      blurb:'A dominant 7th with the 9th flattened a half step — a tense, classic jazz sound that pulls hard toward a minor resolution.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,13]] },
+    { id:'7s9', names:['7#9'], symbol:'7♯9', label:'Dominant 7th ♯9',
+      blurb:'A dominant 7th with a raised 9th clashing against the major 3rd — the gritty, bluesy "Hendrix chord" sound.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,15]] },
+    { id:'7s11', names:['7#11'], symbol:'7♯11', label:'Dominant 7th ♯11',
+      blurb:'A dominant 7th with a raised 11th — the Lydian-dominant color, bright and modern rather than bluesy.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[11,18]] },
+    { id:'9s11', names:['9#11'], symbol:'9♯11', label:'Dominant 9th ♯11',
+      blurb:'A dominant 9th chord with a raised 11th added on top — a rich, modern color common on major-key ii–V–I turnarounds.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,14],[11,18]] },
+    { id:'13s11', names:['13#11'], symbol:'13♯11', label:'Dominant 13th ♯11',
+      blurb:'A dominant 9♯11 chord with a 13th stacked on as well — a dense, orchestral jazz voicing.',
+      tones:[[1,0],[3,4],[5,7],[7,10],[9,14],[11,18],[13,21]] }
+  ];
+
+  function mod12(n){ return ((n % 12) + 12) % 12; }
+
+  function accSymbol(acc){
+    if(acc === 0) return '';
+    if(acc === 1) return '♯';
+    if(acc === -1) return '♭';
+    if(acc > 0) return '♯'.repeat(acc);
+    return '♭'.repeat(-acc);
+  }
+
+  function spellDegree(rootLetter, rootAcc, degree, semitoneFromRoot){
+    const rootIdx = LETTERS.indexOf(rootLetter);
+    const letter = LETTERS[(rootIdx + (degree - 1)) % 7];
+    const rootAbs = mod12(LETTER_SEMI[rootLetter] + rootAcc);
+    const wantedAbs = mod12(rootAbs + semitoneFromRoot);
+    const naturalAbs = LETTER_SEMI[letter];
+    let bestAcc = 0, found = false;
+    for(let a = -2; a <= 2 && !found; a++){
+      if(mod12(naturalAbs + a) === wantedAbs){ bestAcc = a; found = true; }
+    }
+    return { letter, acc:bestAcc, pc:wantedAbs, display:letter + accSymbol(bestAcc) };
+  }
+
+  function normalizeInput(raw){
+    return raw.replace(/♯/g,'#').replace(/♭/g,'b').replace(/−/g,'-').trim().replace(/\s+/g,'');
+  }
+
+  function findQuality(suffix){
+    for(const q of QUALITIES){ if(q.names.includes(suffix)) return q; }
+    if(suffix.length >= 2){
+      const low = suffix.toLowerCase();
+      for(const q of QUALITIES){ if(q.names.some(n => n.length >= 2 && n.toLowerCase() === low)) return q; }
+    }
+    return null;
+  }
+
+  function parseChord(raw){
+    const s = normalizeInput(raw);
+    if(!s) return { error:'Type a chord name to get started — try "Cmaj7" or "Gm7".' };
+    const rootMatch = s.match(/^([A-Ga-g])(#|b)?/);
+    if(!rootMatch) return { error:`"${raw}" doesn't start with a note letter (A–G).` };
+    const rootLetter = rootMatch[1].toUpperCase();
+    const rootAcc = rootMatch[2] === '#' ? 1 : rootMatch[2] === 'b' ? -1 : 0;
+    let rest = s.slice(rootMatch[0].length);
+
+    let bass = null;
+    const slashMatch = rest.match(/\/([A-Ga-g])(#|b)?$/);
+    if(slashMatch){
+      bass = { letter:slashMatch[1].toUpperCase(), acc: slashMatch[2] === '#' ? 1 : slashMatch[2] === 'b' ? -1 : 0 };
+      rest = rest.slice(0, rest.length - slashMatch[0].length);
+    }
+
+    const quality = findQuality(rest);
+    if(!quality) return { error:`"${rest || '(nothing)'}" isn’t a chord quality I know. Try 7, m7, maj7, sus4, dim, m7b5…` };
+
+    const notes = quality.tones.map(([degree, semi]) => {
+      const spelled = spellDegree(rootLetter, rootAcc, degree, semi);
+      return { degree, semi, ...spelled, isRoot: semi === 0 };
+    });
+
+    let bassNote = null;
+    if(bass){
+      const abs = mod12(LETTER_SEMI[bass.letter] + bass.acc);
+      bassNote = { letter:bass.letter, acc:bass.acc, pc:abs, display:bass.letter + accSymbol(bass.acc) };
+    }
+
+    return { rootLetter, rootAcc, quality, notes, bass:bassNote, suffixRaw: rest };
+  }
+
+  function degreeTag(degree, semi){
+    if(degree === 1) return 'R';
+    const ref = MAJOR_SCALE_SEMI[degree];
+    const diff = semi - ref;
+    const sign = diff < 0 ? '♭'.repeat(-diff) : diff > 0 ? '♯'.repeat(diff) : '';
+    return sign + degree;
+  }
+
+  // ---- keyboard rendering ----
+  const WHITE_W = 40, WHITE_H = 128, BLACK_W = 25, BLACK_H = 78;
+  const BLACK_PCS = new Set([1,3,6,8,10]);
+
+  function buildKeyboardModel(){
+    let whiteIdx = 0;
+    const whites = [], blacks = [];
+    for(let s = 0; s <= 24; s++){
+      const pc = mod12(s);
+      if(BLACK_PCS.has(pc)){
+        blacks.push({ pc, precedingWhiteIndex: whiteIdx - 1 });
+      } else {
+        whites.push({ pc, whiteIndex: whiteIdx });
+        whiteIdx++;
+      }
+    }
+    return { whites, blacks, whiteCount: whiteIdx };
+  }
+
+  function renderKeyboard(pcMap){
+    const { whites, blacks, whiteCount } = buildKeyboardModel();
+    const width = whiteCount * WHITE_W;
+    let svg = `<svg viewBox="0 0 ${width} ${WHITE_H}" role="img" aria-label="Piano keyboard with chord keys highlighted">`;
+
+    whites.forEach(k => {
+      const x = k.whiteIndex * WHITE_W;
+      const m = pcMap[k.pc];
+      const cls = m ? (m.isRoot ? 'key white active-root' : 'key white active-tone') : 'key white';
+      svg += `<rect class="${cls}" x="${x}" y="0" width="${WHITE_W - 2}" height="${WHITE_H}" rx="4"/>`;
+      if(m){
+        const labelCls = m.isRoot ? 'key-label on-accent' : 'key-label on-accent';
+        svg += `<text class="${labelCls}" x="${x + (WHITE_W - 2) / 2}" y="${WHITE_H - 14}">${m.display}</text>`;
+        if(m.isBass) svg += `<circle class="bass-dot" cx="${x + (WHITE_W - 2) / 2}" cy="${WHITE_H - 30}" r="3"/>`;
+      }
+    });
+
+    blacks.forEach(k => {
+      const x = (k.precedingWhiteIndex + 1) * WHITE_W - BLACK_W / 2;
+      const m = pcMap[k.pc];
+      const cls = m ? (m.isRoot ? 'key black active-root' : 'key black active-tone') : 'key black';
+      svg += `<rect class="${cls}" x="${x}" y="0" width="${BLACK_W}" height="${BLACK_H}" rx="3"/>`;
+      if(m){
+        svg += `<text class="key-label on-accent" x="${x + BLACK_W / 2}" y="${BLACK_H - 10}" style="font-size:10px">${m.display}</text>`;
+        if(m.isBass) svg += `<circle class="bass-dot" cx="${x + BLACK_W / 2}" cy="${BLACK_H - 20}" r="2.4"/>`;
+      }
+    });
+
+    svg += `</svg>`;
+    document.getElementById('keyboardMount').innerHTML = svg;
+  }
+
+  function prettifyAlias(n){
+    return n.replace(/b(?=\d)/g, '♭').replace(/#/g, '♯');
+  }
+
+  function render(chord){
+    document.getElementById('errorBox').hidden = true;
+    document.getElementById('resultArea').hidden = false;
+
+    const rootDisplay = chord.rootLetter + accSymbol(chord.rootAcc);
+    const bassSuffix = chord.bass ? '/' + chord.bass.display : '';
+    document.getElementById('chordSymbol').textContent = rootDisplay + chord.quality.symbol + bassSuffix;
+    document.getElementById('chordLabel').textContent = rootDisplay + ' ' + chord.quality.label;
+
+    const rootPc = mod12(LETTER_SEMI[chord.rootLetter] + chord.rootAcc);
+    const enharmEl = document.getElementById('enharmonicNote');
+    if(chord.rootAcc !== 0){
+      const altLetter = chord.rootAcc > 0 ? PC_NAMES[rootPc].flat : PC_NAMES[rootPc].sharp;
+      enharmEl.textContent = `Enharmonically: ${altLetter}${chord.quality.symbol}${bassSuffix}`;
+      enharmEl.hidden = false;
+    } else {
+      enharmEl.textContent = '';
+      enharmEl.hidden = true;
+    }
+
+    const pcMap = {};
+    chord.notes.forEach(n => { pcMap[n.pc] = { display:n.display, isRoot:n.isRoot, isBass:false }; });
+    if(chord.bass){
+      if(pcMap[chord.bass.pc]) pcMap[chord.bass.pc].isBass = true;
+      else pcMap[chord.bass.pc] = { display:chord.bass.display, isRoot:false, isBass:true };
+    }
+    renderKeyboard(pcMap);
+
+    const notesLine = chord.notes.map(n => n.isRoot ? `<strong>${n.display}</strong>` : n.display).join(' – ');
+    document.getElementById('notesLine').innerHTML = notesLine;
+
+    const bassLine = document.getElementById('bassLine');
+    if(chord.bass){
+      const matching = chord.notes.find(n => n.pc === chord.bass.pc);
+      let detail;
+      if(matching && matching.isRoot) detail = 'the root — same as playing it in root position';
+      else if(matching) detail = `the ${DEGREE_WORD[matching.degree] || matching.degree} of the chord`;
+      else detail = 'not part of the chord itself — added underneath as a bass color';
+      bassLine.textContent = `Bass note ${chord.bass.display}: ${detail}.`;
+      bassLine.hidden = false;
+    } else {
+      bassLine.hidden = true;
+    }
+
+    document.getElementById('blurb').textContent = chord.quality.blurb;
+
+    const tbody = document.getElementById('intervalBody');
+    tbody.innerHTML = chord.notes.map(n => `
+      <tr>
+        <td class="note-cell">${n.display}</td>
+        <td class="degree-tag">${degreeTag(n.degree, n.semi)}</td>
+        <td>${INTERVAL_NAME[n.semi] || n.semi + ' semitones'}</td>
+      </tr>
+    `).join('');
+
+    const seen = new Set([chord.quality.symbol.toLowerCase()]);
+    const alts = [];
+    chord.quality.names.forEach(n => {
+      if(!n) return;
+      const pretty = prettifyAlias(n);
+      const key = pretty.toLowerCase();
+      if(seen.has(key)) return;
+      seen.add(key);
+      alts.push(rootDisplay + pretty);
+    });
+    const altList = document.getElementById('altNames');
+    if(alts.length === 0){
+      altList.innerHTML = `<li>No common alternate notation — "${rootDisplay}" says it all.</li>`;
+    } else {
+      altList.innerHTML = alts.map(a => `<li>${a}</li>`).join('');
+    }
+
+    syncBuilderFromChord(chord);
+  }
+
+  function showError(message){
+    const box = document.getElementById('errorBox');
+    box.textContent = message;
+    box.hidden = false;
+  }
+
+  function handleInput(value){
+    const result = parseChord(value);
+    if(result.error){ showError(result.error); return; }
+    render(result);
+  }
+
+  const form = document.getElementById('chordForm');
+  const input = document.getElementById('chordInput');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    handleInput(input.value);
+  });
+
+  // ---- click-to-build chord picker ----
+  const QUALITY_GROUPS = [
+    { title:'Triads', ids:['maj','min','dim','aug','five'] },
+    { title:'Suspended', ids:['sus2','sus4','7sus4','7sus2','9sus4'] },
+    { title:'Sixths', ids:['six','m6','six9'] },
+    { title:'Sevenths', ids:['dom7','maj7','min7','mmaj7','m7b5','dim7','7b5','aug7'] },
+    { title:'Extensions (9ths–13ths)', ids:['dom9','maj9','min9','add9','madd9','11','m11','13','m13'] },
+    { title:'Altered Dominants', ids:['7b9','7s9','7s11','9s11','13s11'] }
+  ];
+
+  const JAZZ_SYMBOLS = [
+    { text:'Δ',   qualityId:'maj7',  title:'Major 7th' },
+    { text:'Δ7',  qualityId:'maj7',  title:'Major 7th' },
+    { text:'-',   qualityId:'min',   title:'Minor triad' },
+    { text:'-7',  qualityId:'min7',  title:'Minor 7th' },
+    { text:'-Δ7', qualityId:'mmaj7', title:'Minor–major 7th' },
+    { text:'ø',   qualityId:'m7b5',  title:'Half-diminished 7th' },
+    { text:'ø7',  qualityId:'m7b5',  title:'Half-diminished 7th' },
+    { text:'o',   qualityId:'dim',   title:'Diminished triad' },
+    { text:'o7',  qualityId:'dim7',  title:'Diminished 7th' }
+  ];
+
+  const ACC_OPTIONS = [ {acc:-1, label:'♭'}, {acc:0, label:'♮'}, {acc:1, label:'♯'} ];
+
+  const state = { root:{letter:'C', acc:0}, qualityId:'maj', symbolText:'', bass:null };
+
+  function qualityById(id){ return QUALITIES.find(q => q.id === id); }
+
+  function updateChordFromState(){
+    const rootStr = state.root.letter + accSymbol(state.root.acc);
+    const bassStr = state.bass ? '/' + state.bass.letter + accSymbol(state.bass.acc) : '';
+    const str = rootStr + state.symbolText + bassStr;
+    input.value = str;
+    handleInput(str);
+    input.focus();
+  }
+
+  function selectRoot(letter, acc){ state.root = { letter, acc }; updateChordFromState(); }
+
+  function selectBassLetter(letter){
+    if(state.bass && state.bass.letter === letter){ state.bass = null; }
+    else { state.bass = { letter, acc: state.bass ? state.bass.acc : 0 }; }
+    updateChordFromState();
+  }
+
+  function selectRootAcc(acc){
+    state.root = { letter: state.root.letter, acc: state.root.acc === acc ? 0 : acc };
+    updateChordFromState();
+  }
+
+  function selectBassAcc(acc){
+    const currentLetter = state.bass ? state.bass.letter : 'C';
+    const currentAcc = state.bass ? state.bass.acc : null;
+    state.bass = { letter: currentLetter, acc: currentAcc === acc ? 0 : acc };
+    updateChordFromState();
+  }
+
+  function selectQuality(qualityId, symbolText){
+    const resolvedText = symbolText !== undefined ? symbolText : qualityById(qualityId).symbol;
+    if(state.qualityId === qualityId && state.symbolText === resolvedText && qualityId !== 'maj'){
+      state.qualityId = 'maj';
+      state.symbolText = '';
+    } else {
+      state.qualityId = qualityId;
+      state.symbolText = resolvedText;
+    }
+    updateChordFromState();
+  }
+
+  function buildNotePicker(letterGroupEl, accGroupEl, kind){
+    LETTERS.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = letter;
+      btn.dataset.letter = letter;
+      btn.addEventListener('click', () => {
+        if(kind === 'root'){ selectRoot(letter, state.root.acc); }
+        else { selectBassLetter(letter); }
+      });
+      letterGroupEl.appendChild(btn);
+    });
+    ACC_OPTIONS.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = opt.label;
+      btn.dataset.acc = opt.acc;
+      btn.addEventListener('click', () => {
+        if(kind === 'root'){ selectRootAcc(opt.acc); }
+        else { selectBassAcc(opt.acc); }
+      });
+      accGroupEl.appendChild(btn);
+    });
+  }
+
+  buildNotePicker(document.getElementById('rootLetterGroup'), document.getElementById('rootAccGroup'), 'root');
+  buildNotePicker(document.getElementById('bassLetterGroup'), document.getElementById('bassAccGroup'), 'bass');
+
+  document.getElementById('bassClear').addEventListener('click', () => {
+    state.bass = null;
+    updateChordFromState();
+  });
+
+  const jazzGroupEl = document.getElementById('jazzGroup');
+  JAZZ_SYMBOLS.forEach(j => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pill jazz';
+    btn.textContent = j.text;
+    btn.title = j.title;
+    btn.dataset.qualityId = j.qualityId;
+    btn.dataset.symbolText = j.text;
+    btn.addEventListener('click', () => selectQuality(j.qualityId, j.text));
+    jazzGroupEl.appendChild(btn);
+  });
+
+  const qualityGroupsEl = document.getElementById('qualityGroups');
+  QUALITY_GROUPS.forEach(group => {
+    const section = document.createElement('div');
+    section.className = 'quality-section';
+    const label = document.createElement('p');
+    label.className = 'section-label';
+    label.textContent = group.title;
+    section.appendChild(label);
+    const pillGroup = document.createElement('div');
+    pillGroup.className = 'pill-group';
+    group.ids.forEach(id => {
+      const q = qualityById(id);
+      if(!q) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = q.symbol || '(none)';
+      btn.title = q.label;
+      btn.dataset.qualityId = q.id;
+      btn.dataset.symbolText = q.symbol;
+      btn.addEventListener('click', () => selectQuality(q.id, q.symbol));
+      pillGroup.appendChild(btn);
+    });
+    section.appendChild(pillGroup);
+    qualityGroupsEl.appendChild(section);
+  });
+
+  function highlightBuilder(){
+    document.querySelectorAll('#rootLetterGroup .pill').forEach(b => b.classList.toggle('active', b.dataset.letter === state.root.letter));
+    document.querySelectorAll('#rootAccGroup .pill').forEach(b => b.classList.toggle('active', Number(b.dataset.acc) === state.root.acc));
+    document.querySelectorAll('#bassLetterGroup .pill').forEach(b => b.classList.toggle('active', !!state.bass && b.dataset.letter === state.bass.letter));
+    document.querySelectorAll('#bassAccGroup .pill').forEach(b => b.classList.toggle('active', !!state.bass && Number(b.dataset.acc) === state.bass.acc));
+    document.querySelectorAll('#jazzGroup .pill, #qualityGroups .pill').forEach(b => {
+      b.classList.toggle('active', b.dataset.qualityId === state.qualityId && b.dataset.symbolText === state.symbolText);
+    });
+  }
+
+  function syncBuilderFromChord(chord){
+    state.root = { letter:chord.rootLetter, acc:chord.rootAcc };
+    state.qualityId = chord.quality.id;
+    state.symbolText = chord.suffixRaw;
+    state.bass = chord.bass ? { letter:chord.bass.letter, acc:chord.bass.acc } : null;
+    highlightBuilder();
+  }
+
+  handleInput(input.value);
+})();
+</script>
+</body>
+</html>
