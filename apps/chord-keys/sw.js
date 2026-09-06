@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chord-keys-v1';
+const CACHE_NAME = 'chord-keys-v2';
 const APP_SHELL = [
   './',
   './index.html',
