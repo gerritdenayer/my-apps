@@ -235,6 +235,32 @@
     flex-wrap:wrap;
     gap:.4rem;
   }
+
+  .mode-tabs{
+    display:flex;
+    gap:1.1rem;
+    border-bottom:1px solid var(--line);
+    padding-bottom:.5rem;
+    margin-bottom:.1rem;
+  }
+  .mode-tab{
+    background:none;
+    border:none;
+    padding:0 0 .5rem;
+    margin-bottom:-.51rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+  }
+  .mode-tab:hover{ color:var(--ink); }
+  .mode-tab.active{ color:var(--brass-strong); border-bottom-color:var(--brass); font-weight:600; }
+  .mode-tab:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+
+  #buildPanel, #progressionsPanel{ display:flex; flex-direction:column; gap:.85rem; }
+  #buildPanel[hidden], #progressionsPanel[hidden]{ display:none; }
   .builder-label{
     font-family:'IBM Plex Mono', monospace;
     font-size:.7rem;
@@ -294,6 +320,60 @@
 
   #resultArea{ display:flex; flex-direction:column; gap:.45rem; }
   #resultArea[hidden]{ display:none; }
+
+  .progression-strip{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.65rem .75rem;
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+  }
+  .progression-strip[hidden]{ display:none; }
+  .prog-strip-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:.3rem .8rem;
+  }
+  .prog-title{
+    margin:0;
+    font-family:'Fraunces', Georgia, serif;
+    font-weight:600;
+    font-size:.98rem;
+  }
+  .progression-strip .blurb{ margin:0; font-size:.8rem; }
+  .prog-steps{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.15rem; }
+  .prog-step{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:.1rem;
+    min-width:52px;
+    padding:.35rem .5rem;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--panel);
+  }
+  .prog-step:hover{ border-color:var(--brass); }
+  .prog-step:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .prog-step.active{ background:var(--brass); border-color:var(--brass-strong); }
+  .prog-step .roman{
+    font-family:'Fraunces', Georgia, serif;
+    font-style:italic;
+    font-size:.72rem;
+    color:var(--ink-soft);
+  }
+  .prog-step.active .roman{ color:var(--on-accent); opacity:.85; }
+  .prog-step .chord-name{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.85rem;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .prog-step.active .chord-name{ color:var(--on-accent); }
 
   .chord-title-row{
     display:flex;
@@ -477,27 +557,56 @@
 
     <div class="workspace">
       <aside class="builder">
-        <div class="builder-row">
-          <span class="builder-label">Root</span>
-          <div class="pill-group" id="rootLetterGroup"></div>
-          <div class="pill-group accidental-group" id="rootAccGroup"></div>
-        </div>
-        <div class="builder-row">
-          <span class="builder-label">Bass <em>(optional)</em></span>
-          <div class="pill-group" id="bassLetterGroup"></div>
-          <div class="pill-group accidental-group" id="bassAccGroup"></div>
-          <button type="button" class="chip ghost" id="bassClear">No bass</button>
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" id="tabBuild">Build a chord</button>
+          <button type="button" class="mode-tab" id="tabProgressions">Progressions</button>
         </div>
 
-        <div class="quality-section">
-          <p class="section-label">Jazz lead-sheet symbols</p>
-          <div class="pill-group jazz-group" id="jazzGroup"></div>
+        <div id="buildPanel">
+          <div class="builder-row">
+            <span class="builder-label">Root</span>
+            <div class="pill-group" id="rootLetterGroup"></div>
+            <div class="pill-group accidental-group" id="rootAccGroup"></div>
+          </div>
+          <div class="builder-row">
+            <span class="builder-label">Bass <em>(optional)</em></span>
+            <div class="pill-group" id="bassLetterGroup"></div>
+            <div class="pill-group accidental-group" id="bassAccGroup"></div>
+            <button type="button" class="chip ghost" id="bassClear">No bass</button>
+          </div>
+
+          <div class="quality-section">
+            <p class="section-label">Jazz lead-sheet symbols</p>
+            <div class="pill-group jazz-group" id="jazzGroup"></div>
+          </div>
+
+          <div id="qualityGroups"></div>
         </div>
 
-        <div id="qualityGroups"></div>
+        <div id="progressionsPanel" hidden>
+          <div class="builder-row">
+            <span class="builder-label">Key</span>
+            <div class="pill-group" id="progKeyLetterGroup"></div>
+            <div class="pill-group accidental-group" id="progKeyAccGroup"></div>
+          </div>
+          <div class="builder-row">
+            <span class="builder-label">Scale</span>
+            <div class="pill-group" id="progModeGroup"></div>
+          </div>
+          <div id="progressionGroups"></div>
+        </div>
       </aside>
 
       <div id="resultArea">
+        <div class="progression-strip" id="progressionStrip" hidden>
+          <div class="prog-strip-head">
+            <p class="prog-title" id="progTitle"></p>
+            <button type="button" class="chip ghost" id="progDismiss">Back to single chord</button>
+          </div>
+          <p class="blurb" id="progBlurb"></p>
+          <div class="prog-steps" id="progSteps"></div>
+        </div>
+
         <div class="chord-title-row">
           <h2 id="chordSymbol">C</h2>
           <p id="chordLabel">Major</p>
@@ -541,6 +650,8 @@
   const LETTERS = ['C','D','E','F','G','A','B'];
   const LETTER_SEMI = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
   const MAJOR_SCALE_SEMI = {1:0,2:2,3:4,4:5,5:7,6:9,7:11,9:14,11:17,13:21};
+  const MAJOR_DEGREES = {1:0,2:2,3:4,4:5,5:7,6:9,7:11};
+  const MINOR_DEGREES = {1:0,2:2,3:3,4:5,5:7,6:8,7:10};
   const DEGREE_WORD = {1:'Root',2:'2nd',3:'3rd',4:'4th',5:'5th',6:'6th',7:'7th',9:'9th',11:'11th',13:'13th'};
   const INTERVAL_NAME = {0:'Root',2:'Major 2nd',3:'Minor 3rd',4:'Major 3rd',5:'Perfect 4th',6:'Diminished 5th',7:'Perfect 5th',8:'Augmented 5th',9:'Major 6th',10:'Minor 7th',11:'Major 7th',13:'Minor 9th (♭9)',14:'Major 9th',15:'Augmented 9th (♯9)',17:'Perfect 11th',18:'Augmented 11th (♯11)',21:'Major 13th'};
   const PC_NAMES = [
@@ -658,6 +769,109 @@
       tones:[[1,0],[3,4],[5,7],[7,10],[9,14],[11,18],[13,21]] }
   ];
 
+  const PROGRESSIONS = [
+    { id:'I-IV-V', mode:'major', title:'I – IV – V', subtitle:'Three-Chord Trick',
+      blurb:'The three primary chords of any major key — the foundation of folk, country, blues, and early rock.',
+      steps:[
+        {degree:1, acc:0, qualityId:'maj', roman:'I'},
+        {degree:4, acc:0, qualityId:'maj', roman:'IV'},
+        {degree:5, acc:0, qualityId:'maj', roman:'V'}
+      ] },
+    { id:'I-V-vi-IV', mode:'major', title:'I – V – vi – IV', subtitle:'Pop Progression',
+      blurb:'The "four chords" behind hundreds of pop hits — Journey, Elton John, U2, the whole Axis of Awesome medley.',
+      steps:[
+        {degree:1, acc:0, qualityId:'maj', roman:'I'},
+        {degree:5, acc:0, qualityId:'maj', roman:'V'},
+        {degree:6, acc:0, qualityId:'min', roman:'vi'},
+        {degree:4, acc:0, qualityId:'maj', roman:'IV'}
+      ] },
+    { id:'I-vi-IV-V', mode:'major', title:'I – vi – IV – V', subtitle:'50s Progression',
+      blurb:'The doo-wop backbone of 1950s pop and early rock ‘n’ roll — "Stand By Me" and countless others.',
+      steps:[
+        {degree:1, acc:0, qualityId:'maj', roman:'I'},
+        {degree:6, acc:0, qualityId:'min', roman:'vi'},
+        {degree:4, acc:0, qualityId:'maj', roman:'IV'},
+        {degree:5, acc:0, qualityId:'maj', roman:'V'}
+      ] },
+    { id:'ii-V-I', mode:'major', title:'ii – V – I', subtitle:'Jazz Cadence',
+      blurb:'The single most important cadence in jazz — learn it in all 12 keys and you can play through half the Real Book.',
+      steps:[
+        {degree:2, acc:0, qualityId:'min7', roman:'ii7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'},
+        {degree:1, acc:0, qualityId:'maj7', roman:'IΔ7'}
+      ] },
+    { id:'I-vi-ii-V', mode:'major', title:'I – vi – ii – V', subtitle:'Turnaround',
+      blurb:'A "turnaround" that cycles the harmony back to the top of the form — the A section of Rhythm Changes and countless standards.',
+      steps:[
+        {degree:1, acc:0, qualityId:'maj7', roman:'IΔ7'},
+        {degree:6, acc:0, qualityId:'min7', roman:'vi7'},
+        {degree:2, acc:0, qualityId:'min7', roman:'ii7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'}
+      ] },
+    { id:'iii-VI7-ii-V7-I', mode:'major', title:'iii – VI7 – ii – V7 – I', subtitle:'Chained Secondary Dominants',
+      blurb:'Each dominant briefly "tonicizes" the chord after it — the extended turnaround from "Fly Me to the Moon" and many standards.',
+      steps:[
+        {degree:3, acc:0, qualityId:'min7', roman:'iii7'},
+        {degree:6, acc:0, qualityId:'dom7', roman:'V7/ii'},
+        {degree:2, acc:0, qualityId:'min7', roman:'ii7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'},
+        {degree:1, acc:0, qualityId:'maj7', roman:'IΔ7'}
+      ] },
+    { id:'backdoor', mode:'major', title:'iv – ♭VII7 – I', subtitle:'Backdoor Progression',
+      blurb:'A jazz alternative to ii–V–I that arrives at the tonic from a half-step above instead of below.',
+      steps:[
+        {degree:4, acc:0, qualityId:'min7', roman:'iv7'},
+        {degree:7, acc:-1, qualityId:'dom7', roman:'♭VII7'},
+        {degree:1, acc:0, qualityId:'maj7', roman:'IΔ7'}
+      ] },
+    { id:'blues12', mode:'major', title:'12-Bar Blues', subtitle:'One Chorus',
+      blurb:'The most common form in blues and early rock — even the "I" chord is dominant, giving blues its unresolved, gritty pull.',
+      steps:[
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:4, acc:0, qualityId:'dom7', roman:'IV7'},
+        {degree:4, acc:0, qualityId:'dom7', roman:'IV7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'},
+        {degree:4, acc:0, qualityId:'dom7', roman:'IV7'},
+        {degree:1, acc:0, qualityId:'dom7', roman:'I7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'}
+      ] },
+    { id:'i-iv-v', mode:'minor', title:'i – iv – v', subtitle:'Minor Three-Chord Trick',
+      blurb:'The natural-minor counterpart to I–IV–V — common in rock, metal, and folk written in a minor key.',
+      steps:[
+        {degree:1, acc:0, qualityId:'min', roman:'i'},
+        {degree:4, acc:0, qualityId:'min', roman:'iv'},
+        {degree:5, acc:0, qualityId:'min', roman:'v'}
+      ] },
+    { id:'i-VI-III-VII', mode:'minor', title:'i – VI – III – VII', subtitle:'Epic Minor Progression',
+      blurb:'One of the most common progressions in minor-key rock and pop — dramatic and anthemic.',
+      steps:[
+        {degree:1, acc:0, qualityId:'min', roman:'i'},
+        {degree:6, acc:0, qualityId:'maj', roman:'VI'},
+        {degree:3, acc:0, qualityId:'maj', roman:'III'},
+        {degree:7, acc:0, qualityId:'maj', roman:'VII'}
+      ] },
+    { id:'andalusian', mode:'minor', title:'i – VII – VI – V', subtitle:'Andalusian Cadence',
+      blurb:'A descending four-chord cadence rooted in flamenco and Spanish folk music — also the backbone of "Hit the Road Jack."',
+      steps:[
+        {degree:1, acc:0, qualityId:'min', roman:'i'},
+        {degree:7, acc:0, qualityId:'maj', roman:'VII'},
+        {degree:6, acc:0, qualityId:'maj', roman:'VI'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'}
+      ] },
+    { id:'ii-V-i-minor', mode:'minor', title:'ii° – V – i', subtitle:'Minor Jazz Cadence',
+      blurb:'The minor-key version of the jazz cadence — the ii chord is half-diminished, and the V borrows a raised leading tone to keep its pull to the tonic.',
+      steps:[
+        {degree:2, acc:0, qualityId:'m7b5', roman:'iiø7'},
+        {degree:5, acc:0, qualityId:'dom7', roman:'V7'},
+        {degree:1, acc:0, qualityId:'min7', roman:'i7'}
+      ] }
+  ];
+
   function mod12(n){ return ((n % 12) + 12) % 12; }
 
   function accSymbol(acc){
@@ -679,6 +893,20 @@
       if(mod12(naturalAbs + a) === wantedAbs){ bestAcc = a; found = true; }
     }
     return { letter, acc:bestAcc, pc:wantedAbs, display:letter + accSymbol(bestAcc) };
+  }
+
+  function computeDegreeRoot(keyLetter, keyAcc, mode, degree, accidental){
+    const keyIdx = LETTERS.indexOf(keyLetter);
+    const letter = LETTERS[(keyIdx + (degree - 1)) % 7];
+    const degreeTable = mode === 'minor' ? MINOR_DEGREES : MAJOR_DEGREES;
+    const keyAbs = mod12(LETTER_SEMI[keyLetter] + keyAcc);
+    const wantedAbs = mod12(keyAbs + degreeTable[degree] + (accidental || 0));
+    const naturalAbs = LETTER_SEMI[letter];
+    let bestAcc = 0, found = false;
+    for(let a = -2; a <= 2 && !found; a++){
+      if(mod12(naturalAbs + a) === wantedAbs){ bestAcc = a; found = true; }
+    }
+    return { letter, acc:bestAcc };
   }
 
   function normalizeInput(raw){
@@ -863,6 +1091,7 @@
     }
 
     syncBuilderFromChord(chord);
+    syncProgressionHighlight(chord);
   }
 
   function showError(message){
@@ -1045,6 +1274,192 @@
     state.bass = chord.bass ? { letter:chord.bass.letter, acc:chord.bass.acc } : null;
     highlightBuilder();
   }
+
+  // ---- mode tabs (Build vs Progressions) ----
+  const tabBuild = document.getElementById('tabBuild');
+  const tabProgressions = document.getElementById('tabProgressions');
+  const buildPanel = document.getElementById('buildPanel');
+  const progressionsPanel = document.getElementById('progressionsPanel');
+
+  tabBuild.addEventListener('click', () => {
+    tabBuild.classList.add('active');
+    tabProgressions.classList.remove('active');
+    buildPanel.hidden = false;
+    progressionsPanel.hidden = true;
+  });
+  tabProgressions.addEventListener('click', () => {
+    tabProgressions.classList.add('active');
+    tabBuild.classList.remove('active');
+    progressionsPanel.hidden = false;
+    buildPanel.hidden = true;
+  });
+
+  // ---- progressions ----
+  const progState = { key:{letter:'C', acc:0}, mode:'major', activeProgId:null, activeSteps:[] };
+
+  function progressionById(id){ return PROGRESSIONS.find(p => p.id === id); }
+
+  function computeStepChords(prog){
+    return prog.steps.map(step => {
+      const root = computeDegreeRoot(progState.key.letter, progState.key.acc, prog.mode, step.degree, step.acc);
+      const quality = qualityById(step.qualityId);
+      return {
+        letter: root.letter,
+        acc: root.acc,
+        qualityId: step.qualityId,
+        roman: step.roman,
+        chordStr: root.letter + accSymbol(root.acc) + quality.symbol
+      };
+    });
+  }
+
+  function renderProgressionStrip(){
+    const strip = document.getElementById('progressionStrip');
+    if(!progState.activeProgId){ strip.hidden = true; return; }
+    const prog = progressionById(progState.activeProgId);
+    strip.hidden = false;
+    document.getElementById('progTitle').textContent = `${prog.title} — ${prog.subtitle}`;
+    document.getElementById('progBlurb').textContent = prog.blurb;
+    const stepsEl = document.getElementById('progSteps');
+    stepsEl.innerHTML = '';
+    progState.activeSteps.forEach((step, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'prog-step';
+      btn.dataset.index = i;
+      btn.innerHTML = `<span class="roman">${step.roman}</span><span class="chord-name">${step.chordStr}</span>`;
+      btn.addEventListener('click', () => { input.value = step.chordStr; handleInput(step.chordStr); });
+      stepsEl.appendChild(btn);
+    });
+  }
+
+  function selectProgression(id){
+    progState.activeProgId = id;
+    progState.activeSteps = computeStepChords(progressionById(id));
+    renderProgressionStrip();
+    const first = progState.activeSteps[0];
+    input.value = first.chordStr;
+    handleInput(first.chordStr);
+  }
+
+  function refreshActiveProgression(){
+    if(!progState.activeProgId) return;
+    progState.activeSteps = computeStepChords(progressionById(progState.activeProgId));
+    renderProgressionStrip();
+  }
+
+  document.getElementById('progDismiss').addEventListener('click', () => {
+    progState.activeProgId = null;
+    progState.activeSteps = [];
+    renderProgressionStrip();
+  });
+
+  function syncProgressionHighlight(chord){
+    document.querySelectorAll('#progSteps .prog-step').forEach((btn, i) => {
+      const step = progState.activeSteps[i];
+      const matches = step && step.letter === chord.rootLetter && step.acc === chord.rootAcc && step.qualityId === chord.quality.id;
+      btn.classList.toggle('active', !!matches);
+    });
+  }
+
+  function buildProgKeyPicker(){
+    const letterGroup = document.getElementById('progKeyLetterGroup');
+    const accGroup = document.getElementById('progKeyAccGroup');
+    LETTERS.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = letter;
+      btn.dataset.letter = letter;
+      btn.addEventListener('click', () => {
+        progState.key = { letter, acc: progState.key.acc };
+        highlightProgKey();
+        refreshActiveProgression();
+      });
+      letterGroup.appendChild(btn);
+    });
+    ACC_OPTIONS.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = opt.label;
+      btn.dataset.acc = opt.acc;
+      btn.addEventListener('click', () => {
+        progState.key = { letter: progState.key.letter, acc: progState.key.acc === opt.acc ? 0 : opt.acc };
+        highlightProgKey();
+        refreshActiveProgression();
+      });
+      accGroup.appendChild(btn);
+    });
+  }
+
+  function highlightProgKey(){
+    document.querySelectorAll('#progKeyLetterGroup .pill').forEach(b => b.classList.toggle('active', b.dataset.letter === progState.key.letter));
+    document.querySelectorAll('#progKeyAccGroup .pill').forEach(b => b.classList.toggle('active', Number(b.dataset.acc) === progState.key.acc));
+  }
+
+  function buildProgModePicker(){
+    const group = document.getElementById('progModeGroup');
+    [ {id:'major', label:'Major'}, {id:'minor', label:'Minor'} ].forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = opt.label;
+      btn.dataset.mode = opt.id;
+      btn.addEventListener('click', () => {
+        progState.mode = opt.id;
+        highlightProgMode();
+        renderProgressionList();
+        if(progState.activeProgId && progressionById(progState.activeProgId).mode !== progState.mode){
+          progState.activeProgId = null;
+          progState.activeSteps = [];
+          renderProgressionStrip();
+        }
+      });
+      group.appendChild(btn);
+    });
+  }
+
+  function highlightProgMode(){
+    document.querySelectorAll('#progModeGroup .pill').forEach(b => b.classList.toggle('active', b.dataset.mode === progState.mode));
+  }
+
+  function renderProgressionList(){
+    const container = document.getElementById('progressionGroups');
+    container.innerHTML = '';
+    const section = document.createElement('div');
+    section.className = 'quality-section';
+    const label = document.createElement('p');
+    label.className = 'section-label';
+    label.textContent = progState.mode === 'major' ? 'Major-key progressions' : 'Minor-key progressions';
+    section.appendChild(label);
+    const list = document.createElement('div');
+    list.className = 'pill-group';
+    PROGRESSIONS.filter(p => p.mode === progState.mode).forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill';
+      btn.textContent = p.title;
+      btn.title = p.subtitle;
+      btn.dataset.progId = p.id;
+      btn.addEventListener('click', () => {
+        selectProgression(p.id);
+        renderProgressionList();
+      });
+      list.appendChild(btn);
+    });
+    section.appendChild(list);
+    container.appendChild(section);
+    document.querySelectorAll('#progressionGroups .pill').forEach(b => {
+      b.classList.toggle('active', b.dataset.progId === progState.activeProgId);
+    });
+  }
+
+  buildProgKeyPicker();
+  buildProgModePicker();
+  highlightProgKey();
+  highlightProgMode();
+  renderProgressionList();
 
   handleInput(input.value);
 })();
