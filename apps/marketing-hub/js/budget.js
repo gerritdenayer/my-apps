@@ -26,6 +26,7 @@
     { key: "date", label: "Date", def: 95 },
     { key: "name", label: "Name", def: 240 },
     { key: "entity", label: "Entity", def: 150 },
+    { key: "code", label: "Budget code", def: 120 },
     { key: "svp", label: "SVP", def: 120 },
     { key: "type", label: "Type", def: 130 },
     { key: "status", label: "Status", def: 110 },
@@ -212,6 +213,7 @@
       case "date": return a.date || "";
       case "name": return (a.name || "").toLowerCase();
       case "entity": return ((S.entityById(a.entityId) || {}).name || "").toLowerCase();
+      case "code": return S.budgetCodeForActivity(a).toLowerCase();
       case "svp": return ((S.svpById(a.svpId) || {}).name || "").toLowerCase();
       case "type": return ((S.actTypeById(a.activityTypeId) || {}).name || "").toLowerCase();
       case "status": return ((S.statusById(a.statusId) || {}).name || "").toLowerCase();
@@ -258,6 +260,7 @@
       case "date": return a.date || "";
       case "name": return a.name || "";
       case "entity": return (S.entityById(a.entityId) || {}).name || "";
+      case "code": return S.budgetCodeForActivity(a);
       case "svp": return (S.svpById(a.svpId) || {}).name || "";
       case "type": return (S.actTypeById(a.activityTypeId) || {}).name || "";
       case "status": return (S.statusById(a.statusId) || {}).name || "";
@@ -360,6 +363,7 @@
             <td class="bc-date">${dateHtml}</td>
             <td class="bc-name">${nameHtml}</td>
             <td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>
+            <td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>
             <td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>
             <td class="bc-type">${at ? S.escapeHtml(at.name) : "<span class='muted'>-</span>"}</td>
             <td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>
@@ -393,7 +397,7 @@
     tfoot.innerHTML = `
       <tr class="total-row">
         <td class="bc-actions"></td>
-        <td colspan="9">Total (${rows.length})</td>
+        <td colspan="10">Total (${rows.length})</td>
         <td class="num bc-fG">${S.fmtMoney(fG)}</td>
         <td class="num bc-fP">${S.fmtMoney(fP)}</td>
         <td class="num bc-fN">${S.fmtMoney(fG - fP)}</td>
@@ -617,6 +621,19 @@
     if (!a.apCategoryId) apcatSel.value = typeCatId(a.activityTypeId);
     typeSel.addEventListener("change", () => { apcatSel.value = typeCatId(typeSel.value); });
 
+    // Live: entering an actual value flips a Planned (or blank) status to Committed right away.
+    const statusSel = modal.querySelector("#m-status");
+    const agInput = modal.querySelector("#m-ag");
+    const apInput = modal.querySelector("#m-ap");
+    const syncStatusFromActual = () => {
+      const ag = parseFloat(agInput.value) || 0;
+      const ap = parseFloat(apInput.value) || 0;
+      const next = S.autoCommitStatus(statusSel.value, ag, ap);
+      if (next !== statusSel.value) statusSel.value = next;
+    };
+    if (agInput) agInput.addEventListener("input", syncStatusFromActual);
+    if (apInput) apInput.addEventListener("input", syncStatusFromActual);
+
     const evFilter = modal.querySelector("#m-event-filter");
     if (evFilter) evFilter.oninput = () => {
       const q = evFilter.value.trim().toLowerCase();
@@ -655,6 +672,8 @@
         actualPartner: parseFloat(modal.querySelector("#m-ap").value) || 0,
         notes: modal.querySelector("#m-notes").value,
       };
+      // A line with an actual value cannot stay "Planned": bump it to "Committed".
+      base.statusId = S.autoCommitStatus(base.statusId, base.actualGross, base.actualPartner);
       // Stamp "updated by/on" only when the content really changed (a no-op save or a brand-new
       // line does not count as an update).
       let updated = base;

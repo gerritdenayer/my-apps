@@ -846,6 +846,14 @@
     const cTypeSel=modal.querySelector("#c-type"), cApcatSel=modal.querySelector("#c-bapcat");
     if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{ const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId; });
 
+    // Live: entering an actual value flips a Planned (or blank) budget status to Committed.
+    const cbStatus=modal.querySelector("#c-bstatus"), cbAg=modal.querySelector("#c-bag"), cbAp=modal.querySelector("#c-bap");
+    if(cbStatus && cbAg && cbAp){
+      const syncCbStatus=()=>{ const next=S.autoCommitStatus(cbStatus.value, parseFloat(cbAg.value)||0, parseFloat(cbAp.value)||0); if(next!==cbStatus.value) cbStatus.value=next; };
+      cbAg.addEventListener("input", syncCbStatus);
+      cbAp.addEventListener("input", syncCbStatus);
+    }
+
     // Countries picker: group chips tick their members, search filters the list, clear/copy helpers.
     const coListBox=modal.querySelector("#c-country-list");
     if(coListBox){
@@ -989,6 +997,8 @@
           vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
         });
+        // A line with an actual value cannot stay "Planned": bump it to "Committed".
+        line.statusId=S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
         // Stamp the managed line's update only if it already existed and its content changed.
         if(!isNewLine && contentSig(line)!==beforeSig){
           line.updatedBy=S.state.currentUserId; line.updatedAt=new Date().toISOString();

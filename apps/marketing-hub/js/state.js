@@ -173,6 +173,25 @@
     return list.map((u) => `<option ${selectedId === u.id ? "selected" : ""} value="${u.id}">${escapeHtml(u.name)}${u.active === false ? " (inactive)" : ""}</option>`).join("");
   }
   function statusById(id) { return (state.data.settings.statuses || []).find((x) => x.id === id); }
+  // Budget code for a line: the code assigned to its entity for the line's year (managed in Budget Structure).
+  function budgetCodeForActivity(a) {
+    if (!a) return "";
+    const yr = a.date ? new Date(a.date).getFullYear() : new Date().getFullYear();
+    const bc = ((state.data.settings.budgetCodes || {})[yr]) || {};
+    return bc[a.entityId] || bc[canonicalEntityId(a.entityId)] || "";
+  }
+  // Rule: a line with any actual value cannot stay "Planned" (or blank). Bump it to "Committed".
+  // Returns the status id to use. Other statuses (Committed, Paid, Invoiced, ...) are left untouched.
+  function autoCommitStatus(statusId, actualGross, actualPartner) {
+    const hasActual = (Number(actualGross) || 0) > 0 || (Number(actualPartner) || 0) > 0;
+    if (!hasActual) return statusId;
+    const cur = statusById(statusId);
+    const curName = cur ? String(cur.name).toLowerCase() : "";
+    if (curName && curName !== "planned") return statusId; // keep committed/paid/etc. as-is
+    const list = state.data.settings.statuses || [];
+    const committed = list.find((s) => String(s.name).toLowerCase() === "committed");
+    return committed ? committed.id : statusId;
+  }
   function eventById(id) { return (state.data.events || []).find((x) => x.id === id); }
   function apCategoryById(id) { return (state.data.settings.apCategories || []).find((x) => x.id === id); }
   // Campaign reference resolvers (events store entityId/ownerId; fall back to legacy text).
@@ -313,6 +332,7 @@
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     entityById, svpById, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
+    budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
     uniqueEntities, canonicalEntityId,

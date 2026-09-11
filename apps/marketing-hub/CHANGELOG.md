@@ -1,5 +1,19 @@
 # Changelog
 
+## [v4.9] - 2026-09-11 - Budget code column and auto Committed status
+
+### Added
+- The Budget overview now has a "Budget code" column. It shows the code assigned to each line's
+  entity for that line's year (from the Budget Structure tab). The column can be sorted, filtered
+  and hidden like any other.
+
+### Changed
+- A budget line can no longer stay "Planned" once it has an actual value. As soon as an actual
+  gross or partner amount is entered, a Planned (or blank) status switches to "Committed"
+  automatically. This happens live in the edit form and is enforced again on save, in both the
+  Budget tab and the campaign/event budget section. Other statuses (Committed, Paid, and so on)
+  are left untouched.
+
 ## [v4.8] - 2026-08-08 - More outcome chart types
 
 ### Added
