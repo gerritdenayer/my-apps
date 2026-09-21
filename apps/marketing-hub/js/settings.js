@@ -322,21 +322,27 @@
             <th class="ent-sort" data-sort="name" style="cursor:pointer">Entity${arrow("name")}</th>
             <th class="ent-sort" data-sort="owner" style="cursor:pointer">Default owner${arrow("owner")}</th>
             <th class="ent-sort" data-sort="code" style="cursor:pointer">Budget code (${view.budgetYear})${arrow("code")}</th>
+            <th title="Year the entity starts being used. Blank means always.">Active from</th>
+            <th title="Last year the entity is used. Blank means still open.">Until</th>
             <th></th>
           </tr></thead>
           <tbody>
-            ${rows.map(e => `
-              <tr data-id="${e.id}">
+            ${rows.map(e => {
+              const activeNow = S.entityActiveInYear(e, view.budgetYear);
+              return `
+              <tr data-id="${e.id}"${activeNow ? "" : ' style="opacity:.5" title="Not part of ' + view.budgetYear + '"'}>
                 <td><select class="inp-m1">${m1Options(e.m1 || "")}</select></td>
                 <td><input class="inp-group" type="text" list="cluster-suggestions" value="${S.escapeHtml(e.group || "")}" /></td>
                 <td><input class="inp-name" type="text" value="${S.escapeHtml(e.name)}" /></td>
                 <td><select class="inp-owner">${ownerOptions(e.defaultOwnerId || "")}</select></td>
                 <td><input class="inp-code" type="text" placeholder="e.g. OBI-D&amp;D-BE-26" value="${S.escapeHtml(bcY[e.id] || "")}" /></td>
+                <td><input class="inp-from" type="number" step="1" style="width:72px" placeholder="any" value="${e.startYear || ""}" /></td>
+                <td><input class="inp-until" type="number" step="1" style="width:72px" placeholder="open" value="${e.endYear || ""}" /></td>
                 <td class="actions-cell">
                   <button class="danger del-ent">Delete</button>
                 </td>
               </tr>
-            `).join("")}
+            `;}).join("")}
           </tbody>
         </table>
       </div>
@@ -362,6 +368,10 @@
         e.m1 = tr.querySelector(".inp-m1").value;
         e.defaultOwnerId = tr.querySelector(".inp-owner").value;
         bcY[id] = tr.querySelector(".inp-code").value.trim();
+        const fromV = tr.querySelector(".inp-from").value.trim();
+        const untilV = tr.querySelector(".inp-until").value.trim();
+        if (fromV) e.startYear = parseInt(fromV, 10); else delete e.startYear;
+        if (untilV) e.endYear = parseInt(untilV, 10); else delete e.endYear;
         markDirty();
       };
       tr.querySelector(".inp-name").onchange = writeRow;
@@ -369,6 +379,9 @@
       tr.querySelector(".inp-m1").onchange = writeRow;
       tr.querySelector(".inp-owner").onchange = writeRow;
       tr.querySelector(".inp-code").onchange = writeRow;
+      // Changing the active-year bounds also re-dims the row for the selected year.
+      tr.querySelector(".inp-from").onchange = () => { writeRow(); renderEntities(); };
+      tr.querySelector(".inp-until").onchange = () => { writeRow(); renderEntities(); };
       tr.querySelector(".del-ent").onclick = async () => {
         const e = S.state.data.settings.entities.find((x) => x.id === id);
         const used = S.state.data.activities.filter((a) => a.entityId === id).length;

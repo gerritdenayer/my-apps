@@ -46,7 +46,9 @@
     const data = S.state.data;
     if (!data) { root.innerHTML = ""; return; }
     const canEdit = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
-    const ents = data.settings.entities || [];
+    const allEnts = data.settings.entities || [];
+    // Only show entities that are in use for the selected year (year-aware structure).
+    const ents = allEnts.filter((e) => S.entityActiveInYear(e, view.year));
 
     const ybAll = data.settings.yearlyBudgets || (data.settings.yearlyBudgets = {});
     if (canEdit && !ybAll[view.year]) ybAll[view.year] = {};
@@ -68,7 +70,9 @@
     `;
 
     if (ents.length === 0) {
-      html += `<p class="bs-empty">No entities yet. Add them in Settings &gt; Entity structure.</p>`;
+      html += allEnts.length === 0
+        ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Entity structure.</p>`
+        : `<p class="bs-empty">No entities are active in ${view.year}. Set each entity's "Active from / Until" years in Settings &gt; Entity structure.</p>`;
       root.innerHTML = html;
       wire(root, canEdit);
       return;
@@ -110,7 +114,7 @@
   function recalc(root) {
     const data = S.state.data;
     const yb = (data.settings.yearlyBudgets || {})[view.year] || {};
-    const ents = data.settings.entities || [];
+    const ents = (data.settings.entities || []).filter((e) => S.entityActiveInYear(e, view.year));
     const cT = {}, mT = {}; let grand = 0;
     ents.forEach((e) => {
       const v = yb[e.id] || 0, m = m1Key(e), c = clKey(e);

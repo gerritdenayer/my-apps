@@ -106,7 +106,7 @@
           <label>Month</label>
           <select id="f-month">${S.monthOptions(view.monthFilter)}</select>
         </div>
-        ${S.scopeFilterHtml("f", view.scope, entityFilterLabel)}
+        ${S.scopeFilterHtml("f", view.scope, entityFilterLabel, view.year)}
         <div class="grow">
           <label>Search</label>
           <input id="f-search" type="text" value="${S.escapeHtml(view.search)}" placeholder="Name, vendor, PO, notes" />
@@ -159,7 +159,7 @@
     root.querySelector("#f-year").onchange = (e) => { view.year = +e.target.value; render(); };
     root.querySelectorAll(".f-q").forEach((cb) => { cb.onchange = () => { view.quarters = [...root.querySelectorAll(".f-q:checked")].map((x) => x.value); renderRows(); }; });
     root.querySelector("#f-month").onchange = (e) => { view.monthFilter = e.target.value; renderRows(); };
-    S.wireScopeFilter(root, "f", view.scope, renderRows, entityFilterLabel);
+    S.wireScopeFilter(root, "f", view.scope, renderRows, entityFilterLabel, view.year);
     root.querySelector("#f-search").oninput = (e) => { view.search = e.target.value; renderRows(); };
     const canEditBudget = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
     const addBtn = root.querySelector("#add-activity");
@@ -576,22 +576,27 @@
       </div>
     `, { closeOnBackdrop: false });
 
-    // Populate Entity dropdown filtered by selected Group (deduped by name)
+    // Populate Entity dropdown filtered by selected Group (deduped by name) and by the line's
+    // year, so only entities in use that year show. The currently selected entity is always kept,
+    // even if retired for that year, so an existing line never loses its link.
     const uniqueEnts = S.uniqueEntities();
-    // Show the entity's budget code (for this line's year) in brackets after the name.
-    const codeYear = a.date ? new Date(a.date).getFullYear() : new Date().getFullYear();
-    const bcByEntity = ((data.settings.budgetCodes || {})[codeYear]) || {};
-    const entLabel = (e) => { const c = bcByEntity[e.id]; return c ? `${e.name} (${c})` : e.name; };
+    const lineYear = () => { const d = modal.querySelector("#m-date").value; return d ? new Date(d).getFullYear() : new Date().getFullYear(); };
+    // Show the entity's budget code (for the line's year) in brackets after the name.
+    const entLabel = (e, yr) => { const c = (((data.settings.budgetCodes || {})[yr]) || {})[e.id]; return c ? `${e.name} (${c})` : e.name; };
     function populateEntityOptions(selectedGroup, selectedEntityId) {
       const sel = modal.querySelector("#m-entity");
-      const visible = selectedGroup
-        ? uniqueEnts.filter(e => (e.group || "") === selectedGroup)
-        : uniqueEnts;
+      const yr = lineYear();
+      let visible = selectedGroup ? uniqueEnts.filter(e => (e.group || "") === selectedGroup) : uniqueEnts;
+      visible = visible.filter(e => S.entityActiveInYear(e, yr) || e.id === selectedEntityId);
       sel.innerHTML = '<option value="">Select...</option>' +
-        visible.map(e => `<option ${selectedEntityId===e.id?"selected":""} value="${e.id}">${S.escapeHtml(entLabel(e))}</option>`).join("");
+        visible.map(e => `<option ${selectedEntityId===e.id?"selected":""} value="${e.id}">${S.escapeHtml(entLabel(e, yr))}</option>`).join("");
     }
     // Preselect canonical so duplicates map to the visible option
     populateEntityOptions(initialGroup, S.canonicalEntityId(a.entityId));
+    // Changing the date can change which year's entities apply; refresh the list.
+    modal.querySelector("#m-date").addEventListener("change", () => {
+      populateEntityOptions(modal.querySelector("#m-group").value, modal.querySelector("#m-entity").value);
+    });
 
     // When Group changes, narrow Entity options. Keep current entity if still valid.
     modal.querySelector("#m-group").onchange = (e) => {

@@ -625,9 +625,13 @@
     if(initialCluster && !clusters.includes(initialCluster)) clusters.push(initialCluster);
     clusters.sort();
     const optByName=(arr,sel)=>'<option value="">Select...</option>'+arr.map(n=>`<option ${sel===n?"selected":""} value="${S.escapeHtml(n)}">${S.escapeHtml(n)}</option>`).join("");
-    // Organising entity options (value = entity id), filtered by cluster.
+    // Organising entity options (value = entity id), filtered by cluster and by the event's year
+    // so only entities in use that year show. The current selection is always kept.
+    const evYear=()=>{ const el=document.getElementById("c-start"); const v=(el&&el.value)||e.start||""; return v?new Date(v).getFullYear():new Date().getFullYear(); };
     const entOptions=(cluster,selId)=>{
-      const list=cluster ? uniqueEnts.filter(x=>(x.group||"")===cluster) : uniqueEnts;
+      const yr=evYear();
+      let list=cluster ? uniqueEnts.filter(x=>(x.group||"")===cluster) : uniqueEnts;
+      list=list.filter(x=>S.entityActiveInYear(x,yr) || x.id===selId);
       return '<option value="">Select...</option>'+list.map(x=>`<option ${selId===x.id?"selected":""} value="${x.id}">${S.escapeHtml(x.name)}</option>`).join("");
     };
     // Owner options (value = user id).
@@ -789,7 +793,13 @@
         if(startEl.value && (!endEl.value || endEl.value<startEl.value)) endEl.value=startEl.value;
       };
       if(startEl.value) endEl.min=startEl.value;
-      startEl.onchange=syncEnd;
+      startEl.onchange=()=>{
+        syncEnd();
+        // The event's year may have changed: refresh which entities are offered, keeping selections.
+        const curEnt=entitySel.value;
+        entitySel.innerHTML=entOptions(clusterSel.value, curEnt);
+        if(bEntitySel){ const curB=bEntitySel.value; bEntitySel.innerHTML=entOptions((bClusterSel&&bClusterSel.value)||"", curB); }
+      };
     }
 
     // Kind drives a default activity type: Event -> "Event"; Campaign -> "Digital campaign"

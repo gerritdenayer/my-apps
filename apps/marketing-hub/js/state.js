@@ -229,10 +229,22 @@
     if (m1) ents = ents.filter((e) => (e.m1 || "") === m1);
     return Array.from(new Set(ents.map((e) => (e.group || "").trim()).filter(Boolean))).sort();
   }
-  function entityListFor(m1, cluster) {
+  // Is an entity in use for a given year? startYear/endYear are optional bounds (inclusive).
+  // Empty year (or no bounds) means always active, so nothing is hidden unless the user sets it.
+  function entityActiveInYear(e, year) {
+    if (!e) return false;
+    if (!year) return true;
+    const s = e.startYear ? +e.startYear : null;
+    const u = e.endYear ? +e.endYear : null;
+    if (s && year < s) return false;
+    if (u && year > u) return false;
+    return true;
+  }
+  function entityListFor(m1, cluster, year) {
     let ents = uniqueEntities();
     if (m1) ents = ents.filter((e) => (e.m1 || "") === m1);
     if (cluster) ents = ents.filter((e) => (e.group || "").trim() === cluster);
+    if (year) ents = ents.filter((e) => entityActiveInYear(e, year));
     return ents.slice().sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }
   // Does an entity (by id) fall within the chosen scope? Empty scope = everything.
@@ -247,13 +259,13 @@
     return true;
   }
   // HTML for the three cascading selects. Ids are `${prefix}-m1/-cluster/-entity`.
-  function scopeFilterHtml(prefix, scope, labelFn) {
+  function scopeFilterHtml(prefix, scope, labelFn, year) {
     scope = scope || {};
     const lf = labelFn || ((e) => e.name);
     const m1s = (state.data.settings.m1Levels || []);
     const m1Opts = '<option value="">All zones</option>' + m1s.map((m) => `<option ${scope.m1 === m ? "selected" : ""} value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
     const clOpts = '<option value="">All clusters</option>' + clusterList(scope.m1).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-    const enOpts = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
+    const enOpts = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster, year).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
     return `
       <div><label>M1 zone</label><select id="${prefix}-m1">${m1Opts}</select></div>
       <div><label>Cluster</label><select id="${prefix}-cluster">${clOpts}</select></div>
@@ -261,7 +273,7 @@
     `;
   }
   // Wire the cascade. `scope` is mutated in place; `onChange` is called after each change.
-  function wireScopeFilter(root, prefix, scope, onChange, labelFn) {
+  function wireScopeFilter(root, prefix, scope, onChange, labelFn, year) {
     const lf = labelFn || ((e) => e.name);
     const m1Sel = root.querySelector(`#${prefix}-m1`);
     const clSel = root.querySelector(`#${prefix}-cluster`);
@@ -271,7 +283,7 @@
       clSel.innerHTML = '<option value="">All clusters</option>' + clusterList(scope.m1).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     };
     const rebuildEntity = () => {
-      enSel.innerHTML = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
+      enSel.innerHTML = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster, year).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
     };
     m1Sel.onchange = () => { scope.m1 = m1Sel.value; scope.cluster = ""; scope.entityId = ""; rebuildCluster(); rebuildEntity(); onChange(); };
     clSel.onchange = () => { scope.cluster = clSel.value; scope.entityId = ""; rebuildEntity(); onChange(); };
@@ -336,7 +348,7 @@
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
     uniqueEntities, canonicalEntityId,
-    clusterList, entityListFor, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
+    clusterList, entityListFor, entityActiveInYear, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
     openModal, closeModal, confirmDialog,
     OUTCOME_METRICS,
   };

@@ -1,5 +1,25 @@
 # Changelog
 
+## [v5.0] - 2026-09-21 - Year-aware entities
+
+### Added
+- Each entity now has an optional "Active from" and "Until" year, set in Settings > Entity
+  structure. An entity only shows in the years it is in use. Leave both blank to keep an entity
+  always active (the default, so nothing changes until you set a year).
+
+### Changed
+- The Budget Structure tab now lists only the entities active in the selected year, and its
+  totals follow suit. Rows outside the selected year are dimmed in the settings table so you can
+  see at a glance what belongs to that year.
+- The entity dropdown when creating or editing a budget line, and when creating or editing a
+  campaign or event, now offers only the entities active in that record's year (based on its
+  date). The Budget tab's entity filter does the same for the selected year. An entity already
+  chosen on an existing record is always kept, so nothing loses its link.
+
+### Why
+- Lets the structure differ per year (fewer or regrouped entities for a new year) without
+  touching or deleting the previous year. Old years keep their own entities and history.
+
 ## [v4.9] - 2026-09-11 - Budget code column and auto Committed status
 
 ### Added
