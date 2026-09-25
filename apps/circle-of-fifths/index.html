@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+<title>Circle of Fifths</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Circle of 5ths">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDEFF3; --surface:#FFFFFF; --surface-2:#F5F6F9; --ink:#16181D; --muted:#5B6270; --line:#D3D8E0;
+  --accent:#B3263A; --accent-soft:#F6D9DD; --on-accent:#FFFFFF;
+  --sharp:#B8680F; --sharp-tint:#FBEEDC; --flat:#2D66A8; --flat-tint:#E1EBF7;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", -apple-system, system-ui, sans-serif;
+  --music:"Apple Symbols","Noto Music","Segoe UI Symbol",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101217; --surface:#1A1D24; --surface-2:#15181E; --ink:#ECEEF2; --muted:#9AA1AE; --line:#2E333D;
+    --accent:#E0566A; --accent-soft:#44202A; --on-accent:#FFFFFF;
+    --sharp:#E6A552; --sharp-tint:#2B2318; --flat:#78A9E3; --flat-tint:#19243A;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101217; --surface:#1A1D24; --surface-2:#15181E; --ink:#ECEEF2; --muted:#9AA1AE; --line:#2E333D;
+  --accent:#E0566A; --accent-soft:#44202A; --on-accent:#FFFFFF;
+  --sharp:#E6A552; --sharp-tint:#2B2318; --flat:#78A9E3; --flat-tint:#19243A;
+}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;touch-action:manipulation}
+.app{max-width:1320px;margin:0 auto;padding-inline:20px;padding-block:14px 32px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-family:var(--display);font-weight:800;font-size:1.9rem;letter-spacing:-.02em;margin:0;line-height:1.1}
+.sub{margin:2px 0 0;color:var(--muted);font-size:.95rem}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;min-height:44px;padding:8px 14px;cursor:pointer;font-weight:700}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible,.wedge:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media (min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}.wheel-wrap{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}}
+.wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+#wheel{width:100%;max-width:600px;height:auto;display:block;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.wedge{cursor:pointer;outline:none}
+.legend{display:flex;justify-content:space-between;width:100%;max-width:600px;font-size:.9rem;color:var(--muted);gap:8px}
+.legend b.f{color:var(--flat)} .legend b.s{color:var(--sharp)}
+.panel{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.label{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 8px}
+.keyname{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;margin:0;letter-spacing:-.02em}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sig{font-size:1.1rem;margin:8px 0 10px}
+.sig .acc{font-weight:700}
+.s-col{color:var(--sharp)} .f-col{color:var(--flat)}
+.staff{width:100%;max-width:560px;height:auto;display:block}
+.notes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.note{min-width:48px;text-align:center;border:1px solid var(--line);border-radius:10px;padding:4px 6px;background:var(--surface-2)}
+.note b{display:block;font-size:1.15rem}
+.note small{color:var(--muted);font-size:.75rem}
+.note.tonic{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.note.tonic small{color:var(--on-accent);opacity:.85}
+.kb-wrap{overflow-x:auto}
+#kb{width:100%;min-width:480px;height:auto;display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.kb-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.kb-head p{margin:0;font-weight:700}
+.inv{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.inv .lbl{font-size:.85rem;color:var(--muted);margin-right:4px}
+.inv .btn{font-weight:700;padding:6px 12px}
+.inv .btn.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.inv-note{flex-basis:100%;font-size:.88rem;color:var(--muted);margin:2px 0 0}
+.chords{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:8px 6px;cursor:pointer;text-align:center;min-height:44px}
+.chip .rn{font-family:var(--display);font-weight:800;font-size:1.25rem;display:block}
+.chip .cn{font-weight:700;display:block}
+.chip .q{font-size:.72rem;color:var(--muted);display:block}
+.chip.maj .rn{color:var(--sharp)} .chip.min .rn{color:var(--flat)} .chip.dim .rn{color:var(--muted)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chip.on .rn,.chip.on .q{color:var(--on-accent)}
+.progs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.prog{text-align:left;padding:10px 12px}
+.prog .t{font-family:var(--display);font-weight:800;font-size:1.05rem;display:block}
+.prog .n{display:block;font-weight:400;font-size:.9rem}
+.prog .d{display:block;font-weight:400;font-size:.8rem;color:var(--muted)}
+.prog.on{background:var(--accent-soft);border-color:var(--accent)}
+.tip{font-size:.9rem;color:var(--muted);margin:10px 0 0}
+details summary{cursor:pointer;font-weight:700;min-height:32px}
+details ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.foot{font-size:.85rem;color:var(--muted);margin-top:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:520px){.keyname{font-size:1.9rem} h1{font-size:1.5rem}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Circle of Fifths</h1>
+      <p class="sub">Tap a key on the wheel. Outer ring = major keys, inner ring = minor keys.</p>
+    </div>
+    <button class="btn" id="soundBtn" type="button" aria-pressed="true">Sound on</button>
+  </header>
+
+  <div class="grid">
+    <section class="wheel-wrap" aria-label="Circle of fifths">
+      <svg id="wheel" viewBox="-205 -205 410 410" role="group" aria-label="Keys"></svg>
+      <div class="legend"><span>◀ <b class="f">Left side: flats</b></span><span>C: none</span><span><b class="s">Right side: sharps</b> ▶</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="card">
+        <p class="label">Selected key</p>
+        <div class="row" style="justify-content:space-between">
+          <h2 class="keyname" id="keyName">C major</h2>
+          <div class="row">
+            <button class="btn" id="relBtn" type="button">Relative minor</button>
+            <button class="btn" id="enhBtn" type="button" hidden>Show as G♭</button>
+          </div>
+        </div>
+        <p class="sig" id="sigText"></p>
+        <svg class="staff" id="staff" viewBox="0 0 340 205" aria-label="Key signature and scale notes on the staff"></svg>
+      </div>
+
+      <div class="card">
+        <div class="kb-head">
+          <p id="kbTitle">Scale</p>
+          <div class="row">
+            <button class="btn" id="scaleShowBtn" type="button" hidden>Back to scale</button>
+            <button class="btn primary" id="playScaleBtn" type="button">▶ Play scale</button>
+          </div>
+        </div>
+        <div class="inv" id="invRow" hidden><span class="lbl">Inversion:</span><button type="button" class="btn" data-inv="0">Root position</button><button type="button" class="btn" data-inv="1">1st inversion</button><button type="button" class="btn" data-inv="2">2nd inversion</button><p class="inv-note" id="invNote"></p></div>
+        <div class="notes" id="notes"></div>
+        <div class="kb-wrap"><svg id="kb" viewBox="0 0 602 164" aria-label="Piano keyboard. Tap a key to hear it."></svg></div>
+      </div>
+
+      <div class="card">
+        <p class="label">Chords in this key (tap to hear and see)</p>
+        <div class="chords" id="chords"></div>
+        <p class="tip" id="chordTip"></p>
+      </div>
+
+      <div class="card">
+        <p class="label">Try a chord progression</p>
+        <div class="progs" id="progs"></div>
+      </div>
+
+      <div class="card">
+        <details id="help">
+          <summary>How the circle works (1 minute read)</summary>
+          <ul>
+            <li><b>Clockwise = up a 5th, one more sharp.</b> C → G is five notes up (C D E F G). G has 1 sharp, D has 2, and so on.</li>
+            <li><b>Counterclockwise = up a 4th, one more flat.</b> C → F → B♭ → E♭ ...</li>
+            <li><b>Inner ring = relative minor.</b> Same notes and same key signature as the major key above it. Its home note is the 6th note of the major scale (C major → A minor).</li>
+            <li><b>Neighbors are close friends.</b> Keys next to each other share 6 of their 7 notes. That's why songs often move to a neighbor key.</li>
+            <li><b>The highlighted block of 6 is your key's chords.</b> For a major key: I in the middle, IV to the left, V to the right, and ii, vi, iii just inside them. Only vii° is left out.</li>
+            <li><b>Order of sharps:</b> F C G D A E B (<i>Father Charles Goes Down And Ends Battle</i>). <b>Order of flats</b> is the reverse: B E A D G C F.</li>
+            <li><b>Quick trick to name a key signature:</b> with sharps, go one half step up from the last sharp (F♯ → G major). With flats, the second to last flat is the key (B♭ E♭ → E♭ major).</li>
+          </ul>
+        </details>
+      </div>
+      <p class="foot">No sound on iPad? Check the volume and make sure the silent switch or Silent Mode is off.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+const LETTERS='CDEFGAB', LPC=[0,2,4,5,7,9,11];
+const MAJ=[0,2,4,5,7,9,11], MIN=[0,2,3,5,7,8,10];
+const ACC={'-2':'𝄫','-1':'♭','0':'','1':'♯','2':'𝄪'};
+const ROM=['I','II','III','IV','V','VI','VII'];
+const SHARP_ORDER='FCGDAEB', FLAT_ORDER='BEADGCF';
+const DEG=['1','2','3','4','5','6','7'];
+
+function spell(li,pc){li=((li%7)+7)%7;pc=((pc%12)+12)%12;let d=((pc-LPC[li])%12+12)%12;if(d>6)d-=12;return{li,pc,acc:d,name:LETTERS[li]+ACC[d]};}
+
+const state={pos:0,mode:'major',sharp6:true,sound:true,view:'scale',chordIdx:null,prog:null,inv:0};
+try{const s=JSON.parse(localStorage.getItem('cof-state')||'{}');['pos','mode','sharp6','sound'].forEach(k=>{if(k in s)state[k]=s[k];});}catch(e){}
+function save(){try{localStorage.setItem('cof-state',JSON.stringify({pos:state.pos,mode:state.mode,sharp6:state.sharp6,sound:state.sound}));}catch(e){}}
+
+const TON=[[0,0],[4,0],[1,0],[5,0],[2,0],[6,0],null,[1,-1],[5,-1],[2,-1],[6,-1],[3,0]];
+function majorTonic(p){let t=TON[p];if(p===6)t=state.sharp6?[3,1]:[4,-1];return spell(t[0],LPC[t[0]]+t[1]);}
+function minorTonic(p){const M=majorTonic(p);return spell(M.li+5,M.pc+9);}
+function sigOf(p){if(p===0)return{n:0,type:null};if(p<6||(p===6&&state.sharp6))return{n:p,type:'sharp'};return{n:12-p,type:'flat'};}
+
+function buildChord(scale,d,forceMaj){
+  const root=scale[d];
+  const third=forceMaj?spell(root.li+2,root.pc+4):scale[(d+2)%7];
+  const fifth=scale[(d+4)%7];
+  const i3=(third.pc-root.pc+12)%12,i5=(fifth.pc-root.pc+12)%12;
+  const q=i3===4&&i5===7?'maj':i3===3&&i5===7?'min':i3===3&&i5===6?'dim':'aug';
+  let rn=ROM[d];if(q==='min'||q==='dim')rn=rn.toLowerCase();if(q==='dim')rn+='°';if(q==='aug')rn+='+';
+  const name=root.name+{maj:'',min:'m',dim:'dim',aug:'+'}[q];
+  const r=60+root.pc;
+  return{rn,name,q,notes:[root,third,fifth],midis:[r,r+i3,r+i5],qual:{maj:'major',min:'minor',dim:'diminished',aug:'augmented'}[q]};
+}
+
+function keyData(){
+  const tonic=state.mode==='major'?majorTonic(state.pos):minorTonic(state.pos);
+  const ints=state.mode==='major'?MAJ:MIN;
+  const scale=ints.map((iv,i)=>spell(tonic.li+i,tonic.pc+iv));
+  const chords=scale.map((_,d)=>buildChord(scale,d,false));
+  const tm=60+tonic.pc;
+  return{tonic,ints,scale,chords,tonicMidi:tm,scaleMidis:ints.map(i=>tm+i).concat([tm+12]),
+    name:tonic.name+(state.mode==='major'?' major':' minor')};
+}
+
+/* ---------- audio ---------- */
+let ctx=null,master=null;
+function ac(){
+  if(!ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ctx=new C();
+    const comp=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=0.55;master.connect(comp);comp.connect(ctx.destination);}
+  if(ctx.state==='suspended')ctx.resume();return ctx;
+}
+function tone(midi,delay,dur,vel){
+  if(!state.sound)return;const c=ac();if(!c)return;
+  dur=dur||1.6;vel=vel||0.2;const t0=c.currentTime+0.02+(delay||0);
+  const f=440*Math.pow(2,(midi-69)/12);
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(Math.min(9000,f*9),t0);lp.frequency.exponentialRampToValueAtTime(Math.max(500,f*2),t0+dur);
+  const g=c.createGain();g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vel,t0+0.008);
+  g.gain.exponentialRampToValueAtTime(vel*0.3,t0+0.3);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  [['triangle',1,1],['sine',2,0.35],['sine',3,0.1],['sine',0.5,0.08]].forEach(([type,m,a])=>{
+    const o=c.createOscillator();o.type=type;o.frequency.value=f*m;const og=c.createGain();og.gain.value=a;
+    o.connect(og);og.connect(lp);o.start(t0);o.stop(t0+dur+0.05);});
+  lp.connect(g);g.connect(master);
+}
+function playChord(midis,delay){midis.forEach((m,i)=>tone(m,(delay||0)+i*0.018,1.8,0.16));tone(midis[0]-12,delay||0,1.9,0.14);}
+
+let timers=[];
+function clearTimers(){timers.forEach(clearTimeout);timers=[];playing=new Set();}
+function later(fn,ms){timers.push(setTimeout(fn,ms));}
+let playing=new Set();
+
+/* ---------- wheel ---------- */
+const NS='http://www.w3.org/2000/svg';
+const R_OUT=198,R_MID=136,R_IN=84;
+function P(r,deg){const a=deg*Math.PI/180;return[(r*Math.sin(a)).toFixed(2),(-r*Math.cos(a)).toFixed(2)];}
+function sector(r1,r2,a0,a1){const[a,b]=P(r2,a0),[c,d]=P(r2,a1),[e,f]=P(r1,a1),[g,h]=P(r1,a0);
+  return`M${a} ${b}A${r2} ${r2} 0 0 1 ${c} ${d}L${e} ${f}A${r1} ${r1} 0 0 0 ${g} ${h}Z`;}
+const mod=n=>((n%12)+12)%12;
+
+function family(){
+  const p=state.pos,o={},i={};
+  if(state.mode==='major'){o[mod(p-1)]='IV';o[p]='I';o[mod(p+1)]='V';i[mod(p-1)]='ii';i[p]='vi';i[mod(p+1)]='iii';}
+  else{i[mod(p-1)]='iv';i[p]='i';i[mod(p+1)]='v';o[mod(p-1)]='VI';o[p]='III';o[mod(p+1)]='VII';}
+  return{o,i};
+}
+
+function renderWheel(){
+  const fam=family(),K=keyData();let s='';
+  for(let p=0;p<12;p++){
+    const a0=p*30-15,a1=p*30+15,sg=sigOf(p);
+    const selO=state.mode==='major'&&state.pos===p, selI=state.mode==='minor'&&state.pos===p;
+    const tint=sg.type==='sharp'?'var(--sharp-tint)':sg.type==='flat'?'var(--flat-tint)':'var(--surface)';
+    const cntCol=sg.type==='sharp'?'var(--sharp)':sg.type==='flat'?'var(--flat)':'var(--muted)';
+    // outer
+    let fill=selO?'var(--accent)':fam.o[p]?'var(--accent-soft)':tint;
+    let txt=selO?'var(--on-accent)':'var(--ink)';
+    const mt=majorTonic(p);
+    const cnt=sg.n===0?'no ♯/♭':sg.n+(sg.type==='sharp'?'♯':'♭');
+    let [nx,ny]=P(167,p*30);ny=+ny-8;let cx=nx,cy=+ny+24;
+    s+=`<g class="wedge" tabindex="0" role="button" aria-label="${mt.name} major" data-pos="${p}" data-mode="major">
+      <path d="${sector(R_MID,R_OUT,a0,a1)}" fill="${fill}" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-family="Bricolage Grotesque, Avenir Next, sans-serif" font-weight="800" font-size="23" fill="${txt}">${mt.name}</text>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${fam.o[p]?14:12}" font-weight="700" fill="${selO?'var(--on-accent)':fam.o[p]?'var(--accent)':cntCol}">${fam.o[p]||cnt}</text></g>`;
+    // inner
+    const mi=minorTonic(p);
+    fill=selI?'var(--accent)':fam.i[p]?'var(--accent-soft)':'var(--surface-2)';
+    txt=selI?'var(--on-accent)':'var(--ink)';
+    [nx,ny]=P(110,p*30);if(fam.i[p]){ny=+ny-7;}cx=nx;cy=+ny+17;
+    s+=`<g class="wedge" tabindex="0" role="button" aria-label="${mi.name} minor" data-pos="${p}" data-mode="minor">
+      <path d="${sector(R_IN,R_MID,a0,a1)}" fill="${fill}" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="${nx}" y="${ny}" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="15" fill="${txt}">${mi.name}m</text>
+      ${fam.i[p]?`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="${selI?'var(--on-accent)':'var(--accent)'}">${fam.i[p]}</text>`:''}</g>`;
+  }
+  const sg=sigOf(state.pos);
+  const sigTxt=sg.n===0?'no sharps or flats':sg.n+' '+(sg.type==='sharp'?(sg.n>1?'sharps':'sharp'):(sg.n>1?'flats':'flat'));
+  s+=`<g class="wedge" tabindex="0" role="button" aria-label="Play the scale" id="center">
+    <circle r="${R_IN-4}" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+    <text y="-14" text-anchor="middle" font-family="Bricolage Grotesque, Avenir Next, sans-serif" font-weight="800" font-size="18" fill="var(--ink)">${K.name}</text>
+    <text y="8" text-anchor="middle" font-size="12" fill="var(--muted)">${sigTxt}</text>
+    <text y="32" text-anchor="middle" font-size="11" font-weight="700" fill="var(--accent)">▶ tap to hear scale</text></g>`;
+  wheel.innerHTML=s;
+}
+
+/* ---------- staff ---------- */
+const TREB_S=[8,5,9,6,3,7,4], TREB_F=[4,7,3,6,2,5,1];
+function sigAccFor(li){const sg=sigOf(state.pos);const L=LETTERS[li];
+  if(sg.type==='sharp'&&SHARP_ORDER.slice(0,sg.n).includes(L))return 1;
+  if(sg.type==='flat'&&FLAT_ORDER.slice(0,sg.n).includes(L))return -1;return 0;}
+function dia(n,midi){const oct=Math.floor((midi-n.acc)/12)-1;return oct*7+n.li;}
+function ledgers(steps){let c=0;steps.forEach(t=>{if(t<=-2)c+=Math.floor(-t/2);if(t>=10)c+=Math.floor((t-8)/2);});return c;}
+function bestShift(items,base,shifts){let best=shifts[0],bc=1e9;
+  shifts.forEach(sh=>{const c=ledgers(items.map(it=>dia(it.n,it.m+sh)-base));if(c<bc){bc=c;best=sh;}});return best;}
+function renderStaff(){
+  const sg=sigOf(state.pos),K=keyData();
+  const TB=70,BB=175; /* y of bottom lines */
+  const yT=st=>TB-st*5, yB=st=>BB-st*5;
+  // what to draw: scale (one note per column) or chord (stacked)
+  let cols;
+  if(state.view==='chord'&&state.chordObj){const c=voiced();
+    cols=[{treble:c.notes.map((n,i)=>({n,m:c.midis[i]})),bass:[{n:c.notes[0],m:c.midis[0]}],chord:true}];}
+  else cols=K.scaleMidis.map((m,i)=>({treble:[{n:K.scale[i%7],m}],bass:[{n:K.scale[i%7],m}]}));
+  const allT=cols.flatMap(c=>c.treble),allB=cols.flatMap(c=>c.bass);
+  const tSh=bestShift(allT,30,[0,-12]), bSh=bestShift(allB,18,[-12,-24]);
+  const x0=72+Math.max(sg.n,1)*15+22, gap=cols.length>1?30:0;
+  const W=Math.max(340,x0+(cols.length-1)*gap+40);
+  staff.setAttribute('viewBox',`0 0 ${W} 205`);
+  let s='';
+  for(let k=0;k<5;k++){s+=`<line x1="4" x2="${W-4}" y1="${TB-40+k*10}" y2="${TB-40+k*10}" stroke="var(--muted)" stroke-width="1"/>`;
+                       s+=`<line x1="4" x2="${W-4}" y1="${BB-40+k*10}" y2="${BB-40+k*10}" stroke="var(--muted)" stroke-width="1"/>`;}
+  s+=`<line x1="4" x2="4" y1="${TB-40}" y2="${BB}" stroke="var(--muted)" stroke-width="2"/>`;
+  const MF='font-family="Apple Symbols, Noto Music, Segoe UI Symbol, serif"';
+  s+=`<text x="10" y="${TB+8}" ${MF} font-size="54" fill="var(--ink)">𝄞</text>`;
+  s+=`<text x="10" y="${BB-9}" ${MF} font-size="42" fill="var(--ink)">𝄢</text>`;
+  for(let i=0;i<sg.n;i++){
+    const x=72+i*15,isS=sg.type==='sharp',st=isS?TREB_S[i]:TREB_F[i],glyph=isS?'♯':'♭',dy=isS?0:-3;
+    const col=isS?'var(--sharp)':'var(--flat)';
+    s+=`<text x="${x}" y="${yT(st)+dy}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" fill="${col}">${glyph}</text>`;
+    s+=`<text x="${x}" y="${yB(st-2)+dy}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" fill="${col}">${glyph}</text>`;
+  }
+  const head=(x,y,on,label)=>{let h='';
+    h+=`<ellipse cx="${x}" cy="${y}" rx="6.8" ry="4.9" transform="rotate(-20 ${x} ${y})" fill="${on?'var(--accent)':'none'}" stroke="${on?'var(--accent)':'var(--ink)'}" stroke-width="2.2"/>`;
+    return h;};
+  const ledgerLines=(x,st,yf)=>{let h='';for(let t=-2;t>=st;t-=2)h+=`<line x1="${x-11}" x2="${x+11}" y1="${yf(t)}" y2="${yf(t)}" stroke="var(--ink)" stroke-width="1.3"/>`;
+    for(let t=10;t<=st;t+=2)h+=`<line x1="${x-11}" x2="${x+11}" y1="${yf(t)}" y2="${yf(t)}" stroke="var(--ink)" stroke-width="1.3"/>`;return h;};
+  const accMark=(x,y,n)=>{const want=n.acc,have=sigAccFor(n.li);if(want===have)return'';
+    const g=want===0?'♮':ACC[want];return`<text x="${x-15}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="700" fill="var(--accent)">${g}</text>`;};
+  cols.forEach((c,ci)=>{const x=x0+ci*gap;
+    [[c.treble,tSh,30,yT],[c.bass,bSh,18,yB]].forEach(([arr,sh,base,yf])=>{
+      arr.forEach(it=>{const st=dia(it.n,it.m+sh)-base,y=yf(st),on=playing.has(it.m);
+        s+=ledgerLines(x,st,yf)+accMark(x,y,it.n)+head(x,y,on);});});
+    if(!c.chord)s+=`<text x="${x}" y="${BB+24}" text-anchor="middle" font-size="12" font-weight="700" fill="${ci===0||ci===7?'var(--accent)':'var(--muted)'}">${c.treble[0].n.name}</text>`;
+    else s+=`<text x="${x}" y="${BB+24}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--accent)">${voiced().label}</text>`;
+  });
+  staff.innerHTML=s;
+}
+
+/* ---------- keyboard ---------- */
+const WHITE_PCS=[0,2,4,5,7,9,11];
+function renderKeyboard(hl){
+  const W=40,H=160,BW=24,BH=100;let whites=[],blacks=[],wi=0,s='';
+  for(let m=60;m<=84;m++){const pc=m%12;if(WHITE_PCS.includes(pc)){whites.push({m,x:wi*W});wi++;}else blacks.push({m,x:wi*W-BW/2});}
+  whites.forEach(k=>{const h=hl.get(k.m),pl=playing.has(k.m);
+    const fill=pl?'#F4C542':h?(h.root?'#B3263A':'#F4C9CF'):'#FBFBF8';
+    s+=`<g data-midi="${k.m}"><rect x="${k.x+1}" y="1" width="${W-2}" height="${H}" rx="5" fill="${fill}" stroke="#8A8F99" stroke-width="1"/>`;
+    if(h)s+=`<text x="${k.x+W/2}" y="${H-14}" text-anchor="middle" font-size="15" font-weight="700" fill="${h.root&&!pl?'#fff':'#1A1C22'}">${h.label}</text>`;
+    else if(k.m%12===0)s+=`<text x="${k.x+W/2}" y="${H-14}" text-anchor="middle" font-size="12" fill="#9AA0AA">C</text>`;
+    s+='</g>';});
+  blacks.forEach(k=>{const h=hl.get(k.m),pl=playing.has(k.m);
+    const fill=pl?'#F4C542':h?(h.root?'#B3263A':'#D35C6E'):'#1C1D22';
+    s+=`<g data-midi="${k.m}"><rect x="${k.x}" y="1" width="${BW}" height="${BH}" rx="3" fill="${fill}" stroke="#000" stroke-width="1"/>`;
+    if(h)s+=`<text x="${k.x+BW/2}" y="${BH-12}" text-anchor="middle" font-size="12" font-weight="700" fill="${pl?'#1A1C22':'#fff'}">${h.label}</text>`;
+    s+='</g>';});
+  kb.innerHTML=s;
+}
+
+function currentHL(){
+  const K=keyData(),hl=new Map();
+  if(state.view==='chord'&&state.chordObj){const c=voiced();c.midis.forEach((m,i)=>hl.set(m,{label:c.notes[i].name,root:i===c.rootIdx}));}
+  else K.scaleMidis.forEach((m,i)=>hl.set(m,{label:K.scale[i%7].name,root:i===0||i===7}));
+  return hl;
+}
+function refreshKB(){renderKeyboard(currentHL());renderStaff();}
+
+/* ---------- panel ---------- */
+function progList(K){
+  if(state.mode==='major')return[
+    {seq:[0,3,4,0],d:'The classic. Hymns, blues, rock.'},
+    {seq:[0,4,5,3],d:'The pop ballad. Countless hits.'},
+    {seq:[1,4,0],d:'Jazz: the ii – V – I.'},
+    {seq:[0,5,3,4],d:"'50s doo-wop."}];
+  return[
+    {seq:[0,3,4,0],d:'Natural minor. Soft and dark.'},
+    {seq:[0,3,'V',0],d:'With a major V. Stronger pull home.'},
+    {seq:[0,5,2,6],d:'Epic pop and film.'},
+    {seq:[0,6,5,'V'],d:'Flamenco walk-down.'}];
+}
+function chordFor(K,x){return x==='V'?buildChord(K.scale,4,true):K.chords[x];}
+
+function renderPanel(){
+  const K=keyData(),sg=sigOf(state.pos);
+  keyName.textContent=K.name;
+  const rel=state.mode==='major'?minorTonic(state.pos).name+' minor':majorTonic(state.pos).name+' major';
+  relBtn.textContent=(state.mode==='major'?'Relative minor: ':'Relative major: ')+rel;
+  enhBtn.hidden=state.pos!==6;
+  if(state.pos===6){const alt=state.mode==='major'?(state.sharp6?'G♭':'F♯'):(state.sharp6?'E♭m':'D♯m');enhBtn.textContent='Show as '+alt;}
+  let accs=[];if(sg.type==='sharp')accs=SHARP_ORDER.slice(0,sg.n).split('').map(l=>l+'♯');if(sg.type==='flat')accs=FLAT_ORDER.slice(0,sg.n).split('').map(l=>l+'♭');
+  const cls=sg.type==='sharp'?'s-col':'f-col';
+  sigText.innerHTML=sg.n===0?'<b>No sharps or flats.</b> Only white keys.':
+    `<b>${sg.n} ${sg.type}${sg.n>1?'s':''}:</b> <span class="acc ${cls}">${accs.join('  ')}</span>`;
+  renderStaff();
+  notes.innerHTML=K.scale.map((n,i)=>`<div class="note${i===0?' tonic':''}"><b>${n.name}</b><small>${DEG[i]}</small></div>`).join('')+
+    `<div class="note tonic"><b>${K.scale[0].name}</b><small>8</small></div>`;
+  const vc=state.view==='chord'&&state.chordObj;
+  const V=vc?voiced():null;
+  kbTitle.textContent=vc?`${V.label} chord (${state.chordObj.rn}): ${V.notes.map(n=>n.name).join(' – ')}`:`${K.name} scale`;
+  scaleShowBtn.hidden=!vc;invRow.hidden=!vc;notes.hidden=!!vc;
+  if(vc){invRow.querySelectorAll('[data-inv]').forEach(b=>b.classList.toggle('on',+b.dataset.inv===state.inv));
+    const c=state.chordObj,r=c.notes[0].name,t=c.notes[1].name,f=c.notes[2].name;
+    invNote.innerHTML=[`<b>Root position:</b> the root ${r} is at the bottom. Play ${r} – ${t} – ${f}.`,
+      `<b>1st inversion:</b> the 3rd (${t}) is at the bottom. Play ${t} – ${f} – ${r}. Written ${c.name}/${t}.`,
+      `<b>2nd inversion:</b> the 5th (${f}) is at the bottom. Play ${f} – ${r} – ${t}. Written ${c.name}/${f}.`][state.inv]+' The dark red key is always the root.';}
+  chords.innerHTML=K.chords.map((c,i)=>`<button type="button" class="chip ${c.q}${vc&&state.chordIdx===i?' on':''}" data-chord="${i}">
+    <span class="rn">${c.rn}</span><span class="cn">${c.name}</span><span class="q">${c.qual}</span></button>`).join('');
+  chordTip.innerHTML=state.mode==='major'
+    ?'Uppercase = major chord, lowercase = minor chord. In every major key: I, IV, V are major; ii, iii, vi are minor; vii° is diminished.'
+    :`In minor keys, players often raise the 7th note to turn v into a major <b>V</b> chord (${buildChord(K.scale,4,true).name} here). It pulls home more strongly.`;
+  progs.innerHTML=progList(K).map((p,i)=>{const cs=p.seq.map(x=>chordFor(K,x));
+    return`<button type="button" class="btn prog${state.prog===i?' on':''}" data-prog="${i}"><span class="t">${cs.map(c=>c.rn).join(' – ')}</span><span class="n">${cs.map(c=>c.name).join(' – ')}</span><span class="d">${p.d}</span></button>`;}).join('');
+  refreshKB();
+}
+
+function renderAll(){renderWheel();renderPanel();save();}
+
+/* ---------- actions ---------- */
+function selectKey(pos,mode){
+  clearTimers();state.inv=0;state.pos=pos;state.mode=mode;state.view='scale';state.chordObj=null;state.chordIdx=null;state.prog=null;
+  renderAll();const K=keyData();playChord(K.chords[0].midis);
+}
+function playScale(){
+  clearTimers();state.view='scale';state.chordObj=null;state.chordIdx=null;state.prog=null;renderPanel();
+  const K=keyData(),seq=K.scaleMidis.concat(K.scaleMidis.slice(0,-1).reverse()),step=0.3;
+  seq.forEach((m,i)=>{tone(m,i*step,0.9,0.2);
+    later(()=>{playing=new Set([m]);refreshKB();},i*step*1000);});
+  later(()=>{playing=new Set();refreshKB();},seq.length*step*1000+100);
+}
+function invert(c,inv){const n=c.notes.slice(),m=c.midis.slice();for(let k=0;k<inv;k++){n.push(n.shift());m.push(m.shift()+12);}
+  const lbl=inv===0?c.name:c.name+'/'+n[0].name;return{notes:n,midis:m,rootIdx:(3-inv)%3,label:lbl};}
+function voiced(){return invert(state.chordObj,state.inv);}
+function showChord(c,idx){state.view='chord';state.chordObj=c;state.chordIdx=idx;renderPanel();}
+function playProg(i){
+  clearTimers();state.prog=i;const K=keyData(),p=progList(K)[i],gap=1.05;
+  p.seq.forEach((x,j)=>{const c=chordFor(K,x);playChord(invert(c,state.inv).midis,j*gap);
+    later(()=>{showChord(c,typeof x==='number'?x:null);},j*gap*1000);});
+  later(()=>{state.prog=null;renderPanel();},p.seq.length*gap*1000+400);
+}
+
+wheel.addEventListener('click',e=>{const g=e.target.closest('.wedge');if(!g)return;
+  if(g.id==='center'){playScale();return;} selectKey(+g.dataset.pos,g.dataset.mode);});
+wheel.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const g=e.target.closest('.wedge');if(!g)return;e.preventDefault();
+  if(g.id==='center')playScale();else selectKey(+g.dataset.pos,g.dataset.mode);});
+chords.addEventListener('click',e=>{const b=e.target.closest('[data-chord]');if(!b)return;clearTimers();state.prog=null;
+  const K=keyData(),i=+b.dataset.chord,c=K.chords[i];showChord(c,i);playChord(voiced().midis);});
+invRow.addEventListener('click',e=>{const b=e.target.closest('[data-inv]');if(!b||!state.chordObj)return;clearTimers();state.prog=null;state.inv=+b.dataset.inv;renderPanel();playChord(voiced().midis);});
+progs.addEventListener('click',e=>{const b=e.target.closest('[data-prog]');if(b)playProg(+b.dataset.prog);});
+kb.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-midi]');if(!g)return;e.preventDefault();const m=+g.dataset.midi;
+  tone(m,0,1.4,0.22);playing.add(m);refreshKB();setTimeout(()=>{playing.delete(m);refreshKB();},250);});
+playScaleBtn.addEventListener('click',playScale);
+scaleShowBtn.addEventListener('click',()=>{clearTimers();state.view='scale';state.chordObj=null;state.chordIdx=null;state.prog=null;renderPanel();});
+relBtn.addEventListener('click',()=>selectKey(state.pos,state.mode==='major'?'minor':'major'));
+enhBtn.addEventListener('click',()=>{state.sharp6=!state.sharp6;state.view='scale';state.chordObj=null;renderAll();});
+function paintSound(){soundBtn.textContent=state.sound?'Sound: on':'Sound: off';soundBtn.setAttribute('aria-pressed',state.sound);}
+soundBtn.addEventListener('click',()=>{state.sound=!state.sound;paintSound();save();if(state.sound)ac();});
+paintSound();
+
+renderAll();
+})();
+</script>
+
+</body>
+</html>
