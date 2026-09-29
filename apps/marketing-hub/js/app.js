@@ -116,6 +116,10 @@
           await window.MB_AUTH.ensurePasswords(data.settings.users)) {
         S.scheduleSave();
       }
+      // Pick up passwords changed on other computers, if the browser already has folder access.
+      if (window.MB_DATA && window.MB_DATA.syncPasswords) {
+        try { await window.MB_DATA.syncPasswords({ auto: true }); } catch (e) { console.warn(e); }
+      }
 
       S.setSyncStatus("saved", "Loaded");
       S.setLastUpdated(data.meta && data.meta.lastUpdated);
@@ -161,7 +165,16 @@
     if (!user) return showLoginError("User not found.");
     if (user.active === false) return showLoginError("This account is inactive. Ask an admin to reactivate it.");
 
-    const ok = await window.MB_AUTH.verifyUserPassword(user, passEl ? passEl.value : "");
+    let ok = await window.MB_AUTH.verifyUserPassword(user, passEl ? passEl.value : "");
+    // Wrong here? The password may have been changed on another computer: check the shared
+    // passwords file (may ask once for folder access), then try again.
+    if (!ok && window.MB_DATA && window.MB_DATA.syncPasswords) {
+      try {
+        if (await window.MB_DATA.syncPasswords({ auto: false, quiet: true })) {
+          ok = await window.MB_AUTH.verifyUserPassword(user, passEl ? passEl.value : "");
+        }
+      } catch (e) { console.warn(e); }
+    }
     if (!ok) {
       showLoginError("Wrong password. A new account's default is 1234.");
       if (passEl) { passEl.value = ""; passEl.focus(); }

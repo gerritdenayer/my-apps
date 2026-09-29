@@ -99,5 +99,16 @@
     await w.close();
   }
 
-  window.MB_SHARE = { supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson };
+  // Basic info about a file in the folder: last saved date and size. Null if it is not there.
+  async function fileInfo(dir, filename) {
+    try {
+      const f = await (await dir.getFileHandle(filename)).getFile();
+      return { name: filename, lastModified: f.lastModified, size: f.size };
+    } catch (e) {
+      if (e && e.name === "NotFoundError") return null;
+      throw e;
+    }
+  }
+
+  window.MB_SHARE = { supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson, fileInfo };
 })();

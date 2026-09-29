@@ -327,6 +327,9 @@
   const DATA_FILE = "marketing-hub-budget-events.json";
   const SEEN_KEY = "mb_share_data_seen";
   const BASE_KEY = "mb_share_pub_base"; // signature of budget & events at the last publish/pull
+  const PW_FILE = "marketing-hub-passwords.json"; // login passwords (hashed), newest change wins
+  const SETUP_SEEN_KEY = "mb_share_setup_seen"; // exportedAt of the shared setup at the last sync
+  const SETUP_BASE_KEY = "mb_share_setup_base"; // signature of the shared setup at the last sync
   const SH = window.MB_SHARE;
 
   // Signature of the local budget & events, to tell whether there are unpublished changes.
@@ -340,13 +343,18 @@
   function updateSharedHeader() {
     const el = document.getElementById("shared-updated");
     if (!el) return;
-    const seen = localStorage.getItem(SEEN_KEY) || "";
-    if (!seen) { el.textContent = ""; return; }
-    const d = new Date(seen);
-    if (isNaN(d)) { el.textContent = ""; return; }
-    const date = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    el.textContent = "Shared file: " + date + " " + time;
+    const f = (iso) => {
+      const d = new Date(iso || "");
+      if (!iso || isNaN(d)) return "";
+      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " " +
+        d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    };
+    const data = f(localStorage.getItem(SEEN_KEY));
+    const setup = f(localStorage.getItem(SETUP_SEEN_KEY));
+    const parts = [];
+    if (data) parts.push("Shared file: " + data);
+    if (setup) parts.push("Setup: " + setup);
+    el.textContent = parts.join(" \u00b7 ");
   }
   // True when the local budget & events differ from what was last published or pulled.
   function budgetEventsDirty() {
@@ -387,6 +395,8 @@
     const dir = await SH.savedFolder();
     if (!dir) return S.toast("Choose the shared folder first (Data tab).", "error");
     if (!(await SH.ensurePerm(dir, "readwrite"))) return S.toast("Access to the shared folder was not granted.", "error");
+    await syncPasswords({ auto: false });
+    await checkSetup({ auto: false });
     let remote;
     try { remote = await SH.readJson(dir, DATA_FILE); }
     catch (e) { return S.toast("Could not read the shared file: " + e.message, "error"); }
@@ -536,8 +546,34 @@
     }
     const seen = localStorage.getItem(SEEN_KEY) || "";
     el.innerHTML = `Current shared folder: <strong>${S.escapeHtml(dir.name)}</strong>` +
-      (seen ? ` <span class="muted">&middot; last synced budget &amp; events ${S.escapeHtml(new Date(seen).toLocaleString("en-GB"))}</span>` : "");
+      (seen ? ` <span class="muted">&middot; last synced budget &amp; events ${S.escapeHtml(new Date(seen).toLocaleString("en-GB"))}</span>` : "") +
+      (localStorage.getItem(SETUP_SEEN_KEY) ? ` <span class="muted">&middot; setup ${S.escapeHtml(new Date(localStorage.getItem(SETUP_SEEN_KEY)).toLocaleString("en-GB"))}</span>` : "");
     if (folderBtn) folderBtn.textContent = "Change shared folder...";
+    // The browser never reveals the full folder path, so list the shared files found in it
+    // (with last-saved date and publisher) to show you are on the right folder.
+    const box = document.createElement("div");
+    box.style.marginTop = "6px";
+    el.appendChild(box);
+    if (!(await SH.hasPerm(dir, "readwrite"))) {
+      box.innerHTML = `<span class="muted">Files in this folder are shown once the browser has access (click any Publish or Pull button, or Refresh).</span>`;
+      return;
+    }
+    const fmt = (ms) => new Date(ms).toLocaleString("en-GB");
+    const rows = [];
+    for (const [file, label] of [[SETUP_FILE, "Setup"], [DATA_FILE, "Budget & events"], [PW_FILE, "Passwords"]]) {
+      let line;
+      try {
+        const info = SH.fileInfo ? await SH.fileInfo(dir, file) : null;
+        if (!info) line = `<span style="color:#b45309">not found</span>`;
+        else {
+          let by = "";
+          try { const j = await SH.readJson(dir, file); by = (j && j.meta && j.meta.exportedBy) || ""; } catch (e) {}
+          line = `saved ${S.escapeHtml(fmt(info.lastModified))}${by ? ` by ${S.escapeHtml(by)}` : ""} &middot; ${Math.round(info.size / 1024)} KB`;
+        }
+      } catch (e) { line = `<span style="color:#b91c1c">could not read</span>`; }
+      rows.push(`<div>${label}: <code>${S.escapeHtml(file)}</code> &middot; ${line}</div>`);
+    }
+    box.innerHTML = rows.join("");
   }
 
   // Get the folder handle with write permission, or explain why not.
@@ -571,8 +607,7 @@
       const ok = await S.confirmDialog("Publish your setup to the shared folder? It becomes the master that everyone pulls. Their budget lines and events are not touched.");
       if (!ok) return;
       try {
-        const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
-        await SH.writeJson(dir, SETUP_FILE, obj);
+        await publishSetupTo(dir);
         S.toast("Setup published to the shared folder.", "success");
       } catch (e) { S.toast("Could not publish setup: " + e.message, "error"); }
     };
@@ -584,7 +619,7 @@
       try {
         const incoming = await SH.readJson(dir, SETUP_FILE);
         if (!incoming) return S.toast("No setup file in the shared folder yet.", "error");
-        await loadSetupFile(incoming, SETUP_FILE);
+        if (await loadSetupFile(incoming, SETUP_FILE)) markSetupSynced(incoming);
       } catch (e) { S.toast("Could not pull setup: " + e.message, "error"); }
     };
 
@@ -636,10 +671,11 @@
 
   async function loadSetupFile(incoming, name) {
     const ok = await S.confirmDialog(`Replace your setup (entities, clusters, M1, types, SVPs, statuses, users, yearly budgets, codes) with the one in "${name}"? Your budget lines and events stay. Export a backup first if unsure.`);
-    if (!ok) return;
+    if (!ok) return false;
     S.state.data = API.replaceSetup(S.state.data, incoming);
     S.scheduleSave(); S.notify();
     S.toast("Setup replaced from file", "success");
+    return true;
   }
 
   // Self-healing country tags: incoming events carry the sender's country ids, which may differ
@@ -782,9 +818,222 @@
     const dir = await SH.savedFolder();
     if (!dir) { btn.classList.add("hidden"); return; }
     btn.classList.remove("hidden");
-    btn.onclick = () => refreshFromShared({ auto: false });
-    if (await SH.hasPerm(dir, "readwrite")) refreshFromShared({ auto: true });
+    btn.onclick = async () => { await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); };
+    // On open: check the setup first (new entities or years may be needed by the data), then
+    // pull budget & events.
+    if (await SH.hasPerm(dir, "readwrite")) {
+      await syncPasswords({ auto: true });
+      await checkSetup({ auto: true });
+      await refreshFromShared({ auto: true });
+    }
   }
 
-  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  // ---- Setup (structure) sync check: v5.1 ----
+  // The setup file (entities, yearly budgets, codes, users...) is published separately from the
+  // budget & events file. We remember, per browser, a signature of the shared setup as of the
+  // last pull or publish (the baseline). Comparing local, shared and baseline tells us whether the
+  // shared setup is newer, whether you have unpublished setup changes, or both.
+  // Canonical signature of a settings object: sorted keys, empty values dropped, countries skipped
+  // (countries are auto-created when pulling budget & events, so they are not a real edit).
+  const PW_FIELDS = { pwSalt: 1, pwHash: 1, mustChangePassword: 1, pwChangedAt: 1 };
+  function setupSig(settings) {
+    const norm = (v) => {
+      if (Array.isArray(v)) { const a = v.map(norm).filter((x) => x !== undefined); return a.length ? a : undefined; }
+      if (v && typeof v === "object") {
+        const o = {};
+        Object.keys(v).sort().forEach((k) => {
+          if (PW_FIELDS[k]) return; // passwords sync through their own file
+          const n = norm(v[k]); if (n !== undefined) o[k] = n;
+        });
+        return Object.keys(o).length ? o : undefined;
+      }
+      if (v === null || v === undefined || v === "") return undefined;
+      return v;
+    };
+    const s = {};
+    Object.keys(settings || {}).forEach((k) => { if (k !== "countries") s[k] = settings[k]; });
+    return JSON.stringify(norm(s) || {});
+  }
+  function markSetupSynced(fileObj) {
+    try {
+      localStorage.setItem(SETUP_BASE_KEY, setupSig(fileObj.settings));
+      if (fileObj.meta && fileObj.meta.exportedAt) localStorage.setItem(SETUP_SEEN_KEY, fileObj.meta.exportedAt);
+    } catch (e) {}
+    updateSharedHeader();
+  }
+  // Compare the local setup with the shared one. Returns one of:
+  // "same", "remote-newer", "local-changes", "both-changed", "unknown" (differs, no sync history).
+  function setupStatus(remote) {
+    const localSig = setupSig(S.state.data.settings);
+    const remoteSig = setupSig(remote.settings);
+    if (localSig === remoteSig) return "same";
+    const base = localStorage.getItem(SETUP_BASE_KEY);
+    if (base === null) return "unknown";
+    const remoteChanged = remoteSig !== base;
+    const localChanged = localSig !== base;
+    if (remoteChanged && localChanged) return "both-changed";
+    if (remoteChanged) return "remote-newer";
+    if (localChanged) return "local-changes";
+    return "same";
+  }
+  // Short, human summary of a setup: entity count and years with a yearly budget.
+  function setupSummary(settings) {
+    const s = settings || {};
+    const ents = (s.entities || []).length;
+    const years = Object.keys(s.yearlyBudgets || {}).filter((y) => Object.keys(s.yearlyBudgets[y] || {}).length).sort();
+    return `${ents} entities, budget years ${years.length ? years.join(", ") : "none"}`;
+  }
+  async function publishSetupTo(dir) {
+    const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
+    await SH.writeJson(dir, SETUP_FILE, obj);
+    markSetupSynced(obj);
+    return obj;
+  }
+  function pullSetupFrom(remote) {
+    S.state.data = API.replaceSetup(S.state.data, remote);
+    markSetupSynced(remote);
+    S.scheduleSave(); S.notify();
+    syncPasswords({ auto: true, quiet: true });
+  }
+
+  // ---- Shared passwords file ----
+  // { version, meta, users: { <userId>: { name, pwSalt, pwHash, mustChangePassword, pwChangedAt,
+  // pwChangedBy } } }. Only hashes are stored, never a password. Per user, the newest change wins.
+  function pwEntry(u) {
+    return { name: u.name || "", pwSalt: u.pwSalt, pwHash: u.pwHash, mustChangePassword: !!u.mustChangePassword,
+             pwChangedAt: u.pwChangedAt, pwChangedBy: shareUserName() || u.name || "" };
+  }
+  async function pwDir(auto) {
+    if (!SH || !SH.supported()) return null;
+    const dir = await SH.savedFolder();
+    if (!dir) return null;
+    const ok = auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
+    return ok ? dir : null;
+  }
+  // Two-way sync: take newer passwords from the file, and write back any that are newer here.
+  // Returns the number of local passwords that were updated from the file.
+  async function syncPasswords(opts) {
+    opts = opts || {};
+    const dir = await pwDir(opts.auto);
+    if (!dir) return 0;
+    let file;
+    try { file = (await SH.readJson(dir, PW_FILE)) || { version: 1, users: {} }; }
+    catch (e) { if (!opts.auto && !opts.quiet) S.toast("Could not read the shared passwords: " + e.message, "error"); return 0; }
+    file.users = file.users || {};
+    const byName = {};
+    Object.entries(file.users).forEach(([id, e]) => { if (e && e.name) byName[e.name.trim().toLowerCase()] = id; });
+    let pulled = 0, pushed = 0;
+    (S.state.data.settings.users || []).forEach((u) => {
+      const id = file.users[u.id] ? u.id : byName[(u.name || "").trim().toLowerCase()];
+      const e = id ? file.users[id] : null;
+      const mine = u.pwChangedAt || "";
+      if (e && e.pwHash && (e.pwChangedAt || "") > mine) {
+        u.pwSalt = e.pwSalt; u.pwHash = e.pwHash; u.mustChangePassword = !!e.mustChangePassword;
+        u.pwChangedAt = e.pwChangedAt; pulled++;
+      } else if (u.pwHash && mine && (!e || mine > (e.pwChangedAt || ""))) {
+        if (id && id !== u.id) delete file.users[id];
+        file.users[u.id] = pwEntry(u); pushed++;
+      }
+    });
+    if (pulled) { S.scheduleSave(); S.notify(); }
+    if (pushed) {
+      file.meta = { exportedAt: new Date().toISOString(), exportedBy: shareUserName() };
+      try { await SH.writeJson(dir, PW_FILE, file); } catch (e) { console.warn("Could not write passwords", e); }
+    }
+    return pulled;
+  }
+  // Called right after a password is set or reset on this computer.
+  async function pushPassword(user) {
+    if (!SH || !SH.supported() || !(await SH.savedFolder())) return false; // no shared folder: local only
+    const dir = await pwDir(false);
+    if (!dir) { S.toast("Password saved on this computer only (no access to the shared folder).", "error"); return false; }
+    try {
+      const file = (await SH.readJson(dir, PW_FILE)) || { version: 1, users: {} };
+      file.users = file.users || {};
+      const cur = file.users[user.id];
+      if (cur && (cur.pwChangedAt || "") > (user.pwChangedAt || "")) return false; // a newer one exists
+      file.users[user.id] = pwEntry(user);
+      file.meta = { exportedAt: new Date().toISOString(), exportedBy: shareUserName() || user.name || "" };
+      await SH.writeJson(dir, PW_FILE, file);
+      return true;
+    } catch (e) {
+      S.toast("Password saved on this computer only: " + e.message, "error");
+      return false;
+    }
+  }
+  // Check the shared setup and, if something needs attention, ask what to do. Resolves once the
+  // user has answered (or right away when nothing is needed), so callers can chain the budget &
+  // events check after it. opts.auto: on app open (quiet when all is well).
+  async function checkSetup(opts) {
+    opts = opts || {};
+    if (!SH || !SH.supported()) return;
+    const dir = await SH.savedFolder();
+    if (!dir) return;
+    const permOk = opts.auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
+    if (!permOk) return;
+    let remote;
+    try { remote = await SH.readJson(dir, SETUP_FILE); }
+    catch (e) { if (!opts.auto) S.toast("Could not read the shared setup file: " + e.message, "error"); return; }
+    const admin = canPushSetup();
+    if (!remote) {
+      if (admin && !opts.auto) S.toast("No setup file in the shared folder yet. Publish it from the Data tab.", "error");
+      return;
+    }
+    const status = setupStatus(remote);
+    if (status === "same") { markSetupSynced(remote); return; }
+    if (status === "local-changes" && !admin) return; // only admins can publish the setup
+
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-GB") : "unknown date";
+    const who = (remote.meta && remote.meta.exportedBy) || "a teammate";
+    const when = fmt(remote.meta && remote.meta.exportedAt);
+    const compare = `
+      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr); margin:10px 0">
+        <div class="kpi"><div class="label">Shared setup (${S.escapeHtml(who)}, ${S.escapeHtml(when)})</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(remote.settings))}</div></div>
+        <div class="kpi"><div class="label">Your setup on this computer</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(S.state.data.settings))}</div></div>
+      </div>`;
+    const keepNote = `<p class="muted small">Your budget lines and events are never touched by this choice.</p>`;
+    let html;
+    if (status === "remote-newer") {
+      html = `<h2>A newer setup is available</h2>
+        <p>${S.escapeHtml(who)} published a new setup (entities, yearly budgets, codes, users) on ${S.escapeHtml(when)}.</p>
+        ${compare}${keepNote}
+        <div class="actions"><button class="secondary" id="su-later">Not now</button><button class="primary" id="su-pull">Pull the new setup</button></div>`;
+    } else if (status === "local-changes") {
+      html = `<h2>Your setup changes are not published</h2>
+        <p>You changed the setup on this computer (for example entities, yearly budgets or codes), but the shared folder still has the older version. Teammates will not see your changes until you publish.</p>
+        ${compare}${keepNote}
+        <div class="actions"><button class="secondary" id="su-later">Later</button><button class="primary" id="su-publish">Publish setup</button></div>`;
+    } else {
+      html = `<h2>Your setup is different from the shared setup</h2>
+        <p>${status === "both-changed"
+          ? "Both your copy and the shared setup have changed since you last synced. Choose which one to keep."
+          : "This computer has not synced the setup before, and the two versions differ. Choose which one is right."}</p>
+        ${compare}
+        <p class="muted small">Using the shared setup replaces yours. ${admin ? "Publishing yours replaces the shared one for everyone." : ""} Your budget lines and events are never touched.</p>
+        <div class="actions" style="flex-wrap:wrap; gap:8px">
+          <button class="secondary" id="su-later">Decide later</button>
+          <button class="${admin ? "secondary" : "primary"}" id="su-pull">Use the shared setup</button>
+          ${admin ? `<button class="primary" id="su-publish">Keep mine and publish it</button>` : ""}
+        </div>`;
+    }
+    return new Promise((resolve) => {
+      const m = S.openModal(html, { closeOnBackdrop: false });
+      const done = () => { S.closeModal(); resolve(); };
+      const later = m.querySelector("#su-later"), pull = m.querySelector("#su-pull"), pub = m.querySelector("#su-publish");
+      if (later) later.onclick = done;
+      if (pull) pull.onclick = () => {
+        try { pullSetupFrom(remote); S.toast("Setup updated from the shared folder.", "success"); }
+        catch (e) { S.toast("Could not pull the setup: " + e.message, "error"); }
+        done();
+      };
+      if (pub) pub.onclick = async () => {
+        try { await publishSetupTo(dir); S.toast("Setup published to the shared folder.", "success"); }
+        catch (e) { S.toast("Could not publish setup: " + e.message, "error"); }
+        done();
+      };
+    });
+  }
+
+
+  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, syncPasswords, pushPassword, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

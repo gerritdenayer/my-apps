@@ -195,6 +195,16 @@
   function replaceSetup(current, incoming) {
     const result = JSON.parse(JSON.stringify(current));
     result.settings = JSON.parse(JSON.stringify(incoming.settings || {}));
+    // Passwords travel through their own shared file. Never let a setup file roll back a
+    // password that is newer on this computer.
+    const localUsers = Object.fromEntries(((current.settings || {}).users || []).map((u) => [u.id, u]));
+    (result.settings.users || []).forEach((u) => {
+      const l = localUsers[u.id];
+      if (l && l.pwHash && ((l.pwChangedAt || "") > (u.pwChangedAt || "") || !u.pwHash)) {
+        u.pwSalt = l.pwSalt; u.pwHash = l.pwHash; u.mustChangePassword = l.mustChangePassword;
+        if (l.pwChangedAt) u.pwChangedAt = l.pwChangedAt; else delete u.pwChangedAt;
+      }
+    });
     result.meta = { ...(result.meta || {}), lastUpdated: new Date().toISOString() };
     return result;
   }

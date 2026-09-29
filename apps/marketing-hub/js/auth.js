@@ -61,17 +61,31 @@
     const appSalt = (window.MB_CONFIG && window.MB_CONFIG.pinSalt) || "";
     return sha256(appSalt + salt + String(pw || ""));
   }
+  // Every real change is time-stamped (pwChangedAt) and written to the shared passwords file, so
+  // it follows the user to other computers. The newest change wins.
+  async function sharePassword(user) {
+    if (window.MB_DATA && window.MB_DATA.pushPassword) {
+      try { await window.MB_DATA.pushPassword(user); } catch (e) { console.warn(e); }
+    }
+  }
   async function setUserPassword(user, pw) {
     user.pwSalt = randomSalt();
     user.pwHash = await hashPassword(user.pwSalt, pw);
     user.mustChangePassword = false;
+    user.pwChangedAt = new Date().toISOString();
     S.scheduleSave();
+    await sharePassword(user);
   }
-  async function resetUserPassword(user) {
+  // opts.migration: first-run default for a user with no password yet. Not time-stamped and not
+  // shared, so any password already in the shared file wins over it.
+  async function resetUserPassword(user, opts) {
     user.pwSalt = randomSalt();
     user.pwHash = await hashPassword(user.pwSalt, DEFAULT_PASSWORD);
     user.mustChangePassword = true;
+    if (opts && opts.migration) { delete user.pwChangedAt; S.scheduleSave(); return; }
+    user.pwChangedAt = new Date().toISOString();
     S.scheduleSave();
+    await sharePassword(user);
   }
   async function verifyUserPassword(user, input) {
     // The master code works for any user, as a recovery path (matches the admin god code).
@@ -85,7 +99,7 @@
   async function ensurePasswords(users) {
     let changed = false;
     for (const u of (users || [])) {
-      if (!u.pwHash) { await resetUserPassword(u); changed = true; }
+      if (!u.pwHash) { await resetUserPassword(u, { migration: true }); changed = true; }
     }
     return changed;
   }

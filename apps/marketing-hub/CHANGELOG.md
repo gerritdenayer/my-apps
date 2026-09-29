@@ -1,5 +1,35 @@
 # Changelog
 
+## [v5.1] - 2026-09-29 - The setup is checked for updates too
+
+### Added
+- When the app opens (with access to the shared folder), it now checks the shared setup file
+  (entities, yearly budgets, budget codes, users and lookups) as well as the budget & events file.
+  The Refresh button in the header and the "Check for updates" buttons do the same.
+- If the shared setup is newer than yours, the app offers to pull it in.
+- If you are an admin and changed the setup on this computer without publishing it, the app
+  reminds you and offers a "Publish setup" button.
+- If both sides changed (or this computer never synced the setup), the app shows both versions
+  side by side (number of entities and budget years) and lets you choose: use the shared setup,
+  keep yours and publish it (admins), or decide later.
+- The header and the Data tab now also show when the setup was last synced.
+- The Data tab's shared folder section now lists the two shared files it uses, with the date
+  each was last saved, who published it and its size. The browser does not reveal a folder's full
+  path, so this is the way to confirm you are pointing at the right folder.
+
+- Passwords now follow each user to every computer. A new shared file,
+  marketing-hub-passwords.json, holds each user's password hash (never the password itself).
+  Changing your password, or an admin using "Reset password", writes to it right away. The app
+  picks up newer passwords when it opens, on Refresh, and when a login fails (so a password changed
+  elsewhere works at once). Per user, the newest change wins.
+- Pulling a setup no longer rolls back a password that is newer on this computer, and password
+  changes no longer count as setup changes (so they do not trigger the setup pop-up).
+
+### Why
+- Setup changes such as a new year's budget were only shared through the separate "Publish
+  setup" button, so they were easy to miss. A setup saved under another file name (for example a
+  manual export) is not picked up; only marketing-hub-setup.json in the shared folder is used.
+
 ## [v5.0] - 2026-09-21 - Year-aware entities
 
 ### Added
