@@ -110,5 +110,12 @@
     }
   }
 
-  window.MB_SHARE = { supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson, fileInfo };
+  // Names of the files directly in the folder.
+  async function listFiles(dir) {
+    const out = [];
+    for await (const [name, h] of dir.entries()) { if (h.kind === "file") out.push(name); }
+    return out;
+  }
+
+  window.MB_SHARE = { listFiles, supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson, fileInfo };
 })();

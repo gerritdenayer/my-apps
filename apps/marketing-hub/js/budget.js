@@ -18,6 +18,9 @@
     colFilters: {}, // per-column Excel-style filters: { <key>: { op, value } }
     hiddenCols: loadHidden(),
     colWidths: loadWidths(),
+    colOrder: null,   // set right after COLUMNS below (it needs the column list)
+    _forUser: null,   // user the default filters were set for (reset on a new login)
+    _colsOpen: false, // keep the Columns panel open across a re-render
   };
 
   // The Budget table columns. key matches the sort key and the cell class (bc-<key>).
@@ -44,6 +47,7 @@
     { key: "updatedBy", label: "Updated by", def: 130 },
     { key: "updatedAt", label: "Updated on", def: 150 },
   ];
+  view.colOrder = loadOrder();
 
   function loadHidden() {
     const def = ["createdBy", "createdAt", "updatedBy", "updatedAt"]; // audit columns hidden by default
@@ -51,11 +55,30 @@
     if (raw === null) return new Set(def);
     try { return new Set(JSON.parse(raw)); } catch (e) { return new Set(def); }
   }
+  // Column order, per browser. Unknown keys are dropped and new columns are added at the end, so
+  // a saved order keeps working when columns are added later. "actions" always stays first.
+  function loadOrder() {
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem("mb_budget_order") || "[]") || []; } catch (e) { saved = []; }
+    return normalizeOrder(saved);
+  }
+  function normalizeOrder(keys) {
+    const all = COLUMN_KEYS();
+    const out = (keys || []).filter((k) => all.includes(k) && k !== "actions");
+    all.forEach((k) => { if (k !== "actions" && !out.includes(k)) out.push(k); });
+    return ["actions", ...out];
+  }
+  function COLUMN_KEYS() { return COLUMNS.map((c) => c.key); }
+  function orderedCols() {
+    const byKey = Object.fromEntries(COLUMNS.map((c) => [c.key, c]));
+    return view.colOrder.map((k) => byKey[k]).filter(Boolean);
+  }
   function loadWidths() { try { return JSON.parse(localStorage.getItem("mb_budget_widths") || "{}") || {}; } catch (e) { return {}; } }
   function saveColPrefs() {
     try {
       localStorage.setItem("mb_budget_hidden", JSON.stringify([...view.hiddenCols]));
       localStorage.setItem("mb_budget_widths", JSON.stringify(view.colWidths));
+      localStorage.setItem("mb_budget_order", JSON.stringify(view.colOrder));
     } catch (e) {}
   }
   function colWidth(c) { return view.colWidths[c.key] || c.def; }
@@ -89,6 +112,16 @@
     const data = S.state.data;
     if (!data) { root.innerHTML = ""; return; }
 
+    // On a new login, open on the user's home cluster (set in Users). They can still pick another.
+    if (view._forUser !== S.state.currentUserId) {
+      view._forUser = S.state.currentUserId;
+      const u = S.state.currentUserId ? S.userById(S.state.currentUserId) : null;
+      const hc = (u && u.homeCluster) || "";
+      const known = S.clusterList ? S.clusterList("").includes(hc) : !!hc;
+      view.scope.m1 = ""; view.scope.entityId = "";
+      view.scope.cluster = known ? hc : "";
+    }
+
     const years = uniqueYears(data.activities);
     if (!years.includes(view.year)) years.unshift(view.year);
 
@@ -116,9 +149,15 @@
         <div style="position:relative">
           <label>&nbsp;</label>
           <button id="bc-cols-btn" class="secondary" type="button">Columns</button>
-          <div id="bc-cols-panel" style="display:none; position:absolute; right:0; top:100%; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:340px; overflow:auto; min-width:190px;">
-            <div class="muted small" style="margin-bottom:6px">Show columns</div>
-            ${COLUMNS.filter(c => c.key !== "actions").map(c => `<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;"><input type="checkbox" class="bc-col-chk" value="${c.key}" ${view.hiddenCols.has(c.key) ? "" : "checked"} /> ${S.escapeHtml(c.label)}</label>`).join("")}
+          <div id="bc-cols-panel" style="display:none; position:absolute; right:0; top:100%; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:75vh; overflow:auto; min-width:260px;">
+            <div class="muted small" style="margin-bottom:6px">Show and order columns (drag, or use the arrows)</div>
+            ${orderedCols().filter(c => c.key !== "actions").map((c, i, arr) => `<div class="bc-col-row" draggable="true" data-key="${c.key}" style="display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;cursor:grab;">
+              <span class="muted" title="Drag to move" style="user-select:none">&#8942;&#8942;</span>
+              <label style="display:flex;align-items:center;gap:8px;flex:1;margin:0;cursor:pointer;"><input type="checkbox" class="bc-col-chk" value="${c.key}" ${view.hiddenCols.has(c.key) ? "" : "checked"} /> ${S.escapeHtml(c.label)}</label>
+              <button type="button" class="icon bc-col-up" data-key="${c.key}" title="Move left" ${i === 0 ? "disabled" : ""} style="padding:0 5px">&#9650;</button>
+              <button type="button" class="icon bc-col-down" data-key="${c.key}" title="Move right" ${i === arr.length - 1 ? "disabled" : ""} style="padding:0 5px">&#9660;</button>
+            </div>`).join("")}
+            <div style="margin-top:8px; border-top:1px solid #eef0f3; padding-top:6px"><button type="button" class="link" id="bc-col-reset" style="padding:0">Reset column order</button></div>
           </div>
         </div>
         <div>
@@ -138,7 +177,7 @@
           <table id="activities-table">
             <thead>
               <tr>
-                ${COLUMNS.map(c => {
+                ${orderedCols().map(c => {
                   const sortable = c.key !== "actions";
                   const filtered = sortable && view.colFilters[c.key];
                   return `<th class="bc-${c.key}${c.num ? " num" : ""}" data-col="${c.key}"${sortable ? ` data-sort="${c.key}"` : ""}>${S.escapeHtml(c.label)}${sortable ? sortArrow(c.key) : ""}${filtered ? ' <span title="Filtered" style="color:#0a7d33">&#9873;</span>' : ""}<span class="col-resize"></span></th>`;
@@ -177,12 +216,51 @@
     // Columns show/hide
     const colsBtn = root.querySelector("#bc-cols-btn");
     const colsPanel = root.querySelector("#bc-cols-panel");
-    if (colsBtn) colsBtn.onclick = (e) => { e.stopPropagation(); colsPanel.style.display = colsPanel.style.display === "none" ? "block" : "none"; };
+    if (colsBtn) colsBtn.onclick = (e) => {
+      e.stopPropagation();
+      view._colsOpen = colsPanel.style.display === "none";
+      colsPanel.style.display = view._colsOpen ? "block" : "none";
+    };
+    if (colsPanel && view._colsOpen) colsPanel.style.display = "block";
+    if (colsPanel) colsPanel.onclick = (e) => e.stopPropagation();
     root.querySelectorAll(".bc-col-chk").forEach((chk) => {
       chk.onchange = () => {
         if (chk.checked) view.hiddenCols.delete(chk.value); else view.hiddenCols.add(chk.value);
-        applyColStyles(); saveColPrefs();
+        applyColStyles(); saveColPrefs(); renderRows();
       };
+    });
+    // Column order: arrows, drag and drop, reset. Saved per browser.
+    const moveCol = (key, toIndex) => {
+      const list = view.colOrder.filter((k) => k !== "actions" && k !== key);
+      list.splice(Math.max(0, Math.min(toIndex, list.length)), 0, key);
+      view.colOrder = normalizeOrder(list);
+      saveColPrefs(); view._colsOpen = true; render();
+    };
+    const posOf = (key) => view.colOrder.filter((k) => k !== "actions").indexOf(key);
+    root.querySelectorAll(".bc-col-up").forEach((b) => { b.onclick = () => moveCol(b.dataset.key, posOf(b.dataset.key) - 1); });
+    root.querySelectorAll(".bc-col-down").forEach((b) => { b.onclick = () => moveCol(b.dataset.key, posOf(b.dataset.key) + 1); });
+    let dragKey = null;
+    root.querySelectorAll(".bc-col-row").forEach((row) => {
+      row.ondragstart = (e) => { dragKey = row.dataset.key; e.dataTransfer.effectAllowed = "move"; row.style.opacity = "0.4"; };
+      row.ondragend = () => { row.style.opacity = ""; };
+      row.ondragover = (e) => { e.preventDefault(); row.style.borderTop = "2px solid #ff6a00"; };
+      row.ondragleave = () => { row.style.borderTop = ""; };
+      row.ondrop = (e) => {
+        e.preventDefault(); row.style.borderTop = "";
+        if (dragKey && dragKey !== row.dataset.key) {
+          const target = posOf(row.dataset.key), from = posOf(dragKey);
+          moveCol(dragKey, from < target ? target - 1 : target);
+        }
+      };
+    });
+    const resetBtn = root.querySelector("#bc-col-reset");
+    if (resetBtn) resetBtn.onclick = () => { view.colOrder = normalizeOrder([]); saveColPrefs(); view._colsOpen = true; render(); };
+    // Close the Columns panel when clicking elsewhere.
+    document.addEventListener("click", function closeCols() {
+      const p = document.getElementById("bc-cols-panel");
+      if (p) p.style.display = "none";
+      view._colsOpen = false;
+      document.removeEventListener("click", closeCols);
     });
 
     // Column resize (drag the right edge of a header, Excel-style)
@@ -355,33 +433,32 @@
         const statusSlug = statusName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const nameHtml = a.name && String(a.name).trim() ? S.escapeHtml(a.name) : "<span class='muted'>(no name)</span>";
         const dateHtml = a.date ? S.fmtDate(a.date) : "<span class='muted'>(no date)</span>";
-        const html = `
-          <tr data-id="${a.id}">
-            <td class="bc-actions actions-cell">
+        const cells = {
+          actions: `<td class="bc-actions actions-cell">
               ${canEditRows ? `<button class="icon row-menu" title="Actions" aria-label="Actions">&#9776;</button>` : "<span class='muted'>-</span>"}
-            </td>
-            <td class="bc-date">${dateHtml}</td>
-            <td class="bc-name">${nameHtml}</td>
-            <td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-type">${at ? S.escapeHtml(at.name) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>
-            <td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>
-            <td class="bc-vendor">${S.escapeHtml(a.vendor || "")}</td>
-            <td class="bc-po">${S.escapeHtml(a.poNumber || "")}</td>
-            <td class="num bc-fG">${S.fmtMoney(a.forecastGross)}</td>
-            <td class="num bc-fP">${S.fmtMoney(a.forecastPartner)}</td>
-            <td class="num bc-fN">${S.fmtMoney(fNet)}</td>
-            <td class="num bc-aG">${S.fmtMoney(a.actualGross)}</td>
-            <td class="num bc-aP">${S.fmtMoney(a.actualPartner)}</td>
-            <td class="num bc-aN">${S.fmtMoney(aNet)}</td>
-            <td class="bc-createdBy">${S.escapeHtml(userNm(a.createdBy))}</td>
-            <td class="bc-createdAt">${fmtDT(a.createdAt)}</td>
-            <td class="bc-updatedBy">${S.escapeHtml(userNm(a.updatedBy))}</td>
-            <td class="bc-updatedAt">${fmtDT(a.updatedAt)}</td>
-          </tr>
-        `;
+            </td>`,
+          date: `<td class="bc-date">${dateHtml}</td>`,
+          name: `<td class="bc-name">${nameHtml}</td>`,
+          entity: `<td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>`,
+          code: `<td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>`,
+          svp: `<td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>`,
+          type: `<td class="bc-type">${at ? S.escapeHtml(at.name) : "<span class='muted'>-</span>"}</td>`,
+          status: `<td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>`,
+          owner: `<td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>`,
+          vendor: `<td class="bc-vendor">${S.escapeHtml(a.vendor || "")}</td>`,
+          po: `<td class="bc-po">${S.escapeHtml(a.poNumber || "")}</td>`,
+          fG: `<td class="num bc-fG">${S.fmtMoney(a.forecastGross)}</td>`,
+          fP: `<td class="num bc-fP">${S.fmtMoney(a.forecastPartner)}</td>`,
+          fN: `<td class="num bc-fN">${S.fmtMoney(fNet)}</td>`,
+          aG: `<td class="num bc-aG">${S.fmtMoney(a.actualGross)}</td>`,
+          aP: `<td class="num bc-aP">${S.fmtMoney(a.actualPartner)}</td>`,
+          aN: `<td class="num bc-aN">${S.fmtMoney(aNet)}</td>`,
+          createdBy: `<td class="bc-createdBy">${S.escapeHtml(userNm(a.createdBy))}</td>`,
+          createdAt: `<td class="bc-createdAt">${fmtDT(a.createdAt)}</td>`,
+          updatedBy: `<td class="bc-updatedBy">${S.escapeHtml(userNm(a.updatedBy))}</td>`,
+          updatedAt: `<td class="bc-updatedAt">${fmtDT(a.updatedAt)}</td>`,
+        };
+        const html = `<tr data-id="${a.id}">${orderedCols().map((c) => cells[c.key] || "").join("")}</tr>`;
         tbody.insertAdjacentHTML("beforeend", html);
       } catch (err) {
         console.error("Row render failed for activity", a, err);
@@ -394,22 +471,13 @@
     const sum = (k) => rows.reduce((s, a) => s + (a[k] || 0), 0);
     const fG = sum("forecastGross"), fP = sum("forecastPartner");
     const aG = sum("actualGross"), aP = sum("actualPartner");
-    tfoot.innerHTML = `
-      <tr class="total-row">
-        <td class="bc-actions"></td>
-        <td colspan="10">Total (${rows.length})</td>
-        <td class="num bc-fG">${S.fmtMoney(fG)}</td>
-        <td class="num bc-fP">${S.fmtMoney(fP)}</td>
-        <td class="num bc-fN">${S.fmtMoney(fG - fP)}</td>
-        <td class="num bc-aG">${S.fmtMoney(aG)}</td>
-        <td class="num bc-aP">${S.fmtMoney(aP)}</td>
-        <td class="num bc-aN">${S.fmtMoney(aG - aP)}</td>
-        <td class="bc-createdBy"></td>
-        <td class="bc-createdAt"></td>
-        <td class="bc-updatedBy"></td>
-        <td class="bc-updatedAt"></td>
-      </tr>
-    `;
+    const totals = { fG: fG, fP: fP, fN: fG - fP, aG: aG, aP: aP, aN: aG - aP };
+    // "Total (n)" goes in the first visible text column of the chosen order.
+    const labelKey = (orderedCols().find((c) => c.key !== "actions" && !c.num && !view.hiddenCols.has(c.key)) || {}).key || "actions";
+    tfoot.innerHTML = `<tr class="total-row">${orderedCols().map((c) => {
+      if (c.num) return `<td class="num bc-${c.key}">${S.fmtMoney(totals[c.key] || 0)}</td>`;
+      return `<td class="bc-${c.key}">${c.key === labelKey ? `Total (${rows.length})` : ""}</td>`;
+    }).join("")}</tr>`;
 
     // bind row actions: one menu button per row opens Edit / Copy / Delete
     if (!canEditRows) return;
@@ -462,119 +530,85 @@
 
     const modal = S.openModal(`
       <h2>${isEdit ? "Edit budget line" : "New budget line"}</h2>
-      <div class="row">
+      <div class="form-cols">
         <div>
-          <label>Expenditure or Activity *</label>
-          <input id="m-name" type="text" value="${S.escapeHtml(a.name)}" />
+          <div class="row">
+            <div><label>Expenditure or Activity *</label><input id="m-name" type="text" value="${S.escapeHtml(a.name)}" /></div>
+            <div class="row" style="gap:10px">
+              <div><label>Date *</label><input id="m-date" type="date" value="${a.date || ""}" /></div>
+              <div><label>Status</label>
+                <select id="m-status"><option value="">Select...</option>
+                  ${(data.settings.statuses || []).map(s => `<option ${a.statusId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
+                </select></div>
+            </div>
+          </div>
+          <div class="row">
+            <div><label>Cluster *</label>
+              <select id="m-group"><option value="">Select...</option>
+                ${groups.map(g => `<option ${initialGroup===g?"selected":""} value="${S.escapeHtml(g)}">${S.escapeHtml(g)}</option>`).join("")}
+              </select></div>
+            <div><label>Entity *</label><select id="m-entity"></select></div>
+          </div>
+          <div class="row">
+            <div><label>SVP</label>
+              <select id="m-svp"><option value="">Select...</option>
+                ${data.settings.svps.map(s => `<option ${a.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
+              </select></div>
+            <div><label>Activity type</label>
+              <select id="m-type"><option value="">Select...</option>
+                ${data.settings.activityTypes.map(t => `<option ${a.activityTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}
+              </select></div>
+          </div>
+          <div class="row">
+            <div><label>A&amp;P category <span class="muted small">(defaults from type)</span></label>
+              <select id="m-apcat"><option value="">Select...</option>
+                ${(data.settings.apCategories||[]).map(c => `<option ${a.apCategoryId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
+              </select></div>
+            <div><label>Owner</label>
+              <select id="m-owner"><option value="">Unassigned</option>${S.activeOwnerOptions(a.ownerId)}</select></div>
+          </div>
+          <div class="row">
+            <div><label>Vendor</label><input id="m-vendor" type="text" value="${S.escapeHtml(a.vendor || "")}" /></div>
+            <div><label>PO number</label><input id="m-po" type="text" value="${S.escapeHtml(a.poNumber || "")}" /></div>
+          </div>
         </div>
         <div>
-          <label>Date *</label>
-          <input id="m-date" type="date" value="${a.date || ""}" />
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>Cluster *</label>
-          <select id="m-group">
-            <option value="">Select...</option>
-            ${groups.map(g => `<option ${initialGroup===g?"selected":""} value="${S.escapeHtml(g)}">${S.escapeHtml(g)}</option>`).join("")}
-          </select>
-        </div>
-        <div>
-          <label>Entity *</label>
-          <select id="m-entity"></select>
-        </div>
-      </div>
-      <div class="row">
-        <div style="grid-column: 1 / -1;">
-          <label>Linked campaigns / events <span class="muted small">(hold Ctrl or Cmd to pick several, or none)</span></label>
-          <input id="m-event-filter" type="text" placeholder="Type to filter campaigns..." style="margin-bottom:6px" />
-          <select id="m-event" multiple size="4">
+          <label>Linked campaigns / events <span class="muted small">(Ctrl or Cmd to pick several, or none)</span></label>
+          <input id="m-event-filter" type="text" placeholder="Type to filter campaigns..." style="margin-bottom:4px" />
+          <select id="m-event" multiple size="5">
             ${(data.events || []).slice().sort((x,y)=>(x.name||"").localeCompare(y.name||"")).map(ev => `<option ${(a.eventIds||[]).includes(ev.id)?"selected":""} value="${ev.id}">${S.escapeHtml(ev.name)}</option>`).join("")}
           </select>
-          <p class="muted small" style="margin:4px 0 0">Empty means general spend not tied to any campaign. One line can cover several campaigns.</p>
+          <p class="muted small" style="margin:3px 0 0">Empty means general spend, not tied to a campaign.</p>
+          <h3>Amounts (EUR)</h3>
+          <div class="amt-grid">
+            <div></div><div class="amt-h">Gross</div><div class="amt-h">Partner funds</div><div class="amt-h" style="text-align:right">Net</div>
+            <div class="amt-l">Forecast</div>
+            <input id="m-fg" type="number" step="0.01" value="${a.forecastGross || 0}" />
+            <input id="m-fp" type="number" step="0.01" value="${a.forecastPartner || 0}" />
+            <div class="amt-net" id="m-fn"></div>
+            <div class="amt-l">Actual</div>
+            <input id="m-ag" type="number" step="0.01" value="${a.actualGross || 0}" />
+            <input id="m-ap" type="number" step="0.01" value="${a.actualPartner || 0}" />
+            <div class="amt-net" id="m-an"></div>
+          </div>
+          <label>Notes</label>
+          <textarea id="m-notes" rows="3">${S.escapeHtml(a.notes || "")}</textarea>
         </div>
       </div>
-      <div class="row-3">
-        <div>
-          <label>SVP</label>
-          <select id="m-svp">
-            <option value="">Select...</option>
-            ${data.settings.svps.map(s => `<option ${a.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
-          </select>
-        </div>
-        <div>
-          <label>Activity type</label>
-          <select id="m-type">
-            <option value="">Select...</option>
-            ${data.settings.activityTypes.map(t => `<option ${a.activityTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}
-          </select>
-        </div>
-        <div>
-          <label>Status</label>
-          <select id="m-status">
-            <option value="">Select...</option>
-            ${(data.settings.statuses || []).map(s => `<option ${a.statusId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
-          </select>
-        </div>
-      </div>
-      <div class="row-3">
-        <div>
-          <label>A&amp;P category <span class="muted small">(defaults from type)</span></label>
-          <select id="m-apcat">
-            <option value="">Select...</option>
-            ${(data.settings.apCategories||[]).map(c => `<option ${a.apCategoryId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
-          </select>
-        </div>
-        <div></div>
-        <div></div>
-      </div>
-      <div class="row-3">
-        <div>
-          <label>Owner</label>
-          <select id="m-owner">
-            <option value="">Unassigned</option>
-            ${S.activeOwnerOptions(a.ownerId)}
-          </select>
-        </div>
-        <div>
-          <label>Vendor</label>
-          <input id="m-vendor" type="text" value="${S.escapeHtml(a.vendor || "")}" />
-        </div>
-        <div>
-          <label>PO number</label>
-          <input id="m-po" type="text" value="${S.escapeHtml(a.poNumber || "")}" />
-        </div>
-      </div>
-      <h3>Forecast</h3>
-      <div class="row">
-        <div>
-          <label>Forecast gross (EUR)</label>
-          <input id="m-fg" type="number" step="0.01" value="${a.forecastGross || 0}" />
-        </div>
-        <div>
-          <label>Forecast partner funds (EUR)</label>
-          <input id="m-fp" type="number" step="0.01" value="${a.forecastPartner || 0}" />
-        </div>
-      </div>
-      <h3>Actual</h3>
-      <div class="row">
-        <div>
-          <label>Actual gross (EUR)</label>
-          <input id="m-ag" type="number" step="0.01" value="${a.actualGross || 0}" />
-        </div>
-        <div>
-          <label>Actual partner funds (EUR)</label>
-          <input id="m-ap" type="number" step="0.01" value="${a.actualPartner || 0}" />
-        </div>
-      </div>
-      <label>Notes</label>
-      <textarea id="m-notes">${S.escapeHtml(a.notes || "")}</textarea>
-      <div class="actions">
+      <div class="actions sticky-actions">
         <button class="secondary" id="m-cancel">Cancel</button>
         <button class="primary" id="m-save">${isEdit ? "Save" : "Create"}</button>
       </div>
-    `, { closeOnBackdrop: false });
+    `, { closeOnBackdrop: false, cls: "modal-form" });
+
+    // Live net amounts (gross - partner) next to the inputs.
+    const updNet = () => {
+      const v = (sel) => parseFloat(modal.querySelector(sel).value) || 0;
+      modal.querySelector("#m-fn").textContent = S.fmtMoney(v("#m-fg") - v("#m-fp"));
+      modal.querySelector("#m-an").textContent = S.fmtMoney(v("#m-ag") - v("#m-ap"));
+    };
+    ["#m-fg", "#m-fp", "#m-ag", "#m-ap"].forEach((sel) => modal.querySelector(sel).addEventListener("input", updNet));
+    updNet();
 
     // Populate Entity dropdown filtered by selected Group (deduped by name) and by the line's
     // year, so only entities in use that year show. The currently selected entity is always kept,

@@ -324,7 +324,7 @@
 
   // ---- Shared folder (Teams / OneDrive) ----
   const SETUP_FILE = "marketing-hub-setup.json";
-  const DATA_FILE = "marketing-hub-budget-events.json";
+  const DATA_FILE = "marketing-hub-budget-events.json"; // old single file (before per-year files)
   const SEEN_KEY = "mb_share_data_seen";
   const BASE_KEY = "mb_share_pub_base"; // signature of budget & events at the last publish/pull
   const PW_FILE = "marketing-hub-passwords.json"; // login passwords (hashed), newest change wins
@@ -398,7 +398,7 @@
     await syncPasswords({ auto: false });
     await checkSetup({ auto: false });
     let remote;
-    try { remote = await SH.readJson(dir, DATA_FILE); }
+    try { remote = await readSharedBE(dir); }
     catch (e) { return S.toast("Could not read the shared file: " + e.message, "error"); }
     if (!remote) return S.toast("No budget & events file in the shared folder yet.", "error");
     const seen = localStorage.getItem(SEEN_KEY) || "";
@@ -470,7 +470,7 @@
     try {
       const ok = await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
       if (!ok) return false;
-      const remote = reconcileIncomingCountries(await SH.readJson(dir, DATA_FILE));
+      const remote = reconcileIncomingCountries(await readSharedBE(dir));
       let baseline = null;
       try { baseline = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { baseline = null; }
       const localA = S.state.data.activities || [], localE = S.state.data.events || [];
@@ -483,13 +483,14 @@
         S.state.data.activities = ma.list;
         S.state.data.events = me.list;
       }
-      const obj = API.stampExport(API.pickBudgetEvents(S.state.data), shareUserName(), "budget-events");
-      await SH.writeJson(dir, DATA_FILE, obj);
-      localStorage.setItem(SEEN_KEY, obj.meta.exportedAt);
+      const res = await writeSharedBE(dir, S.state.data.activities, S.state.data.events, remote);
+      const seenStamp = [res.newest, (remote && remote.meta && remote.meta.exportedAt) || ""].sort().pop();
+      if (seenStamp) localStorage.setItem(SEEN_KEY, seenStamp);
       markPublishBaseline(); updateSharedHeader();
       S.scheduleSave(); S.notify();
       const mine = stats.insA + stats.insE, changed = stats.updA + stats.updE, removed = stats.delA + stats.delE;
-      S.toast(`Published & merged. New: ${mine}, changed: ${changed}, removed: ${removed}. Pulled in from teammates: ${stats.fromRemote}.`, "success");
+      const yrs = res.written.length ? ` Updated file(s): ${res.written.join(", ")}.` : " No shared file needed changes.";
+      S.toast(`Published & merged. New: ${mine}, changed: ${changed}, removed: ${removed}. Pulled in from teammates: ${stats.fromRemote}.${yrs}`, "success");
       return true;
     } catch (e) { S.toast("Could not publish budget & events: " + e.message, "error"); return false; }
   }
@@ -560,8 +561,21 @@
     }
     const fmt = (ms) => new Date(ms).toLocaleString("en-GB");
     const rows = [];
-    for (const [file, label] of [[SETUP_FILE, "Setup"], [DATA_FILE, "Budget & events"], [PW_FILE, "Passwords"]]) {
+    let yearFiles = [];
+    try { yearFiles = (await SH.listFiles(dir)).filter((n) => BE_RE.test(n)).sort(); } catch (e) {}
+    const list = [[SETUP_FILE, "Setup"]]
+      .concat(yearFiles.map((n) => [n, "Budget & events " + n.match(BE_RE)[1]]))
+      .concat([[DATA_FILE, "Old single file"], [PW_FILE, "Passwords"]]);
+    for (const [file, label] of list) {
       let line;
+      if (file === DATA_FILE) {
+        // The old single file: only worth showing when it exists.
+        let legacy = null;
+        try { legacy = await SH.readJson(dir, DATA_FILE); } catch (e) {}
+        if (!legacy) continue;
+        if (legacy.meta && legacy.meta.splitInto) { rows.push(`<div class="muted">${label}: <code>${S.escapeHtml(file)}</code> &middot; empty, replaced by the per-year files</div>`); continue; }
+        if (!yearFiles.length) { rows.push(`<div>Budget &amp; events: <code>${S.escapeHtml(file)}</code> &middot; single file, split into one file per year at the next publish</div>`); continue; }
+      }
       try {
         const info = SH.fileInfo ? await SH.fileInfo(dir, file) : null;
         if (!info) line = `<span style="color:#b45309">not found</span>`;
@@ -640,11 +654,11 @@
       const dir = await shareDir();
       if (!dir) return;
       try {
-        const incoming = await SH.readJson(dir, DATA_FILE);
+        const incoming = await readSharedBE(dir);
         if (!incoming) return S.toast("No budget & events file in the shared folder yet.", "error");
         if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
         await refreshShareStatus(root);
-        mergeBudgetEventsFile(incoming, DATA_FILE);
+        mergeBudgetEventsFile(incoming, "the shared budget & events files");
       } catch (e) { S.toast("Could not review budget & events: " + e.message, "error"); }
     };
   }
@@ -762,7 +776,7 @@
     const permOk = opts.auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
     if (!permOk) { if (!opts.auto) S.toast("Access to the shared folder was not granted.", "error"); return; }
     let incoming;
-    try { incoming = await SH.readJson(dir, DATA_FILE); }
+    try { incoming = await readSharedBE(dir); }
     catch (e) { if (!opts.auto) S.toast("Could not read the shared file: " + e.message, "error"); return; }
     if (!incoming) { if (!opts.auto) S.toast("No budget & events file in the shared folder yet.", "error"); return; }
     reconcileIncomingCountries(incoming);
@@ -896,6 +910,106 @@
     syncPasswords({ auto: true, quiet: true });
   }
 
+  // ---- Budget & events: one shared file per year ----
+  // Rows are filed by year: budget lines by their date, events by their start date. Rows without a
+  // date go to the "undated" file. Publishing rewrites only the year files whose rows changed, so
+  // people working on different years do not write the same file. The old single file
+  // (marketing-hub-budget-events.json) is still read if an older app version wrote to it, and is
+  // replaced by an empty marker once the per-year files are in use.
+  const BE_PREFIX = "marketing-hub-budget-events-";
+  const BE_RE = /^marketing-hub-budget-events-(\d{4}|undated)\.json$/;
+  function rowYear(r) {
+    const y = String((r && (r.start || r.date)) || "").slice(0, 4);
+    return /^\d{4}$/.test(y) ? y : "undated";
+  }
+  function yearFileName(y) { return BE_PREFIX + y + ".json"; }
+  // Sort rows by id and stringify, to tell whether a year file's content really changed.
+  function rowsSig(acts, evs) {
+    const byId = (a, b) => String(a.id).localeCompare(String(b.id));
+    return JSON.stringify({ a: [...(acts || [])].sort(byId), e: [...(evs || [])].sort(byId) });
+  }
+  function isLegacyActive(obj) {
+    return !!(obj && !(obj.meta && obj.meta.splitInto) &&
+      ((obj.activities || []).length || (obj.events || []).length));
+  }
+  // Read every budget & events file in the folder and combine them into one dataset, shaped like
+  // a single file ({ events, activities, countriesRef, meta }) so the existing merge logic works
+  // unchanged. Returns null when there is no budget & events data at all.
+  async function readSharedBE(dir) {
+    const names = (await SH.listFiles(dir)).filter((n) => BE_RE.test(n));
+    const files = {};
+    for (const name of names) {
+      const obj = await SH.readJson(dir, name);
+      if (obj) files[name.match(BE_RE)[1]] = { name, obj };
+    }
+    const legacy = await SH.readJson(dir, DATA_FILE);
+    const legacyActive = isLegacyActive(legacy);
+    if (!Object.keys(files).length && !legacyActive) return null;
+
+    const rows = { activities: {}, events: {} };   // id -> { row, stamp }
+    const countries = {};
+    let stamp = "", by = "";
+    // Per row, the most recently edited version wins (its own updatedAt, else createdAt). A file
+    // written by an older app version holds that person's whole copy, including stale rows, so a
+    // file's publish date alone must not decide.
+    const rowStamp = (r) => String(r.updatedAt || r.createdAt || "");
+    const take = (obj) => {
+      const st = (obj.meta && obj.meta.exportedAt) || "";
+      if (st > stamp) { stamp = st; by = (obj.meta && obj.meta.exportedBy) || ""; }
+      ["activities", "events"].forEach((k) => (obj[k] || []).forEach((r) => {
+        const cur = rows[k][r.id];
+        if (!cur || rowStamp(r) > rowStamp(cur.row)) rows[k][r.id] = { row: r };
+      }));
+      (obj.countriesRef || []).forEach((c) => { if (c && c.id) countries[c.id] = c; });
+    };
+    Object.values(files).forEach((f) => take(f.obj));
+    // Rows an older app version published to the old single file: added when missing, and they
+    // replace a year file's row only when that row was edited more recently.
+    if (legacyActive) take(legacy);
+    return {
+      version: 1,
+      meta: { exportedAt: stamp, exportedBy: by, exportKind: "budget-events" },
+      activities: Object.values(rows.activities).map((x) => x.row),
+      events: Object.values(rows.events).map((x) => x.row),
+      countriesRef: Object.values(countries),
+      _files: files, _legacy: legacy, _legacyActive: legacyActive,
+    };
+  }
+  // Write the given budget lines and events as per-year files. Only years whose rows differ from
+  // what is in the shared folder are written. Returns the newest exportedAt written (or "").
+  async function writeSharedBE(dir, acts, evs, remote) {
+    const groups = {};
+    const g = (y) => (groups[y] = groups[y] || { activities: [], events: [] });
+    (acts || []).forEach((r) => g(rowYear(r)).activities.push(r));
+    (evs || []).forEach((r) => g(rowYear(r)).events.push(r));
+    const existing = (remote && remote._files) || {};
+    const years = new Set([...Object.keys(groups), ...Object.keys(existing)]);
+    let newest = "";
+    const written = [];
+    for (const y of [...years].sort()) {
+      const grp = groups[y] || { activities: [], events: [] };
+      const ex = existing[y];
+      if (ex && rowsSig(ex.obj.activities, ex.obj.events) === rowsSig(grp.activities, grp.events)) continue;
+      if (!ex && !grp.activities.length && !grp.events.length) continue;
+      const obj = API.stampExport(API.pickBudgetEvents({ version: S.state.data.version, meta: S.state.data.meta,
+        settings: S.state.data.settings, activities: grp.activities, events: grp.events }), shareUserName(), "budget-events");
+      obj.meta.year = y;
+      await SH.writeJson(dir, yearFileName(y), obj);
+      written.push(y);
+      if (obj.meta.exportedAt > newest) newest = obj.meta.exportedAt;
+    }
+    // Retire the old single file: an empty marker, so older versions pull nothing from it.
+    if (!remote || !remote._legacy || !(remote._legacy.meta && remote._legacy.meta.splitInto) || remote._legacyActive) {
+      const legacyExists = remote ? !!remote._legacy : !!(await SH.readJson(dir, DATA_FILE));
+      if (legacyExists) {
+        await SH.writeJson(dir, DATA_FILE, { version: 1, events: [], activities: [], meta: {
+          exportKind: "budget-events", splitInto: "per-year", exportedAt: new Date().toISOString(), exportedBy: shareUserName(),
+          note: "Budget & events now live in one file per year (marketing-hub-budget-events-YYYY.json). This file is kept empty on purpose." } });
+      }
+    }
+    return { newest, written };
+  }
+
   // ---- First connection from the login screen ----
   // Pick the shared folder and load everything from it: the setup (users, entities, budgets...),
   // the budget & events (merged: nothing local is removed) and the passwords. Returns null when
@@ -908,11 +1022,11 @@
     let setup, data;
     try {
       setup = await SH.readJson(dir, SETUP_FILE);
-      data = await SH.readJson(dir, DATA_FILE);
+      data = await readSharedBE(dir);
     } catch (e) { return { error: "Could not read the shared files: " + e.message }; }
     if (!setup && !data) {
       await SH.forgetFolder();
-      return { error: `"${dir.name}" has no Marketing Hub files (${SETUP_FILE}, ${DATA_FILE}). Pick the team's shared folder.` };
+      return { error: `"${dir.name}" has no Marketing Hub files (${SETUP_FILE}, ${BE_PREFIX}YYYY.json). Pick the team's shared folder.` };
     }
     const cur = S.state.data;
     const hasLocal = ((cur.settings.users || []).length) || (cur.activities || []).length || (cur.events || []).length;

@@ -21,6 +21,14 @@
       `<option ${selected === c.id ? "selected" : ""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("");
   }
 
+  // Options for the per-user "home cluster" dropdown. Empty = no default (Budget shows all clusters).
+  function homeClusterOptions(selected) {
+    const list = S.clusterList ? S.clusterList("") : [];
+    const extra = selected && !list.includes(selected) ? [selected] : []; // keep a cluster that no longer exists visible
+    return `<option value="">(none)</option>` + [...list, ...extra].map((c) =>
+      `<option ${selected === c ? "selected" : ""} value="${S.escapeHtml(c)}">${S.escapeHtml(c)}</option>`).join("");
+  }
+
   function render() {
     const root = document.getElementById("tab-users");
     root.innerHTML = `
@@ -76,7 +84,7 @@
     host.innerHTML = `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Role</th><th>Home country</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Role</th><th>Home country</th><th>Home cluster</th><th>Status</th><th></th></tr></thead>
           <tbody>
             ${users.map((u) => `
               <tr data-id="${u.id}"${u.active === false ? ' style="opacity:.6"' : ""}>
@@ -85,6 +93,7 @@
                   : S.escapeHtml(u.name)}</td>
                 <td><select class="u-role" data-id="${u.id}">${roleOptions(u.role || "admin")}</select></td>
                 <td><select class="u-home" data-id="${u.id}">${homeCountryOptions(u.homeCountryId || "")}</select></td>
+                <td><select class="u-cluster" data-id="${u.id}" title="The Budget tab opens filtered on this cluster for this user">${homeClusterOptions(u.homeCluster || "")}</select></td>
                 <td>${u.active === false ? `<span class="muted">Inactive</span>` : "Active"}</td>
                 <td class="actions-cell">${editingUserId === u.id
                   ? `<button class="primary save-name" data-id="${u.id}">Save</button> <button class="secondary cancel-name">Cancel</button>`
@@ -105,6 +114,12 @@
       sel.onchange = () => {
         const u = users.find((x) => x.id === sel.dataset.id);
         if (u) { if (sel.value) u.homeCountryId = sel.value; else delete u.homeCountryId; S.scheduleSave(); }
+      };
+    });
+    host.querySelectorAll(".u-cluster").forEach((sel) => {
+      sel.onchange = () => {
+        const u = users.find((x) => x.id === sel.dataset.id);
+        if (u) { if (sel.value) u.homeCluster = sel.value; else delete u.homeCluster; S.scheduleSave(); }
       };
     });
     host.querySelectorAll(".edit-name").forEach((btn) => {

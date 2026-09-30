@@ -1,8 +1,40 @@
 # Changelog
 
-## [Unreleased]
+## [v5.1.1] - 2026-09-30 - Per-year shared files, login connect, column order, home cluster, roomier forms
+
+### Changed
+- Budget & events are now shared as one file per year: marketing-hub-budget-events-2026.json,
+  -2027.json and so on. Budget lines are filed by their date and events by their start date; rows
+  without a date go to marketing-hub-budget-events-undated.json. Publishing only rewrites the year
+  files that actually changed, so people working on different years no longer write the same file,
+  and a closed year stays untouched. Pulling, refreshing, Check for updates and Review & merge read
+  all year files together, so nothing changes in how you work.
+- Moving to per-year files happens by itself at the first publish with this version. The old
+  single file (marketing-hub-budget-events.json) is then kept as an empty marker. If someone on an
+  older version still publishes to it, its new rows are picked up, an edited row replaces the shared one only
+  when it was edited more recently, and everything moves into the year files at the next publish.
+- The Data tab's file list shows each year's file.
+- Budget lines now also get an "Updated by / on" stamp when an event action changes their links:
+  deleting an event, linking or unlinking existing lines in the event form, or switching an event
+  to "No budget line". Events themselves already got this stamp on every real edit.
+
+### Changed
+- The "New / Edit budget line" and "New / Edit campaign / event" pop-ups are redesigned to fit a
+  normal laptop screen without scrolling. Both are wider and more compact. The budget line form
+  has the details on the left, and the linked campaigns, an amounts grid (forecast and actual, with
+  the net shown live) and notes on the right. The campaign / event form is split into tabs:
+  Details (with countries), Partners & content, Budget and Outcomes; small counters on the tabs
+  show what is filled in. Save and Cancel always stay visible at the bottom. If something is
+  missing on Save, the form jumps to the tab with that field.
 
 ### Added
+- Budget tab: the column order is now yours to set. Open "Columns" and drag a column up or down,
+  or use the arrows; "Reset column order" goes back to the default. The rows and the totals line
+  follow the order. Like column widths and hidden columns, the order is remembered in this browser.
+- Each user can have a "Home cluster", set by an admin in the Users tab. After logging in, the
+  Budget tab opens filtered on that cluster, so people see their own view straight away. They can
+  still switch to another cluster or "All clusters". Users without a home cluster see all clusters,
+  as before. The home cluster is part of the setup, so publish the setup after setting it.
 - The login screen now has a "Connect to shared folder..." button. On a new computer, pick the
   team's shared folder and the app loads the users, setup, budget & events and passwords from it
   in one step. Then pick your name and log in with your existing account. If the computer already

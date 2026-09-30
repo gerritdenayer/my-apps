@@ -652,32 +652,45 @@
 
     const modal=S.openModal(`
       <h2>${isEdit?"Edit campaign / event":"New campaign / event"}</h2>
-      <div class="row">
-        <div><label>Name *</label><input id="c-name" type="text" value="${S.escapeHtml(e.name)}" /></div>
-        <div><label>Kind</label><select id="c-kind">${opt([["Event","Event"],["Campaign","Campaign"]],e.kind||"Event")}</select></div>
+      <div class="modal-tabs">
+        <button type="button" class="active" data-pane="details">Details</button>
+        <button type="button" data-pane="partners">Partners &amp; content</button>
+        <button type="button" data-pane="budget">Budget</button>
+        <button type="button" data-pane="outcomes">Outcomes</button>
       </div>
-      <div class="row-3">
-        <div><label>Start *</label><input id="c-start" type="date" value="${e.start||""}" /></div>
-        <div><label>End</label><input id="c-end" type="date" value="${e.end||""}" /></div>
-        <div><label>Owner</label><select id="c-owner">${ownerOptions(e.ownerId||"")}</select></div>
+      <div class="modal-panes">
+      <div class="modal-pane" data-pane="details">
+        <div class="form-cols">
+          <div>
+            <div class="row-3">
+              <div class="span-2"><label>Name *</label><input id="c-name" type="text" value="${S.escapeHtml(e.name)}" /></div>
+              <div><label>Kind</label><select id="c-kind">${opt([["Event","Event"],["Campaign","Campaign"]],e.kind||"Event")}</select></div>
+            </div>
+            <div class="row-3">
+              <div><label>Start *</label><input id="c-start" type="date" value="${e.start||""}" /></div>
+              <div><label>End</label><input id="c-end" type="date" value="${e.end||""}" /></div>
+              <div><label>Owner</label><select id="c-owner">${ownerOptions(e.ownerId||"")}</select></div>
+            </div>
+            <div class="row-3">
+              <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
+              <div><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
+              <div><label>SVP</label>
+                <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${e.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+            </div>
+            <div class="row">
+              <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
+                <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
+              <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
+            </div>
+            <label>Notes</label>
+            <textarea id="c-info" rows="4">${S.escapeHtml(e.info||"")}</textarea>
+          </div>
+          <div>
+            ${countriesPickerHtml(data, e.countryIds)}
+          </div>
+        </div>
       </div>
-      <div class="row-3">
-        <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
-        <div><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
-        <div><label>SVP</label>
-          <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${e.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
-      </div>
-      <div class="row-3">
-        <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
-          <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
-        <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
-        <div></div>
-      </div>
-      <label>Notes</label>
-      <textarea id="c-info">${S.escapeHtml(e.info||"")}</textarea>
-
-      ${countriesPickerHtml(data, e.countryIds)}
-
+      <div class="modal-pane hidden" data-pane="partners">
       <h3 style="margin:12px 0 4px">Partners</h3>
       <div class="tl-rowset" id="c-partners"></div>
       <button class="link" id="c-addpartner" type="button">+ Add partner</button>
@@ -687,9 +700,9 @@
       <button class="link" id="c-addcontent" type="button">+ Add content link</button>
 
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
-
-      <h3 style="margin:14px 0 4px">Budget</h3>
-      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP are taken from the event above.</p>
+      </div>
+      <div class="modal-pane hidden" data-pane="budget">
+      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP are taken from the Details tab.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
@@ -728,20 +741,48 @@
         <div id="c-bexlist" style="max-height:180px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${existingLinesHtml}</div>
         <p class="muted small">Tick the lines this campaign belongs to. A line can serve several campaigns.</p>
       </div>
-
+      </div>
+      <div class="modal-pane hidden" data-pane="outcomes">
       ${outcomesHtml}
+      </div>
+      </div>
 
-      ${isEdit ? `<div class="muted small" style="margin-top:12px; border-top:1px solid #eef0f3; padding-top:8px;">
+      <div class="actions sticky-actions">
+        ${isEdit ? `<div class="muted small audit">
         Created by ${S.escapeHtml((e.createdBy && S.userById(e.createdBy) ? S.userById(e.createdBy).name : "") || "-")} on ${tlFmtDT(e.createdAt)}
         &middot; Last updated by ${S.escapeHtml((e.updatedBy && S.userById(e.updatedBy) ? S.userById(e.updatedBy).name : "") || "-")} on ${tlFmtDT(e.updatedAt)}
       </div>` : ""}
-
-      <div class="actions" style="margin-top:16px">
         <button class="secondary" id="c-cancel">Cancel</button>
         ${isEdit?'<button class="secondary" id="c-delete" style="color:#a00">Delete</button>':''}
         <button class="primary" id="c-save">${isEdit?"Save":"Create"}</button>
       </div>
-    `, { closeOnBackdrop:false });
+    `, { closeOnBackdrop:false, cls:"modal-form modal-tabbed" });
+
+    // Tabs: show one pane at a time. All fields stay in the form, so Save reads every tab.
+    const showPane=(name)=>{
+      modal.querySelectorAll(".modal-tabs button").forEach(b=>b.classList.toggle("active", b.dataset.pane===name));
+      modal.querySelectorAll(".modal-pane").forEach(p=>p.classList.toggle("hidden", p.dataset.pane!==name));
+    };
+    modal.querySelectorAll(".modal-tabs button").forEach(b=>{ b.onclick=()=>showPane(b.dataset.pane); });
+    // Small counters on the tabs, so filled-in tabs are visible at a glance.
+    const updBadges=()=>{
+      const set=(pane,n)=>{ const b=modal.querySelector(`.modal-tabs button[data-pane="${pane}"]`); if(!b) return;
+        let s=b.querySelector(".tab-badge"); if(!n){ if(s) s.remove(); return; }
+        if(!s){ s=document.createElement("span"); s.className="tab-badge"; b.appendChild(s); } s.textContent=n; };
+      set("partners", modal.querySelectorAll("#c-partners > *").length + modal.querySelectorAll("#c-content > *").length);
+      set("outcomes", [...modal.querySelectorAll('[data-pane="outcomes"] input[type=number]')].filter(i=>i.value!=="" && +i.value!==0).length);
+    };
+    modal.addEventListener("input", updBadges); modal.addEventListener("click", ()=>setTimeout(updBadges,0));
+    setTimeout(updBadges,0);
+    // On Save, jump to the tab that holds a missing or wrong field (the toast explains what).
+    modal.querySelector("#c-save").addEventListener("click", ()=>{
+      const v=(sel)=>{ const el=modal.querySelector(sel); return el?el.value:""; };
+      const bm=v("#c-bmode");
+      if(!v("#c-name").trim() || !v("#c-start") || (v("#c-end") && v("#c-end")<v("#c-start"))) return showPane("details");
+      if(bm==="new" && !v("#c-entity")) return showPane("details");
+      if(bm==="new" && !v("#c-type")) return showPane("budget");
+      if(bm==="existing" && !modal.querySelector("#c-bexlist .bx-chk:checked")) return showPane("budget");
+    });
 
     // Cluster <-> organising entity cascade (entity value = id), budget entity follows it.
     const clusterSel=modal.querySelector("#c-cluster");
@@ -931,7 +972,7 @@
         const ok=await S.confirmDialog(msg);
         if(!ok) return;
         data.events=data.events.filter(x=>x.id!==id);
-        linkedActivities(id).forEach(a=>{ a.eventIds=(a.eventIds||[]).filter(x=>x!==id); });
+        linkedActivities(id).forEach(a=>{ a.eventIds=(a.eventIds||[]).filter(x=>x!==id); stampUpdated(a); });
         S.scheduleSave(); S.notify(); S.closeModal(); S.toast("Campaign deleted","success");
       };
     }
@@ -1018,8 +1059,8 @@
         const sel=new Set(selectedExisting);
         (data.activities||[]).forEach(a=>{
           const has=(a.eventIds||[]).includes(e.id);
-          if(sel.has(a.id) && !has) a.eventIds=[...(a.eventIds||[]), e.id];
-          else if(!sel.has(a.id) && has) a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id);
+          if(sel.has(a.id) && !has){ a.eventIds=[...(a.eventIds||[]), e.id]; stampUpdated(a); }
+          else if(!sel.has(a.id) && has){ a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id); stampUpdated(a); }
         });
         primaryId=""; // no dedicated managed line when linking existing
       } else {
@@ -1027,7 +1068,7 @@
         // and delete the campaign's own dedicated line if it is now orphaned. Shared lines that
         // still serve other campaigns are only unlinked, never deleted.
         const primaryLineId=e.primaryActivityId;
-        (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id)) a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id); });
+        (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id)){ a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id); stampUpdated(a); } });
         if(primaryLineId){
           const idx=(data.activities||[]).findIndex(x=>x.id===primaryLineId);
           if(idx>=0 && ((data.activities[idx].eventIds||[]).length===0)) data.activities.splice(idx,1);
@@ -1102,6 +1143,9 @@
       <input id="c-country-search" type="text" placeholder="Type to filter countries..." style="margin-bottom:6px" />
       <div id="c-country-list" style="max-height:160px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${boxes}</div>`;
   }
+
+  // Mark a budget line as updated now by the current user (used when an event action changes its links).
+  function stampUpdated(a){ a.updatedBy=S.state.currentUserId; a.updatedAt=new Date().toISOString(); }
 
   // Signature of a record's content, ignoring audit fields, to tell a real edit from a no-op save.
   function contentSig(o){

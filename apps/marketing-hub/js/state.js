@@ -312,7 +312,8 @@
   // Modal
   function openModal(html, opts) {
     const root = document.getElementById("modal-root");
-    root.innerHTML = `<div class="modal-backdrop"><div class="modal">${html}</div></div>`;
+    const cls = (opts && opts.cls) ? " " + opts.cls : "";
+    root.innerHTML = `<div class="modal-backdrop"><div class="modal${cls}">${html}</div></div>`;
     const backdrop = root.querySelector(".modal-backdrop");
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop && (!opts || opts.closeOnBackdrop !== false)) closeModal();
