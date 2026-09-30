@@ -219,3 +219,21 @@ td.actions-cell button { margin-left: 4px; }
 .modal-tabs button .tab-badge { display: inline-block; min-width: 16px; padding: 0 5px; margin-left: 4px; border-radius: 8px; background: #f1f5f9; color: #475569; font-size: 11px; }
 .modal.modal-tabbed { min-height: min(640px, 90vh); display: flex; flex-direction: column; }
 .modal.modal-tabbed .modal-panes { flex: 1; }
+
+/* Settings: sub-menu on the left, one section at a time on the right */
+body.settings-mode main#app-main { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; }
+#settings-nav { position: sticky; top: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 8px; }
+#settings-nav .sn-group { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin: 10px 8px 4px; }
+#settings-nav .sn-group:first-child { margin-top: 2px; }
+#settings-nav button { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: 7px 10px; font-size: 13px; color: #374151; cursor: pointer; }
+#settings-nav button:hover { background: #f3f4f6; }
+#settings-nav button.active { background: #fff3eb; color: #ff6a00; font-weight: 500; }
+#settings-nav button .sn-lock { margin-left: auto; font-size: 11px; opacity: .6; }
+#tab-settings[data-show] .card[data-sec] { display: none; }
+#tab-settings[data-show="entities"] .card[data-sec="entities"] { display: block; }
+#tab-settings[data-show="svps"] .card[data-sec="svps"] { display: block; }
+#tab-settings[data-show="countries"] .card[data-sec="countries"] { display: block; }
+#tab-settings[data-show="types"] .card[data-sec="types"] { display: block; }
+#tab-settings[data-show="statuses"] .card[data-sec="statuses"] { display: block; }
+#tab-settings[data-show="import"] .card[data-sec="import"] { display: block; }
+@media (max-width: 800px) { body.settings-mode main#app-main { grid-template-columns: 1fr; } #settings-nav { position: static; } }

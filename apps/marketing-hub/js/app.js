@@ -63,9 +63,10 @@
     };
 
     S.subscribe(() => {
-      const active = document.querySelector(".tab.active");
-      if (!active) return;
-      renderActiveTab(active.dataset.tab);
+      // Re-render the panel on screen (a Settings section may be showing under the Settings button).
+      const panel = document.querySelector(".tab-panel.active");
+      if (!panel) return;
+      renderActiveTab(panel.id.replace(/^tab-/, ""));
     });
 
     await loadAndShowLogin();
@@ -289,8 +290,74 @@
     if (window.MB_DATA && window.MB_DATA.initSharedRefresh) window.MB_DATA.initSharedRefresh();
   }
 
+  // ---- Settings sub-menu ----
+  // Budget structure, Data & sharing and Users used to be top-level tabs; they now live under
+  // Settings with the other sections. "tab" is the panel that renders it; admin-only sections ask
+  // for the pin when the user is not an admin (same rule as before).
+  const SETTINGS_ITEMS = [
+    { group: "Structure" },
+    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true },
+    { key: "budget-structure", label: "Budget structure", tab: "budget-structure", cap: "viewStructure" },
+    { group: "Lists" },
+    { key: "svps", label: "SVPs", tab: "settings", admin: true },
+    { key: "countries", label: "Countries", tab: "settings", admin: true },
+    { key: "types", label: "Activity types & A&P", tab: "settings", admin: true },
+    { key: "statuses", label: "Statuses", tab: "settings", admin: true },
+    { group: "Team & data" },
+    { key: "users", label: "Users & access", tab: "users", admin: true },
+    { key: "data", label: "Data & sharing", tab: "data", cap: "importExport" },
+    { key: "import", label: "Bulk import", tab: "settings", admin: true },
+  ];
+  const SETTINGS_TABS = ["settings", "budget-structure", "data", "users"];
+  let settingsSection = null;
+  function settingsItemAllowed(it, withPin) {
+    const AUTH = window.MB_AUTH;
+    if (it.admin) return withPin ? true : AUTH.canSeeSettings();
+    return AUTH.can(it.cap);
+  }
+  // Items this user can open right now, or after entering the pin (admin sections).
+  function visibleSettingsItems() {
+    const AUTH = window.MB_AUTH;
+    return SETTINGS_ITEMS.filter((it) => it.group || it.admin || AUTH.can(it.cap));
+  }
+  function renderSettingsNav() {
+    const nav = document.getElementById("settings-nav");
+    if (!nav) return;
+    const AUTH = window.MB_AUTH;
+    const items = visibleSettingsItems();
+    // Drop group headings with no item under them.
+    const html = items.map((it, i) => {
+      if (it.group) {
+        const next = items.slice(i + 1).find((x) => true);
+        return next && !next.group ? `<div class="sn-group">${escapeHtml(it.group)}</div>` : "";
+      }
+      const locked = !settingsItemAllowed(it, false);
+      return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}</button>`;
+    }).join("");
+    nav.innerHTML = html;
+    nav.querySelectorAll("button[data-sec]").forEach((b) => { b.onclick = () => openSettings(b.dataset.sec); });
+  }
+  function openSettings(key) {
+    const AUTH = window.MB_AUTH;
+    let it = SETTINGS_ITEMS.find((x) => x.key === key && !x.group);
+    if (!it) it = SETTINGS_ITEMS.find((x) => !x.group && settingsItemAllowed(x, false));
+    if (!it) { doSwitch(AUTH.firstAllowedTab()); return; }
+    if (!settingsItemAllowed(it, false)) {
+      if (it.admin) { AUTH.promptPin(() => { AUTH.applyTabVisibility(); openSettings(it.key); }); }
+      return;
+    }
+    settingsSection = it.key;
+    doSwitch(it.tab, it.key);
+  }
+
   function switchTab(name) {
     const AUTH = window.MB_AUTH;
+    // Settings and its sections (Budget structure, Data & sharing, Users) open through the
+    // Settings sub-menu. Opening "settings" goes to the last section used, or the first allowed.
+    if (SETTINGS_TABS.includes(name)) {
+      if (name === "settings") return openSettings(settingsSection);
+      return openSettings(name);
+    }
     // Settings and Users are protected by the pin (or god code), once per session.
     const pinGated = (name === "settings" || name === "users");
     if (pinGated && !AUTH.isUnlocked()) {
@@ -306,13 +373,19 @@
     doSwitch(name);
   }
 
-  function doSwitch(name) {
-    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  function doSwitch(name, section) {
+    const inSettings = SETTINGS_TABS.includes(name);
+    const topName = inSettings ? "settings" : name;
+    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === topName));
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
-    renderActiveTab(name);
+    document.body.classList.toggle("settings-mode", inSettings);
+    const nav = document.getElementById("settings-nav");
+    if (nav) nav.classList.toggle("hidden", !inSettings);
+    if (inSettings) renderSettingsNav();
+    renderActiveTab(name, section);
   }
 
-  function renderActiveTab(name) {
+  function renderActiveTab(name, section) {
     if (name === "budget") window.MB_BUDGET.render();
     if (name === "timeline") window.MB_TIMELINE.render();
     if (name === "reporting") window.MB_REPORTING.render();
@@ -320,7 +393,7 @@
     if (name === "budget-structure") window.MB_STRUCTURE.render();
     if (name === "data") window.MB_DATA.render();
     if (name === "users") window.MB_USERS.render();
-    if (name === "settings") window.MB_SETTINGS.render();
+    if (name === "settings") window.MB_SETTINGS.render(section);
   }
 
   function escapeHtml(s) {

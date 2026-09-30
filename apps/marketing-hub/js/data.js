@@ -393,7 +393,7 @@
   async function checkForShared() {
     if (!SH || !SH.supported()) return S.toast("Shared folder is not available in this browser.", "error");
     const dir = await SH.savedFolder();
-    if (!dir) return S.toast("Choose the shared folder first (Data tab).", "error");
+    if (!dir) return S.toast("Choose the shared folder first (Settings > Data & sharing).", "error");
     if (!(await SH.ensurePerm(dir, "readwrite"))) return S.toast("Access to the shared folder was not granted.", "error");
     await syncPasswords({ auto: false });
     await checkSetup({ auto: false });
@@ -772,7 +772,7 @@
     opts = opts || {};
     if (!SH || !SH.supported()) return;
     const dir = await SH.savedFolder();
-    if (!dir) { if (!opts.auto) S.toast("Choose the shared folder first (Data tab).", "error"); return; }
+    if (!dir) { if (!opts.auto) S.toast("Choose the shared folder first (Settings > Data & sharing).", "error"); return; }
     const permOk = opts.auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
     if (!permOk) { if (!opts.auto) S.toast("Access to the shared folder was not granted.", "error"); return; }
     let incoming;
@@ -805,7 +805,7 @@
     const missN = diff.events.missing.length + diff.activities.missing.length;
     const names = (arr) => arr.slice(0, 50).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.name)}</div>`).join("");
     const block = (title, arr) => arr.length ? `<details style="margin:4px 0"><summary style="cursor:pointer">${title} (${arr.length})</summary>${names(arr)}</details>` : "";
-    const missNote = missN ? `<p class="muted small" style="margin-top:10px">${missN} item(s) exist only on your copy and were kept (not deleted). To sync deletions, use Data tab &rarr; Pull budget &amp; events.</p>` : "";
+    const missNote = missN ? `<p class="muted small" style="margin-top:10px">${missN} item(s) exist only on your copy and were kept (not deleted). To sync deletions, use Settings &rarr; Data &amp; sharing &rarr; Pull budget &amp; events.</p>` : "";
     const m = S.openModal(`
       <h2>Shared data updated</h2>
       <p class="muted small">From ${S.escapeHtml(by)}${when ? " on " + S.escapeHtml(when) : ""}. Applied automatically.</p>
@@ -1129,7 +1129,7 @@
     catch (e) { if (!opts.auto) S.toast("Could not read the shared setup file: " + e.message, "error"); return; }
     const admin = canPushSetup();
     if (!remote) {
-      if (admin && !opts.auto) S.toast("No setup file in the shared folder yet. Publish it from the Data tab.", "error");
+      if (admin && !opts.auto) S.toast("No setup file in the shared folder yet. Publish it from Settings > Data & sharing.", "error");
       return;
     }
     const status = setupStatus(remote);

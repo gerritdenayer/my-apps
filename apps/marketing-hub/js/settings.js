@@ -41,10 +41,15 @@
     window.__mbSettingsUnloadGuard = true;
   }
 
-  function render() {
+  // Settings is split into sections (see the sub-menu in app.js). Only the chosen section's card
+  // is shown; the attribute on the panel survives re-renders.
+  let section = "entities";
+  function render(sec) {
+    if (sec) section = sec;
     const root = document.getElementById("tab-settings");
     const data = S.state.data;
     if (!data) { root.innerHTML = ""; return; }
+    root.setAttribute("data-show", section);
     renderInner(root, data);
   }
 
@@ -55,9 +60,9 @@
         <span class="grow"></span>
         <button id="set-saveall" class="primary" disabled>Save all changes</button>
       </div>
-      <div class="card">
+      <div class="card" data-sec="entities">
         <h2>Entity structure</h2>
-        <p class="muted small">Hierarchy is M1 &gt; Cluster &gt; Entity. Cluster is used for subtotals in reporting; M1 is the top zone level and is a reporting filter. The budget code is per year. The yearly budget amounts are set in the Budget Structure tab.</p>
+        <p class="muted small">Hierarchy is M1 &gt; Cluster &gt; Entity. Cluster is used for subtotals in reporting; M1 is the top zone level and is a reporting filter. The budget code is per year. The yearly budget amounts are set in Settings &gt; Budget structure.</p>
         <div class="filter-bar">
           <div><label>Budget code year</label><select id="ent-year">${yearOptions()}</select></div>
         </div>
@@ -79,7 +84,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sec="svps">
         <h2>SVPs</h2>
         <p class="muted small">Includes None and All as selectable values.</p>
         <div id="svps-list" class="chip-list"></div>
@@ -89,7 +94,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sec="countries">
         <h2>Countries</h2>
         <p class="muted small">Used to tag campaigns and events so people can see what is happening in their country. Not linked to budget. Mark a value as "global" (like Pan-European) to make it show under every country in the agenda.</p>
         <div id="countries-list" class="chip-list"></div>
@@ -107,7 +112,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sec="types">
         <h2>Activity types &amp; A&amp;P categories</h2>
         <p class="muted small">Each activity type belongs to one A&amp;P category. Budget lines inherit the category from their type, and can override it per line.</p>
         <h3>Activity types</h3>
@@ -128,7 +133,7 @@
         <button class="secondary" id="apply-apcat">Apply A&amp;P category from type to lines without one</button>
       </div>
 
-      <div class="card">
+      <div class="card" data-sec="statuses">
         <h2>Activity statuses</h2>
         <div id="status-list" class="chip-list"></div>
         <div class="row">
@@ -137,7 +142,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-sec="import">
         <h2>Bulk import from Excel</h2>
         <p class="muted small">Upload any .xlsx file. Pick the sheet, confirm the column mapping, preview a few rows, then import. Each row with a monthly amount becomes one budget line dated to the first of that month.</p>
         <button id="btn-import-excel" class="primary">Import from Excel file...</button>

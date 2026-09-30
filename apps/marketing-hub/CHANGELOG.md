@@ -1,5 +1,18 @@
 # Changelog
 
+## [v5.1.2] - 2026-09-30 - Simpler top menu, Settings sub-menu
+
+### Changed
+- Simpler top menu: Budget, Campaigns & events, Reporting, Outcomes and Settings. Budget
+  structure, Data (now "Data & sharing") and Users (now "Users & access") moved under Settings.
+- Settings now has a sub-menu on the left, grouped as Structure (Entities & clusters, Budget
+  structure), Lists (SVPs, Countries, Activity types & A&P, Statuses) and Team & data (Users &
+  access, Data & sharing, Bulk import). Only the chosen section shows, so the page is no longer
+  one long scroll. Settings reopens on the last section you used.
+- Access is unchanged: budget owners still reach Budget structure and Data & sharing without the
+  admin pin, marketing users still see Budget structure, and admin-only sections show a lock and
+  ask for the pin. Campaigns viewers only see Campaigns & events, as before.
+
 ## [v5.1.1] - 2026-09-30 - Per-year shared files, login connect, column order, home cluster, roomier forms
 
 ### Changed

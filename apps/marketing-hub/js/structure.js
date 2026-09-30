@@ -71,8 +71,8 @@
 
     if (ents.length === 0) {
       html += allEnts.length === 0
-        ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Entity structure.</p>`
-        : `<p class="bs-empty">No entities are active in ${view.year}. Set each entity's "Active from / Until" years in Settings &gt; Entity structure.</p>`;
+        ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Entities &amp; clusters.</p>`
+        : `<p class="bs-empty">No entities are active in ${view.year}. Set each entity's "Active from / Until" years in Settings &gt; Entities &amp; clusters.</p>`;
       root.innerHTML = html;
       wire(root, canEdit);
       return;

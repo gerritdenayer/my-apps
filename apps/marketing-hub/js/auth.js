@@ -108,7 +108,7 @@
     document.querySelectorAll(".tab").forEach((btn) => {
       const t = btn.dataset.tab;
       let vis;
-      if (t === "settings") vis = canSeeSettings();
+      if (t === "settings") vis = canSeeSettings() || can("viewStructure") || can("importExport");
       else if (t === "users") vis = canSeeUsers();
       else vis = can(TAB_CAP[t]);
       btn.classList.toggle("hidden", !vis);
@@ -119,7 +119,7 @@
   }
 
   function firstAllowedTab() {
-    const order = ["budget", "timeline", "reporting", "outcomes", "budget-structure", "users", "settings"];
+    const order = ["budget", "timeline", "reporting", "outcomes", "settings"];
     return order.find((t) => (t === "settings" ? canSeeSettings() : t === "users" ? canSeeUsers() : can(TAB_CAP[t]))) || "timeline";
   }
 
