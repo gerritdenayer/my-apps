@@ -20,6 +20,19 @@
     if (loginPass) loginPass.onkeydown = (e) => { if (e.key === "Enter") onLogin(); };
     document.getElementById("logout-btn").onclick = onLogout;
 
+    // First-time setup: point this browser at the team's shared folder from the login screen.
+    const connectBtn = document.getElementById("login-connect");
+    if (connectBtn) connectBtn.onclick = async () => {
+      clearLoginError();
+      if (!window.MB_DATA || !window.MB_DATA.connectShared) return;
+      const res = await window.MB_DATA.connectShared();
+      if (!res) return; // cancelled
+      if (res.error) return showLoginError(res.error);
+      await API.save(S.state.data);
+      await loadAndShowLogin();
+      S.toast("Connected to the shared folder. Pick your name and log in.", "success");
+    };
+
     // Recovery: load a data file straight from the login screen (no login needed).
     const importLink = document.getElementById("login-import");
     const importFile = document.getElementById("login-file");
@@ -125,6 +138,8 @@
       S.setLastUpdated(data.meta && data.meta.lastUpdated);
       setTimeout(() => S.setSyncStatus("", "Saved locally"), 1000);
 
+      await renderLoginShared(data);
+
       const userSel = document.getElementById("login-user");
       const users = (data.settings.users || []).filter((u) => u.active !== false);
       const remembered = localStorage.getItem(LS_USER);
@@ -139,6 +154,35 @@
       console.error(e);
       showLoginError("Could not load local data. Details: " + e.message);
       S.setSyncStatus("error", "Load failed");
+    }
+  }
+
+  // The shared folder box on the login screen: explains the state and offers to connect.
+  async function renderLoginShared(data) {
+    const box = document.getElementById("login-shared");
+    const txt = document.getElementById("login-shared-text");
+    const btn = document.getElementById("login-connect");
+    if (!box || !txt || !btn) return;
+    const SH = window.MB_SHARE;
+    box.classList.remove("hidden");
+    if (!SH || !SH.supported()) {
+      txt.textContent = "To work with your team's shared folder, open this app in Chrome or Edge.";
+      btn.classList.add("hidden");
+      return;
+    }
+    btn.classList.remove("hidden");
+    const dir = await SH.savedFolder();
+    const noUsers = !((data.settings.users || []).length);
+    if (dir) {
+      txt.innerHTML = `Shared folder: <strong>${escapeHtml(dir.name)}</strong>`;
+      btn.textContent = "Connect to another shared folder...";
+      btn.className = "link";
+    } else {
+      txt.textContent = noUsers
+        ? "New on this computer? Connect to your team's shared folder to load the users, setup, budget and events. Then log in with your existing account."
+        : "Not connected to a shared folder. Connect to share budget, events and setup with your team.";
+      btn.textContent = "Connect to shared folder...";
+      btn.className = noUsers ? "primary" : "secondary";
     }
   }
 

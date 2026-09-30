@@ -22,7 +22,11 @@
       <label for="login-pass">Password</label>
       <input id="login-pass" type="password" autocomplete="off" placeholder="Default is 1234 for a new account" />
       <button id="login-btn" class="primary">Continue</button>
-      <p class="muted small">First time? Pick "Add new user..." to create your profile. New accounts start with password 1234 and ask you to set your own.</p>
+      <div id="login-shared" class="hidden" style="margin-top:14px; border-top:1px solid #e5e7eb; padding-top:10px;">
+        <p class="muted small" id="login-shared-text" style="margin:0 0 8px"></p>
+        <button id="login-connect" class="secondary">Connect to shared folder...</button>
+      </div>
+      <p class="muted small">Working alone? Pick "Add new user..." to create your profile. New accounts start with password 1234 and ask you to set your own.</p>
       <p class="muted small" style="margin-top:14px; border-top:1px solid #e5e7eb; padding-top:10px;">
         Locked out or restoring a backup? <a href="#" id="login-import">Load a data file...</a>
       </p>

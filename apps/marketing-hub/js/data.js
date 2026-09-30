@@ -896,6 +896,45 @@
     syncPasswords({ auto: true, quiet: true });
   }
 
+  // ---- First connection from the login screen ----
+  // Pick the shared folder and load everything from it: the setup (users, entities, budgets...),
+  // the budget & events (merged: nothing local is removed) and the passwords. Returns null when
+  // cancelled, { error } on a problem, or a summary. The caller saves and reloads the login screen.
+  async function connectShared() {
+    if (!SH || !SH.supported()) return { error: "This browser cannot use a shared folder. Use Chrome or Edge." };
+    let dir;
+    try { dir = await SH.chooseFolder(); }
+    catch (e) { return (e && e.name === "AbortError") ? null : { error: "Could not open the folder: " + e.message }; }
+    let setup, data;
+    try {
+      setup = await SH.readJson(dir, SETUP_FILE);
+      data = await SH.readJson(dir, DATA_FILE);
+    } catch (e) { return { error: "Could not read the shared files: " + e.message }; }
+    if (!setup && !data) {
+      await SH.forgetFolder();
+      return { error: `"${dir.name}" has no Marketing Hub files (${SETUP_FILE}, ${DATA_FILE}). Pick the team's shared folder.` };
+    }
+    const cur = S.state.data;
+    const hasLocal = ((cur.settings.users || []).length) || (cur.activities || []).length || (cur.events || []).length;
+    if (hasLocal) {
+      const ok = await S.confirmDialog(`This computer already has data. Load the team's setup from "${dir.name}" and merge in the shared budget & events? Your own budget lines and events are kept. Export a backup first if unsure.`);
+      if (!ok) return null;
+    }
+    if (setup) {
+      S.state.data = API.replaceSetup(S.state.data, setup);
+      markSetupSynced(setup);
+    }
+    if (data) {
+      reconcileIncomingCountries(data);
+      S.state.data = API.applyBudgetEventsMerge(S.state.data, data, {});
+      if (data.meta && data.meta.exportedAt) localStorage.setItem(SEEN_KEY, data.meta.exportedAt);
+      markPublishBaseline();
+    }
+    await syncPasswords({ auto: true });
+    updateSharedHeader();
+    return { folder: dir.name, setup: !!setup, data: !!data };
+  }
+
   // ---- Shared passwords file ----
   // { version, meta, users: { <userId>: { name, pwSalt, pwHash, mustChangePassword, pwChangedAt,
   // pwChangedBy } } }. Only hashes are stored, never a password. Per user, the newest change wins.
@@ -1035,5 +1074,5 @@
   }
 
 
-  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, syncPasswords, pushPassword, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

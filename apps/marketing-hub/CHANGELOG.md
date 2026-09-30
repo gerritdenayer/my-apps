@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- The login screen now has a "Connect to shared folder..." button. On a new computer, pick the
+  team's shared folder and the app loads the users, setup, budget & events and passwords from it
+  in one step. Then pick your name and log in with your existing account. If the computer already
+  has data, the app asks first, loads the team's setup and merges in the shared budget & events
+  (nothing of your own is removed). The login screen also shows which shared folder is in use, and
+  suggests Chrome or Edge in browsers that cannot use a shared folder.
+
 ## [v5.1] - 2026-09-29 - The setup is checked for updates too
 
 ### Added
