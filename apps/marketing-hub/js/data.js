@@ -351,10 +351,11 @@
     };
     const data = f(localStorage.getItem(SEEN_KEY));
     const setup = f(localStorage.getItem(SETUP_SEEN_KEY));
+    // One line each, shown in the "last updated" pop-up in the header.
     const parts = [];
-    if (data) parts.push("Shared file: " + data);
-    if (setup) parts.push("Setup: " + setup);
-    el.textContent = parts.join(" \u00b7 ");
+    if (data) parts.push("Shared budget &amp; events: " + S.escapeHtml(data));
+    if (setup) parts.push("Shared setup: " + S.escapeHtml(setup));
+    el.innerHTML = parts.map((x) => `<div>${x}</div>`).join("");
   }
   // True when the local budget & events differ from what was last published or pulled.
   function budgetEventsDirty() {
@@ -615,16 +616,7 @@
     };
 
     const pushSetupBtn = root.querySelector("#sh-push-setup");
-    if (pushSetupBtn) pushSetupBtn.onclick = async () => {
-      const dir = await shareDir();
-      if (!dir) return;
-      const ok = await S.confirmDialog("Publish your setup to the shared folder? It becomes the master that everyone pulls. Their budget lines and events are not touched.");
-      if (!ok) return;
-      try {
-        await publishSetupTo(dir);
-        S.toast("Setup published to the shared folder.", "success");
-      } catch (e) { S.toast("Could not publish setup: " + e.message, "error"); }
-    };
+    if (pushSetupBtn) pushSetupBtn.onclick = () => publishSetupFlow();
 
     const pullSetupBtn = root.querySelector("#sh-pull-setup");
     if (pullSetupBtn) pullSetupBtn.onclick = async () => {
@@ -874,6 +866,7 @@
       if (fileObj.meta && fileObj.meta.exportedAt) localStorage.setItem(SETUP_SEEN_KEY, fileObj.meta.exportedAt);
     } catch (e) {}
     updateSharedHeader();
+    if (window.MB_APP && window.MB_APP.refreshSetupStatus) setTimeout(() => window.MB_APP.refreshSetupStatus(), 0);
   }
   // Compare the local setup with the shared one. Returns one of:
   // "same", "remote-newer", "local-changes", "both-changed", "unknown" (differs, no sync history).
@@ -1049,6 +1042,56 @@
     return { folder: dir.name, setup: !!setup, data: !!data };
   }
 
+  // ---- Setup publish status (shown in the Settings sub-menu) ----
+  // Is the setup on this computer different from what was last published or pulled?
+  // Returns { show, noFolder, dirty } where dirty is true, false or null (unknown: no access yet).
+  async function setupPublishState() {
+    if (!SH || !SH.supported() || !canPushSetup()) return { show: false };
+    const dir = await SH.savedFolder();
+    if (!dir) return { show: true, noFolder: true };
+    const localSig = setupSig(S.state.data.settings);
+    const base = localStorage.getItem(SETUP_BASE_KEY);
+    if (base !== null) return { show: true, dirty: localSig !== base };
+    // Never synced on this computer: compare with the shared file if we already have access.
+    if (await SH.hasPerm(dir, "readwrite")) {
+      let remote = null;
+      try { remote = await SH.readJson(dir, SETUP_FILE); } catch (e) {}
+      if (!remote) return { show: true, dirty: true };
+      if (setupSig(remote.settings) === localSig) { markSetupSynced(remote); return { show: true, dirty: false }; }
+      return { show: true, dirty: true };
+    }
+    return { show: true, dirty: null };
+  }
+  // Publish the setup, with a clear warning if someone else published since your last sync.
+  async function publishSetupFlow() {
+    if (!canPushSetup()) { S.toast("Only admins can publish the setup.", "error"); return false; }
+    // Include any Settings edits that are not saved yet.
+    if (window.MB_SETTINGS && window.MB_SETTINGS.isDirty && window.MB_SETTINGS.isDirty()) window.MB_SETTINGS.saveAll();
+    const dir = await shareDir();
+    if (!dir) return false;
+    let remote = null;
+    try { remote = await SH.readJson(dir, SETUP_FILE); } catch (e) {}
+    const st = remote ? setupStatus(remote) : "local-changes";
+    if (st === "same") {
+      markSetupSynced(remote);
+      S.toast("The shared setup is already up to date.", "success");
+      if (window.MB_APP && window.MB_APP.refreshSetupStatus) window.MB_APP.refreshSetupStatus();
+      return true;
+    }
+    const who = (remote && remote.meta && remote.meta.exportedBy) || "a teammate";
+    const when = remote && remote.meta && remote.meta.exportedAt ? new Date(remote.meta.exportedAt).toLocaleString("en-GB") : "";
+    const msg = (st === "both-changed" || st === "remote-newer" || st === "unknown")
+      ? `Careful: the shared setup was published by ${who}${when ? " on " + when : ""}, and it differs from what this computer last synced. Publishing replaces it with your version for everyone. Continue?`
+      : "Publish your setup to the shared folder? Everyone gets it the next time they open the app. Budget lines and events are not touched.";
+    if (!(await S.confirmDialog(msg))) return false;
+    try {
+      await publishSetupTo(dir);
+      S.toast("Setup published to the shared folder.", "success");
+    } catch (e) { S.toast("Could not publish setup: " + e.message, "error"); return false; }
+    if (window.MB_APP && window.MB_APP.refreshSetupStatus) window.MB_APP.refreshSetupStatus();
+    return true;
+  }
+
   // ---- Shared passwords file ----
   // { version, meta, users: { <userId>: { name, pwSalt, pwHash, mustChangePassword, pwChangedAt,
   // pwChangedBy } } }. Only hashes are stored, never a password. Per user, the newest change wins.
@@ -1188,5 +1231,5 @@
   }
 
 
-  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

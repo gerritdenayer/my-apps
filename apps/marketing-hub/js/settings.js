@@ -589,5 +589,5 @@
     render();
   }
 
-  window.MB_SETTINGS = { render };
+  window.MB_SETTINGS = { render, isDirty: () => dirty, saveAll };
 })();

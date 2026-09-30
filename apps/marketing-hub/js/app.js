@@ -33,6 +33,14 @@
       S.toast("Connected to the shared folder. Pick your name and log in.", "success");
     };
 
+    // Header clock icon: hover shows the "last updated" details; click pins them open (touch screens).
+    const infoBtn = document.getElementById("info-btn");
+    if (infoBtn) {
+      const wrap = infoBtn.closest(".info-wrap");
+      infoBtn.onclick = (e) => { e.stopPropagation(); wrap.classList.toggle("open"); };
+      document.addEventListener("click", () => wrap.classList.remove("open"));
+    }
+
     // Recovery: load a data file straight from the login screen (no login needed).
     const importLink = document.getElementById("login-import");
     const importFile = document.getElementById("login-file");
@@ -61,6 +69,16 @@
     if (lockBtn) lockBtn.onclick = () => {
       window.MB_AUTH.promptPin(() => { window.MB_AUTH.applyTabVisibility(); switchTab("settings"); });
     };
+
+    // Keep the "Setup not published" status current while working in Settings.
+    let snTimer = null;
+    const snRefresh = () => {
+      if (!document.body.classList.contains("settings-mode")) return;
+      clearTimeout(snTimer); snTimer = setTimeout(refreshSetupStatus, 250);
+    };
+    const mainEl = document.getElementById("app-main");
+    if (mainEl) { mainEl.addEventListener("change", snRefresh); mainEl.addEventListener("click", snRefresh); }
+    S.subscribe(snRefresh);
 
     S.subscribe(() => {
       // Re-render the panel on screen (a Settings section may be showing under the Settings button).
@@ -334,8 +352,36 @@
       const locked = !settingsItemAllowed(it, false);
       return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}</button>`;
     }).join("");
-    nav.innerHTML = html;
+    nav.innerHTML = html + `<div id="sn-setup" class="sn-setup"></div>`;
     nav.querySelectorAll("button[data-sec]").forEach((b) => { b.onclick = () => openSettings(b.dataset.sec); });
+    refreshSetupStatus();
+  }
+  // The setup publish status at the bottom of the Settings sub-menu (admins only).
+  let setupStatusBusy = false, setupStatusAgain = false;
+  async function refreshSetupStatus() {
+    const box = document.getElementById("sn-setup");
+    if (!box || !window.MB_DATA || !window.MB_DATA.setupPublishState) return;
+    if (setupStatusBusy) { setupStatusAgain = true; return; }
+    setupStatusBusy = true;
+    try {
+      const st = await window.MB_DATA.setupPublishState();
+      if (!st.show) { box.innerHTML = ""; box.classList.add("hidden"); return; }
+      box.classList.remove("hidden");
+      if (st.noFolder) {
+        box.innerHTML = `<div class="sn-status muted">No shared folder yet.</div><button type="button" class="sn-link" id="sn-go-data">Set it up in Data &amp; sharing</button>`;
+        box.querySelector("#sn-go-data").onclick = () => openSettings("data");
+      } else if (st.dirty === false) {
+        box.innerHTML = `<div class="sn-status ok"><span class="sn-dot"></span>Setup is published</div>`;
+      } else {
+        const label = st.dirty ? "Setup not published" : "Publish status unknown";
+        const hint = st.dirty ? "Your setup changes are only on this computer." : "Click to check and publish.";
+        box.innerHTML = `<div class="sn-status warn"><span class="sn-dot"></span>${label}</div><div class="sn-hint">${hint}</div><button type="button" class="primary sn-publish" id="sn-publish">Publish setup</button>`;
+        box.querySelector("#sn-publish").onclick = () => window.MB_DATA.publishSetupFlow();
+      }
+    } finally {
+      setupStatusBusy = false;
+      if (setupStatusAgain) { setupStatusAgain = false; refreshSetupStatus(); }
+    }
   }
   function openSettings(key) {
     const AUTH = window.MB_AUTH;
@@ -611,5 +657,5 @@
     });
   }
 
-  window.MB_APP = { switchTab };
+  window.MB_APP = { switchTab, refreshSetupStatus };
 })();

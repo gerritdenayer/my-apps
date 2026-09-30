@@ -1,5 +1,20 @@
 # Changelog
 
+## [v5.1.3] - 2026-09-30 - Setup publish status, compact header dates
+
+### Added
+- The Settings sub-menu now shows, for admins, whether the setup is published. When you change
+  something in the setup (a user, a role, a home cluster, an entity, a budget, a list) it shows
+  "Setup not published" in orange with a "Publish setup" button, on every Settings page. After
+  publishing it shows "Setup is published" in green. Unsaved Settings edits are saved first. If
+  another admin published a different setup since you last synced, you get a clear warning before
+  yours replaces it. The Publish setup button in Data & sharing uses the same check.
+
+### Changed
+- The "last updated" dates in the header are now tucked behind a small clock icon. Hover over it
+  (or click it) to see when your data changed and when the shared budget & events and the shared
+  setup were last synced. This frees up space in the header.
+
 ## [v5.1.2] - 2026-09-30 - Simpler top menu, Settings sub-menu
 
 ### Changed

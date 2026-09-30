@@ -237,3 +237,22 @@ body.settings-mode main#app-main { display: grid; grid-template-columns: 220px m
 #tab-settings[data-show="statuses"] .card[data-sec="statuses"] { display: block; }
 #tab-settings[data-show="import"] .card[data-sec="import"] { display: block; }
 @media (max-width: 800px) { body.settings-mode main#app-main { grid-template-columns: 1fr; } #settings-nav { position: static; } }
+
+/* Header: "last updated" info behind a small clock icon (hover or click) */
+.info-wrap { position: relative; display: inline-flex; align-items: center; }
+.info-btn { color: #6b7280; padding: 4px; display: inline-flex; align-items: center; }
+.info-btn:hover, .info-wrap.open .info-btn { color: #ff6a00; }
+.info-pop { display: none; position: absolute; top: calc(100% + 8px); right: -8px; z-index: 300; min-width: 260px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 10px 12px; font-size: 12px; color: #374151; line-height: 1.6; white-space: nowrap; }
+.info-pop .info-title { font-weight: 600; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.info-wrap:hover .info-pop, .info-wrap.open .info-pop { display: block; }
+
+/* Setup publish status, bottom of the Settings sub-menu */
+#settings-nav .sn-setup { margin: 12px 4px 2px; padding-top: 10px; border-top: 1px solid #eef0f3; font-size: 12px; }
+#settings-nav .sn-status { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+#settings-nav .sn-status.ok { color: #0a7d33; }
+#settings-nav .sn-status.warn { color: #c2410c; }
+#settings-nav .sn-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+#settings-nav .sn-hint { color: #6b7280; margin: 2px 0 8px 14px; }
+#settings-nav button.sn-publish { width: 100%; justify-content: center; color: #fff; background: #ff6a00; padding: 7px 10px; }
+#settings-nav button.sn-publish:hover { background: #e85f00; }
+#settings-nav button.sn-link { color: #ff6a00; padding: 4px 0; font-size: 12px; }
