@@ -172,6 +172,7 @@
           <button id="add-activity" class="primary">+ New budget line</button>
         </div>
       </div>
+      <div id="bud-summary"></div>
       <div class="card">
         <div class="table-wrap">
           <table id="activities-table">
@@ -406,7 +407,83 @@
     });
   }
 
+  // Budget left for the selected entity (its budget code) in the selected year. Uses net amounts
+  // (gross - partner funds), like Reporting, and the whole year: other filters (quarter, month,
+  // search, column filters) do not change what is left on the budget.
+  function renderEntitySummary() {
+    const host = document.getElementById("bud-summary");
+    if (!host) return;
+    const entId = view.scope && view.scope.entityId;
+    if (!entId) { host.innerHTML = ""; return; }
+    const data = S.state.data;
+    const ent = S.entityById(entId);
+    if (!ent) { host.innerHTML = ""; return; }
+    const cid = S.canonicalEntityId(entId);
+    const sameEnt = (id) => id && S.canonicalEntityId(id) === cid;
+    const yb = ((data.settings.yearlyBudgets || {})[view.year]) || {};
+    const bcs = ((data.settings.budgetCodes || {})[view.year]) || {};
+    let budget = 0, code = bcs[entId] || "";
+    (data.settings.entities || []).forEach((e) => {
+      if (!sameEnt(e.id)) return;
+      budget += yb[e.id] || 0;
+      if (!code && bcs[e.id]) code = bcs[e.id];
+    });
+    let fNet = 0, aNet = 0, n = 0;
+    (data.activities || []).forEach((a) => {
+      if (!sameEnt(a.entityId) || !a.date || new Date(a.date).getFullYear() !== view.year) return;
+      fNet += (a.forecastGross || 0) - (a.forecastPartner || 0);
+      aNet += (a.actualGross || 0) - (a.actualPartner || 0);
+      n++;
+    });
+    const leftF = budget - fNet, leftA = budget - aNet;
+    const pct = budget ? Math.round((fNet / budget) * 100) : 0;
+    const barW = Math.max(0, Math.min(100, pct));
+    const over = budget && leftF < 0;
+    const title = `${S.escapeHtml(ent.name)}${code ? ` <span class="bsum-code">${S.escapeHtml(code)}</span>` : ""} <span class="muted">&middot; ${view.year}</span>`;
+    if (!budget) {
+      host.innerHTML = `<div class="bsum card"><div class="bsum-title">${title}</div>
+        <div class="muted small">No yearly budget set for ${view.year}. Planned spend so far: <strong>${S.fmtMoney(fNet)}</strong> net (${n} line${n === 1 ? "" : "s"}). Set the budget in Settings &gt; Budget structure.</div>${codeShareHtml(code, cid)}</div>`;
+      return;
+    }
+    host.innerHTML = `<div class="bsum card">
+      <div class="bsum-title">${title}</div>
+      <div class="bsum-kpis">
+        <div><div class="bsum-l">Yearly budget</div><div class="bsum-v">${S.fmtMoney(budget)}</div></div>
+        <div><div class="bsum-l">Planned (forecast net)</div><div class="bsum-v">${S.fmtMoney(fNet)}</div></div>
+        <div><div class="bsum-l">Spent (actual net)</div><div class="bsum-v">${S.fmtMoney(aNet)}</div></div>
+        <div class="bsum-left ${over ? "neg" : "pos"}"><div class="bsum-l">Left after planned</div><div class="bsum-v">${S.fmtMoney(leftF)}</div></div>
+        <div><div class="bsum-l">Left after actual</div><div class="bsum-v">${S.fmtMoney(leftA)}</div></div>
+      </div>
+      <div class="bsum-bar" title="${pct}% of the budget is planned"><div class="bsum-fill ${over ? "neg" : ""}" style="width:${barW}%"></div></div>
+      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${view.year}${over ? " &middot; <strong style=\"color:#b91c1c\">over budget</strong>" : ""}</div>
+      ${codeShareHtml(code, cid)}
+    </div>`;
+  }
+  // When several entities share the same budget code, what is left on the code as a whole matters.
+  function codeShareHtml(code, cid) {
+    if (!code) return "";
+    const data = S.state.data;
+    const yb = ((data.settings.yearlyBudgets || {})[view.year]) || {};
+    const bcs = ((data.settings.budgetCodes || {})[view.year]) || {};
+    const ids = (data.settings.entities || []).filter((e) => bcs[e.id] === code).map((e) => e.id);
+    const others = [...new Set(ids.filter((id) => S.canonicalEntityId(id) !== cid).map((id) => (S.entityById(id) || {}).name).filter(Boolean))];
+    if (!others.length) return "";
+    const idSet = new Set(ids);
+    const budget = ids.reduce((t, id) => t + (yb[id] || 0), 0);
+    let f = 0, a = 0;
+    (data.activities || []).forEach((x) => {
+      if (!idSet.has(x.entityId) || !x.date || new Date(x.date).getFullYear() !== view.year) return;
+      f += (x.forecastGross || 0) - (x.forecastPartner || 0);
+      a += (x.actualGross || 0) - (x.actualPartner || 0);
+    });
+    const left = budget - f;
+    return `<div class="bsum-shared">Budget code <strong>${S.escapeHtml(code)}</strong> is shared with ${S.escapeHtml(others.join(", "))}.
+      For the whole code: budget <strong>${S.fmtMoney(budget)}</strong> &middot; planned ${S.fmtMoney(f)} &middot; spent ${S.fmtMoney(a)} &middot;
+      left after planned <strong style="color:${left < 0 ? "#b91c1c" : "#0a7d33"}">${S.fmtMoney(left)}</strong></div>`;
+  }
+
   function renderRows() {
+    renderEntitySummary();
     const canEditRows = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
     const rows = filteredActivities();
     const tbody = document.getElementById("activities-body");

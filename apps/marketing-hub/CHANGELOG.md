@@ -1,5 +1,17 @@
 # Changelog
 
+## [v5.1.4] - 2026-10-02 - Budget left per entity and budget code, codes in Budget structure
+
+### Added
+- Budget tab: when you pick an entity, a summary shows its budget code and, for the selected year,
+  the yearly budget, planned spend (forecast net), spent (actual net), and what is left after
+  planned and after actual, with a progress bar. It turns red when the plan goes over budget.
+  Amounts are net (gross minus partner funds), like Reporting, and cover the whole year whatever
+  the other filters. When several entities share the same budget code, an extra line shows the
+  totals and what is left for the code as a whole.
+- Settings > Budget structure shows each entity's budget code for the selected year next to its
+  name.
+
 ## [v5.1.3] - 2026-09-30 - Setup publish status, compact header dates
 
 ### Added

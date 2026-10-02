@@ -21,6 +21,7 @@
       .bs-cluster-head{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f3f4f6;padding:8px 10px;font-weight:600;font-size:13px}
       .bs-ent{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 10px;border-top:1px solid #f1f5f9;font-size:13px}
       .bs-ent-name{color:#374151}
+      .bs-code{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;background:#f1f5f9;color:#475569;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
       .bs-ent-amt{font-variant-numeric:tabular-nums;color:#111}
       .bs-ent.zero .bs-ent-amt{color:#9ca3af}
       #tab-budget-structure .bs-amt-input{width:120px;text-align:right;font-size:13px;padding:3px 6px}
@@ -53,6 +54,7 @@
     const ybAll = data.settings.yearlyBudgets || (data.settings.yearlyBudgets = {});
     if (canEdit && !ybAll[view.year]) ybAll[view.year] = {};
     const yb = ybAll[view.year] || {};
+    const bc = ((data.settings.budgetCodes || {})[view.year]) || {};
 
     const tree = {};
     ents.forEach((e) => { const m = m1Key(e), c = clKey(e); tree[m] = tree[m] || {}; (tree[m][c] = tree[m][c] || []).push(e); });
@@ -98,7 +100,8 @@
                     const right = (canEdit && view.editing)
                       ? `<input class="bs-amt-input" data-id="${e.id}" type="number" step="100" value="${amt}" />`
                       : `<span class="bs-ent-amt">${amt ? S.fmtMoney(amt) : "-"}</span>`;
-                    return `<div class="bs-ent${amt ? "" : " zero"}"><span class="bs-ent-name">${S.escapeHtml(e.name)}</span>${right}</div>`;
+                    const code = bc[e.id] ? `<span class="bs-code" title="Budget code ${view.year}">${S.escapeHtml(bc[e.id])}</span>` : "";
+                    return `<div class="bs-ent${amt ? "" : " zero"}"><span class="bs-ent-name">${S.escapeHtml(e.name)}${code}</span>${right}</div>`;
                   }).join("")}
                 </div>`;
             }).join("")}
