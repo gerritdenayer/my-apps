@@ -271,3 +271,17 @@ body.settings-mode main#app-main { display: grid; grid-template-columns: 220px m
 .bsum-fill.neg { background: #b91c1c; }
 @media (max-width: 900px) { .bsum-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bsum-shared { margin-top: 8px; padding: 8px 10px; background: #f8fafc; border: 1px solid #eef0f3; border-radius: 6px; font-size: 13px; color: #374151; }
+.bsum-details { margin-top: 8px; }
+.bsum-details summary { cursor: pointer; font-size: 13px; font-weight: 500; color: #ff6a00; }
+.bsum-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.bsum-table th { text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.bsum-table td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.bsum-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bsum-table tr.pos .bsum-leftcell { color: #0a7d33; font-weight: 600; }
+.bsum-table tr.neg .bsum-leftcell { color: #b91c1c; font-weight: 600; }
+.bsum-table tr.neg { background: #fef2f2; }
+.bsum-table a.bsum-ent { color: #374151; text-decoration: none; border-bottom: 1px dotted #9ca3af; }
+.bsum-table a.bsum-ent:hover { color: #ff6a00; border-bottom-color: #ff6a00; }
+.bsum-mini { display: inline-block; width: 50px; height: 5px; background: #f1f5f9; border-radius: 3px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
+.bsum-mini span { display: block; height: 100%; background: #ff6a00; }
+.bsum-table tr.neg .bsum-mini span { background: #b91c1c; }

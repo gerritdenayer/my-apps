@@ -1,5 +1,14 @@
 # Changelog
 
+## [v5.1.5] - 2026-10-02 - Budget overview for any selection, per budget code
+
+### Added
+- Budget tab: the budget summary now also shows when no single entity is picked, for everything
+  in the selected M1 zone, cluster or all entities: yearly budget, planned, spent and what is left,
+  with the number of budget codes over budget. A fold-out "Per budget code" table lists every code
+  with its entities, budget, planned, spent, what is left and % planned; codes over budget are red.
+  Click an entity in the table to jump to its own summary. The fold-out is remembered.
+
 ## [v5.1.4] - 2026-10-02 - Budget left per entity and budget code, codes in Budget structure
 
 ### Added

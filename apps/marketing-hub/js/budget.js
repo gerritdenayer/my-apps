@@ -414,7 +414,7 @@
     const host = document.getElementById("bud-summary");
     if (!host) return;
     const entId = view.scope && view.scope.entityId;
-    if (!entId) { host.innerHTML = ""; return; }
+    if (!entId) { renderScopeSummary(host); return; }
     const data = S.state.data;
     const ent = S.entityById(entId);
     if (!ent) { host.innerHTML = ""; return; }
@@ -459,6 +459,84 @@
       ${codeShareHtml(code, cid)}
     </div>`;
   }
+  // Overview for everything in the current M1 zone / cluster selection (no single entity picked):
+  // totals for the year plus a fold-out table per budget code. Net amounts, whole year.
+  function renderScopeSummary(host) {
+    const data = S.state.data;
+    const yr = view.year;
+    const sc = view.scope || {};
+    const yb = ((data.settings.yearlyBudgets || {})[yr]) || {};
+    const bcs = ((data.settings.budgetCodes || {})[yr]) || {};
+    const ents = (data.settings.entities || []).filter((e) => S.entityMatchesScope(e.id, sc));
+    const codeOf = (id) => bcs[id] || bcs[S.canonicalEntityId(id)] || "";
+    const keyOf = (id) => codeOf(id) || ("ent:" + S.canonicalEntityId(id));
+    const groups = {};
+    const g = (k) => (groups[k] = groups[k] || { budget: 0, f: 0, a: 0, n: 0, ents: {} });
+    let budget = 0;
+    ents.forEach((e) => {
+      const amt = yb[e.id] || 0;
+      budget += amt;
+      if (!amt && !S.entityActiveInYear(e, yr)) return;
+      const grp = g(keyOf(e.id)); grp.budget += amt;
+      grp.ents[S.canonicalEntityId(e.id)] = (S.entityById(S.canonicalEntityId(e.id)) || e).name;
+    });
+    let f = 0, a = 0, n = 0, noEnt = 0;
+    (data.activities || []).forEach((x) => {
+      if (!x.date || new Date(x.date).getFullYear() !== yr) return;
+      if (!S.entityMatchesScope(x.entityId, sc)) return;
+      const fn = (x.forecastGross || 0) - (x.forecastPartner || 0), an = (x.actualGross || 0) - (x.actualPartner || 0);
+      f += fn; a += an; n++;
+      if (!x.entityId || !S.entityById(x.entityId)) { noEnt += fn; return; }
+      const grp = g(keyOf(x.entityId)); grp.f += fn; grp.a += an; grp.n++;
+      const cid = S.canonicalEntityId(x.entityId);
+      grp.ents[cid] = grp.ents[cid] || (S.entityById(cid) || {}).name || "";
+    });
+    const scopeLabel = sc.cluster ? `Cluster ${S.escapeHtml(sc.cluster)}` : sc.m1 ? `${S.escapeHtml(sc.m1)}` : "All entities";
+    const leftF = budget - f, leftA = budget - a;
+    const pct = budget ? Math.round((f / budget) * 100) : 0;
+    const over = budget && leftF < 0;
+    const rows = Object.entries(groups).filter(([, v]) => v.budget || v.f || v.a)
+      .map(([k, v]) => ({ code: k.startsWith("ent:") ? "" : k, ...v, left: v.budget - v.f }))
+      .sort((x, y) => (x.code || "~").localeCompare(y.code || "~"));
+    const overCodes = rows.filter((r) => r.budget && r.left < 0).length;
+    const noBudget = rows.filter((r) => !r.budget && r.f).length;
+    const open = (() => { try { return localStorage.getItem("mb_bsum_codes") === "1"; } catch (e) { return false; } })();
+    const entLinks = (r) => Object.entries(r.ents).filter(([, nm]) => nm).map(([id, nm]) =>
+      `<a href="#" class="bsum-ent" data-id="${id}">${S.escapeHtml(nm)}</a>`).join(", ");
+    const table = `
+      <table class="bsum-table">
+        <thead><tr><th>Budget code</th><th>Entities</th><th class="num">Budget</th><th class="num">Planned</th><th class="num">Spent</th><th class="num">Left after planned</th><th class="num">% planned</th></tr></thead>
+        <tbody>${rows.map((r) => {
+          const p = r.budget ? Math.round((r.f / r.budget) * 100) : null;
+          const cls = !r.budget ? "nob" : r.left < 0 ? "neg" : "pos";
+          return `<tr class="${cls}"><td>${r.code ? `<span class="bsum-code">${S.escapeHtml(r.code)}</span>` : '<span class="muted">(no code)</span>'}</td>
+            <td>${entLinks(r)}</td>
+            <td class="num">${r.budget ? S.fmtMoney(r.budget) : '<span class="muted">-</span>'}</td>
+            <td class="num">${S.fmtMoney(r.f)}</td><td class="num">${S.fmtMoney(r.a)}</td>
+            <td class="num bsum-leftcell">${r.budget ? S.fmtMoney(r.left) : '<span class="muted">no budget</span>'}</td>
+            <td class="num">${p === null ? "" : `<span class="bsum-mini"><span style="width:${Math.max(0, Math.min(100, p))}%"></span></span>${p}%`}</td></tr>`;
+        }).join("")}</tbody>
+      </table>`;
+    host.innerHTML = `<div class="bsum card">
+      <div class="bsum-title">${scopeLabel} <span class="muted">&middot; ${yr}</span></div>
+      <div class="bsum-kpis">
+        <div><div class="bsum-l">Yearly budget</div><div class="bsum-v">${S.fmtMoney(budget)}</div></div>
+        <div><div class="bsum-l">Planned (forecast net)</div><div class="bsum-v">${S.fmtMoney(f)}</div></div>
+        <div><div class="bsum-l">Spent (actual net)</div><div class="bsum-v">${S.fmtMoney(a)}</div></div>
+        <div class="bsum-left ${over ? "neg" : "pos"}"><div class="bsum-l">Left after planned</div><div class="bsum-v">${S.fmtMoney(leftF)}</div></div>
+        <div><div class="bsum-l">Left after actual</div><div class="bsum-v">${S.fmtMoney(leftA)}</div></div>
+      </div>
+      <div class="bsum-bar"><div class="bsum-fill ${over ? "neg" : ""}" style="width:${Math.max(0, Math.min(100, pct))}%"></div></div>
+      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${yr}${overCodes ? ` &middot; <strong style="color:#b91c1c">${overCodes} budget code${overCodes === 1 ? "" : "s"} over budget</strong>` : ""}${noBudget ? ` &middot; ${noBudget} with spend but no budget` : ""}${noEnt ? ` &middot; ${S.fmtMoney(noEnt)} planned on lines without an entity` : ""}</div>
+      <details class="bsum-details"${open ? " open" : ""}><summary>Per budget code (${rows.length})</summary>${table}</details>
+    </div>`;
+    const det = host.querySelector(".bsum-details");
+    if (det) det.addEventListener("toggle", () => { try { localStorage.setItem("mb_bsum_codes", det.open ? "1" : "0"); } catch (e) {} });
+    host.querySelectorAll(".bsum-ent").forEach((el) => {
+      el.onclick = (ev) => { ev.preventDefault(); view.scope.entityId = el.dataset.id; render(); };
+    });
+  }
+
   // When several entities share the same budget code, what is left on the code as a whole matters.
   function codeShareHtml(code, cid) {
     if (!code) return "";
