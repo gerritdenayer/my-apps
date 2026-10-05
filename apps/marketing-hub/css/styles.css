@@ -285,3 +285,15 @@ body.settings-mode main#app-main { display: grid; grid-template-columns: 220px m
 .bsum-mini { display: inline-block; width: 50px; height: 5px; background: #f1f5f9; border-radius: 3px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
 .bsum-mini span { display: block; height: 100%; background: #ff6a00; }
 .bsum-table tr.neg .bsum-mini span { background: #b91c1c; }
+
+/* Shared folder status: header dot + warning bar */
+.share-pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; background: #fff; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.share-pill .sp-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.share-pill.ok { color: #0a7d33; border-color: #bbf7d0; background: #f0fdf4; }
+.share-pill.warn { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
+.share-pill.err { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+.share-pill.off { color: #6b7280; }
+.share-banner { display: flex; align-items: center; gap: 12px; background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #7c2d12; padding: 8px 24px; font-size: 13px; }
+.share-banner > span { flex: 1; }
+.share-banner button.primary { padding: 6px 14px; }
+.share-banner button.link { font-size: 18px; color: #9a3412; padding: 0 4px; }

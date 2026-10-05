@@ -537,6 +537,7 @@
   }
 
   async function refreshShareStatus(root) {
+    updateShareIndicator();
     const el = root.querySelector("#share-status");
     if (!el || !SH) return;
     const folderBtn = root.querySelector("#sh-folder");
@@ -596,6 +597,7 @@
     const dir = await SH.savedFolder();
     if (!dir) { S.toast("Choose the shared folder first.", "error"); return null; }
     const ok = await SH.ensurePerm(dir, "readwrite");
+    updateShareIndicator();
     if (!ok) { S.toast("Access to the shared folder was not granted.", "error"); return null; }
     return dir;
   }
@@ -816,7 +818,72 @@
   }
 
   // Show/hide the header Refresh button and, if the browser already has access, auto-check on open.
+  // ---- Shared folder connection status (header dot + warning bar) ----
+  // ok: access granted and the folder can be read; noaccess: a folder is set but the browser
+  // needs permission (common after a browser restart); error: access but the folder cannot be
+  // read (moved, renamed, OneDrive not synced); none: no shared folder set; unsupported: browser.
+  async function shareState() {
+    if (!SH || !SH.supported()) return { state: "unsupported" };
+    const dir = await SH.savedFolder();
+    if (!dir) return { state: "none" };
+    if (!(await SH.hasPerm(dir, "readwrite"))) return { state: "noaccess", dir };
+    try { await SH.listFiles(dir); } catch (e) { return { state: "error", dir, msg: e.message }; }
+    return { state: "ok", dir };
+  }
+  let bannerDismissed = false;
+  async function updateShareIndicator() {
+    const pill = document.getElementById("share-pill");
+    const banner = document.getElementById("share-banner");
+    if (!pill) return;
+    const st = await shareState();
+    const name = st.dir ? st.dir.name : "";
+    const seen = localStorage.getItem(SEEN_KEY);
+    const seenTxt = seen ? new Date(seen).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+    const P = {
+      ok: { cls: "ok", text: "Shared", title: `Connected to the shared folder "${name}". Click to check for updates now.` },
+      noaccess: { cls: "warn", text: "No access", title: `The browser has no access to the shared folder "${name}" yet, so the data may be old. Click to connect.` },
+      error: { cls: "err", text: "Folder not found", title: `The shared folder "${name}" cannot be read (${st.msg || "unknown error"}). It may have moved, or OneDrive is not synced. Click to fix it in Data & sharing.` },
+      none: { cls: "off", text: "Local only", title: "Not connected to a shared folder: your data is only on this computer. Click to set it up." },
+      unsupported: { cls: "off", text: "Local only", title: "This browser cannot use a shared folder. Use Chrome or Edge to share data with your team." },
+    }[st.state];
+    pill.className = "share-pill " + P.cls;
+    pill.innerHTML = `<span class="sp-dot"></span>${P.text}`;
+    pill.title = P.title;
+    pill.onclick = () => shareAction(st.state);
+    // Warning bar: only when a shared folder is set but cannot be used.
+    if (banner) {
+      if ((st.state === "noaccess" || st.state === "error") && !bannerDismissed) {
+        const msg = st.state === "noaccess"
+          ? `<strong>No access to the shared folder "${S.escapeHtml(name)}".</strong> You may be looking at old data${seenTxt ? ` (last synced ${S.escapeHtml(seenTxt)})` : ""}. Connect to get the latest setup, budget and events.`
+          : `<strong>The shared folder "${S.escapeHtml(name)}" cannot be read.</strong> It may have moved or OneDrive may not be synced. You may be looking at old data.`;
+        banner.innerHTML = `<span>${msg}</span><button type="button" class="primary" id="sb-connect">${st.state === "noaccess" ? "Connect now" : "Fix in Data &amp; sharing"}</button><button type="button" class="link" id="sb-close" title="Hide until next time">&times;</button>`;
+        banner.classList.remove("hidden");
+        banner.querySelector("#sb-connect").onclick = () => shareAction(st.state);
+        banner.querySelector("#sb-close").onclick = () => { bannerDismissed = true; banner.classList.add("hidden"); };
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+  }
+  async function shareAction(state) {
+    if (state === "unsupported") return S.toast("This browser cannot use a shared folder. Use Chrome or Edge.", "error");
+    if (state === "none" || state === "error") { if (window.MB_APP) window.MB_APP.switchTab("data"); return; }
+    const dir = await SH.savedFolder();
+    if (!dir) return;
+    const ok = await SH.ensurePerm(dir, "readwrite");
+    await updateShareIndicator();
+    if (!ok) return S.toast("Access to the shared folder was not granted.", "error");
+    await syncPasswords({ auto: false });
+    await checkSetup({ auto: false });
+    await refreshFromShared({ auto: false });
+    await updateShareIndicator();
+  }
+
   async function initSharedRefresh() {
+    await initSharedRefreshInner();
+    await updateShareIndicator();
+  }
+  async function initSharedRefreshInner() {
     updateSharedHeader();
     const btn = document.getElementById("refresh-btn");
     if (!btn) return;
@@ -824,7 +891,7 @@
     const dir = await SH.savedFolder();
     if (!dir) { btn.classList.add("hidden"); return; }
     btn.classList.remove("hidden");
-    btn.onclick = async () => { await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); };
+    btn.onclick = async () => { await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); await updateShareIndicator(); };
     // On open: check the setup first (new entities or years may be needed by the data), then
     // pull budget & events.
     if (await SH.hasPerm(dir, "readwrite")) {
@@ -1231,5 +1298,5 @@
   }
 
 
-  window.MB_DATA = { render, initSharedRefresh, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

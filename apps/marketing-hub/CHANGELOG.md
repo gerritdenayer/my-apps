@@ -1,5 +1,17 @@
 # Changelog
 
+## [v5.1.7] - 2026-10-05 - Shared folder connection status
+
+### Added
+- A status dot in the header shows the shared folder connection at a glance: green "Shared"
+  (connected), orange "No access" (a folder is set but the browser needs permission, common after
+  a browser restart), red "Folder not found" (the folder cannot be read, for example moved or not
+  synced by OneDrive) and grey "Local only" (no shared folder, or a browser that cannot use one).
+  Hover for details; click to connect, check for updates or go to Data & sharing.
+- When the app opens without access to the shared folder, an orange bar warns that you may be
+  looking at old data, with the date of the last sync and a "Connect now" button. One click grants
+  access and pulls the latest setup, passwords, budget and events. Before, this was silent.
+
 ## [v5.1.6] - 2026-10-05 - Quarter column, "is one of" column filter
 
 ### Changed
