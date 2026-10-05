@@ -297,3 +297,8 @@ body.settings-mode main#app-main { display: grid; grid-template-columns: 220px m
 .share-banner > span { flex: 1; }
 .share-banner button.primary { padding: 6px 14px; }
 .share-banner button.link { font-size: 18px; color: #9a3412; padding: 0 4px; }
+.tr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tr-table th { text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.tr-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+.tr-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+button.danger:disabled, button.secondary:disabled { opacity: .5; cursor: default; }

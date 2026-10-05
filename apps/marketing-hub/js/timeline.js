@@ -968,10 +968,12 @@
     if(isEdit){
       modal.querySelector("#c-delete").onclick=async()=>{
         const linked=linkedActivities(id).length;
-        const msg=linked?`Delete "${e.name}"? ${linked} linked budget line(s) will stay but lose their link.`:`Delete "${e.name}"?`;
+        const msg=(linked?`Delete "${e.name}"? ${linked} linked budget line(s) will stay but lose their link.`:`Delete "${e.name}"?`)+" An admin can restore it from Settings > Deleted items.";
         const ok=await S.confirmDialog(msg);
         if(!ok) return;
-        data.events=data.events.filter(x=>x.id!==id);
+        // Remember the linked budget lines, so a restore can link them again.
+        const links=linkedActivities(id).map(a=>a.id);
+        S.softDelete("events", id, { _links: links });
         linkedActivities(id).forEach(a=>{ a.eventIds=(a.eventIds||[]).filter(x=>x!==id); stampUpdated(a); });
         S.scheduleSave(); S.notify(); S.closeModal(); S.toast("Campaign deleted","success");
       };
@@ -1071,7 +1073,7 @@
         (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id)){ a.eventIds=(a.eventIds||[]).filter(x=>x!==e.id); stampUpdated(a); } });
         if(primaryLineId){
           const idx=(data.activities||[]).findIndex(x=>x.id===primaryLineId);
-          if(idx>=0 && ((data.activities[idx].eventIds||[]).length===0)) data.activities.splice(idx,1);
+          if(idx>=0 && ((data.activities[idx].eventIds||[]).length===0)) S.softDelete("activities", data.activities[idx].id);
         }
         primaryId="";
       }

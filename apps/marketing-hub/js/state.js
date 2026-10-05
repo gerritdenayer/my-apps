@@ -340,7 +340,35 @@
     });
   }
 
+  // ---- Deleted items (bin) ----
+  // Budget lines and events are never really deleted: they move to data.bin with who deleted them
+  // and when. Views only use data.activities / data.events, so binned rows never show or count.
+  // Admins can restore or permanently delete them in Settings > Deleted items.
+  function ensureBin(d) {
+    d = d || state.data;
+    d.bin = d.bin || { activities: [], events: [] };
+    d.bin.activities = d.bin.activities || [];
+    d.bin.events = d.bin.events || [];
+    d.purgedIds = d.purgedIds || [];
+    return d.bin;
+  }
+  function moveToBin(kind, row, extra) {
+    const bin = ensureBin();
+    const r = { ...row, ...(extra || {}), deletedAt: new Date().toISOString(), deletedBy: state.currentUserId || "" };
+    bin[kind] = bin[kind].filter((x) => x.id !== row.id);
+    bin[kind].push(r);
+  }
+  function softDelete(kind, id, extra) {
+    const list = state.data[kind] || [];
+    const row = list.find((x) => x.id === id);
+    if (!row) return null;
+    state.data[kind] = list.filter((x) => x.id !== id);
+    moveToBin(kind, row, extra);
+    return row;
+  }
+
   window.MB_STATE = {
+    ensureBin, moveToBin, softDelete,
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,

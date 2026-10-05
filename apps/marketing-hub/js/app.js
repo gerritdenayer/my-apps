@@ -325,8 +325,9 @@
     { key: "users", label: "Users & access", tab: "users", admin: true },
     { key: "data", label: "Data & sharing", tab: "data", cap: "importExport" },
     { key: "import", label: "Bulk import", tab: "settings", admin: true },
+    { key: "trash", label: "Deleted items", tab: "trash", admin: true },
   ];
-  const SETTINGS_TABS = ["settings", "budget-structure", "data", "users"];
+  const SETTINGS_TABS = ["settings", "budget-structure", "data", "users", "trash"];
   let settingsSection = null;
   function settingsItemAllowed(it, withPin) {
     const AUTH = window.MB_AUTH;
@@ -440,6 +441,7 @@
     if (name === "data") window.MB_DATA.render();
     if (name === "users") window.MB_USERS.render();
     if (name === "settings") window.MB_SETTINGS.render(section);
+    if (name === "trash" && window.MB_TRASH) window.MB_TRASH.render();
   }
 
   function escapeHtml(s) {

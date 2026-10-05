@@ -1,5 +1,33 @@
 # Changelog
 
+## [v5.1.8] - 2026-10-05 - Shared data is the truth on opening, deleted items bin
+
+### Added
+- Deleted items are kept, not removed. Deleting a budget line or an event (from the Budget menu,
+  the campaign / event form, the "No budget line" option or Review & merge) moves it to a bin with
+  who deleted it and when. Binned items do not show or count anywhere in the app. The bin is part
+  of the shared files, so every computer agrees on what was deleted.
+- Settings > Deleted items (admins only) lists everything in the bin, with type, name, date,
+  entity, amount, deleted by and deleted on. Admins can restore items (an event also gets its
+  budget line links back) or delete them permanently, one by one or in bulk. Both are published to
+  the shared folder straight away.
+
+### Changed
+- On opening (and on Refresh or Pull), your budget & events now become an exact copy of the shared
+  files: new and changed rows come in, and rows a teammate deleted are removed. Before, rows that
+  differed were updated but deleted rows stayed on your copy.
+- Unpublished work is never thrown away silently. If this computer has changes that are not in the
+  shared folder yet (new, changed or deleted rows, or rows that only exist here), the app asks
+  first: "Publish my changes" (recommended), "Discard mine, load shared" (asks to confirm) or
+  "Decide later".
+- When someone publishes a deletion, the shared file now remembers the deleted row, so other
+  computers remove it without asking. Deletions published by older versions are not remembered,
+  so the app may ask once about those rows.
+
+### Fixed
+- Opening the app could mark unpublished changes as published when the shared data had not
+  changed, so they were never sent. They are now kept and offered for publishing.
+
 ## [v5.1.7] - 2026-10-05 - Shared folder connection status
 
 ### Added

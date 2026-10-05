@@ -465,11 +465,12 @@
     return n;
   }
 
-  async function publishBudgetEvents() {
+  async function publishBudgetEvents(opts) {
+    opts = opts || {};
     const dir = await shareDir();
     if (!dir) return false;
     try {
-      const ok = await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
+      const ok = opts.skipConfirm || await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
       if (!ok) return false;
       const remote = reconcileIncomingCountries(await readSharedBE(dir));
       let baseline = null;
@@ -484,7 +485,23 @@
         S.state.data.activities = ma.list;
         S.state.data.events = me.list;
       }
-      const res = await writeSharedBE(dir, S.state.data.activities, S.state.data.events, remote);
+      // Bin: shared bin + this computer's bin, without rows that are active again or purged.
+      const purged = new Set([...((remote && remote.purgedIds) || []), ...(S.state.data.purgedIds || [])]);
+      const localBin = S.ensureBin(S.state.data);
+      const mergedBin = {};
+      ["activities", "events"].forEach((k) => {
+        const active = new Set((S.state.data[k] || []).map((r) => r.id));
+        const m = {};
+        [...((remote && remote.bin && remote.bin[k]) || []), ...localBin[k]].forEach((r) => {
+          if (purged.has(r.id) || active.has(r.id)) return;
+          const c = m[r.id];
+          if (!c || String(r.deletedAt || "") >= String(c.deletedAt || "")) m[r.id] = r;
+        });
+        mergedBin[k] = Object.values(m);
+      });
+      S.state.data.bin = mergedBin;
+      S.state.data.purgedIds = [...purged];
+      const res = await writeSharedBE(dir, S.state.data.activities, S.state.data.events, remote, mergedBin, [...purged]);
       const seenStamp = [res.newest, (remote && remote.meta && remote.meta.exportedAt) || ""].sort().pop();
       if (seenStamp) localStorage.setItem(SEEN_KEY, seenStamp);
       markPublishBaseline(); updateSharedHeader();
@@ -527,7 +544,7 @@
           <button class="secondary" id="sh-pull-data">Pull budget &amp; events</button>
           <button class="secondary" id="sh-review-data">Review &amp; merge...</button>
         </div>
-        <p class="muted small" style="margin-top:6px">Pull applies new and changed items automatically and shows a summary. Use Review &amp; merge only when you need to handle deletions by hand.</p>
+        <p class="muted small" style="margin-top:6px">Pull makes your copy identical to the shared data (the app also does this when it opens). If you have unpublished changes, it asks first. Review &amp; merge lets you pick row by row instead.</p>
       </div>`;
   }
 
@@ -749,9 +766,12 @@
     m.querySelector("#mg-apply").onclick = () => {
       const delEv = new Set([...m.querySelectorAll(".del-ev:checked")].map((c) => c.value));
       const delAc = new Set([...m.querySelectorAll(".del-ac:checked")].map((c) => c.value));
+      const toBin = [...(S.state.data.events || []).filter((x) => delEv.has(x.id)).map((r) => ["events", r]),
+                     ...(S.state.data.activities || []).filter((x) => delAc.has(x.id)).map((r) => ["activities", r])];
       const upToggle = m.querySelector("#mg-updates");
       const skipUpdates = upToggle ? !upToggle.checked : false;
       S.state.data = API.applyBudgetEventsMerge(S.state.data, incoming, { delEventIds: delEv, delActIds: delAc, skipUpdates });
+      toBin.forEach(([k, r]) => S.moveToBin(k, r));
       S.scheduleSave(); S.notify(); S.closeModal();
       const added = ev.adds.length + ac.adds.length;
       const upd = skipUpdates ? 0 : (ev.updates.length + ac.updates.length);
@@ -762,6 +782,33 @@
 
   // Pull the shared budget & events and apply adds + updates automatically (no confirm screen),
   // then show a summary of what changed. Local-only items are kept, never auto-deleted.
+  // What changed on this computer since the last publish or pull (compared with that baseline).
+  // When there is no baseline yet, rows that exist only here count as local changes.
+  function localChanges(incoming) {
+    let base = null;
+    try { base = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { base = null; }
+    const out = [];
+    const deleted = new Set(incoming.deletedIds || []);
+    const cmp = (key, label, baseArr, refArr) => {
+      const B = Object.fromEntries((baseArr || []).map((x) => [x.id, x]));
+      const R = Object.fromEntries((refArr || []).map((x) => [x.id, x]));
+      const local = S.state.data[key] || [];
+      const L = new Set(local.map((x) => x.id));
+      local.forEach((x) => {
+        if (!B[x.id]) { if (base || !R[x.id]) out.push({ kind: "new", label, name: x.name }); }
+        else if (base && rowSig(x) !== rowSig(B[x.id])) out.push({ kind: "changed", label, name: x.name });
+        else if (!R[x.id] && !deleted.has(x.id)) out.push({ kind: "only here", label, name: x.name });
+      });
+      if (base) Object.keys(B).forEach((id) => { if (!L.has(id)) out.push({ kind: "deleted", label, name: B[id].name }); });
+    };
+    cmp("activities", "Budget line", base ? base.a : null, incoming.activities);
+    cmp("events", "Event", base ? base.e : null, incoming.events);
+    return out;
+  }
+
+  // Pull budget & events: this computer is made identical to the shared files (they are the
+  // master). If there are changes here that were never published, the app asks first:
+  // publish them, discard them, or decide later. Nothing local is thrown away silently.
   async function refreshFromShared(opts) {
     opts = opts || {};
     if (!SH || !SH.supported()) return;
@@ -775,20 +822,57 @@
     if (!incoming) { if (!opts.auto) S.toast("No budget & events file in the shared folder yet.", "error"); return; }
     reconcileIncomingCountries(incoming);
 
+    const mine = localChanges(incoming);
+    if (mine.length) {
+      const choice = await askUnpublished(mine);
+      if (choice === "publish") { await publishBudgetEvents({ skipConfirm: true }); return; }
+      if (choice !== "discard") return; // decide later: keep working on this copy
+    }
+    mirrorShared(incoming, opts);
+  }
+
+  // Replace the local budget & events with the shared ones and show what changed.
+  function mirrorShared(incoming, opts) {
     const diff = API.diffBudgetEvents(S.state.data, incoming);
-    const addN = diff.events.adds.length + diff.activities.adds.length;
-    const updN = diff.events.updates.length + diff.activities.updates.length;
-    if (addN === 0 && updN === 0) {
-      if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
-      markPublishBaseline(); updateSharedHeader();
+    const changed = diff.events.adds.length + diff.activities.adds.length + diff.events.updates.length +
+      diff.activities.updates.length + diff.events.missing.length + diff.activities.missing.length;
+    S.state.data.activities = JSON.parse(JSON.stringify(incoming.activities || []));
+    S.state.data.events = JSON.parse(JSON.stringify(incoming.events || []));
+    S.state.data.bin = JSON.parse(JSON.stringify(incoming.bin || { activities: [], events: [] }));
+    S.state.data.purgedIds = (incoming.purgedIds || []).slice();
+    if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
+    markPublishBaseline(); updateSharedHeader();
+    if (!changed) {
       if (!opts.auto) S.toast("You are up to date with the shared data.", "success");
       return;
     }
-    S.state.data = API.applyBudgetEventsMerge(S.state.data, incoming, {});
-    if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
-    markPublishBaseline(); updateSharedHeader();
     S.scheduleSave(); S.notify();
     showRefreshSummary(diff, incoming);
+  }
+
+  function askUnpublished(mine) {
+    return new Promise((resolve) => {
+      const count = (k) => mine.filter((x) => x.kind === k).length;
+      const parts = [["new", "new"], ["changed", "changed"], ["deleted", "deleted"], ["only here", "only on this computer"]].map(([k, l]) => count(k) ? `${count(k)} ${l}` : "").filter(Boolean).join(", ");
+      const list = mine.slice(0, 60).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.label)} ${x.kind}: ${S.escapeHtml(x.name || "(no name)")}</div>`).join("");
+      const m = S.openModal(`
+        <h2>You have unpublished changes</h2>
+        <p>This computer has changes that are not in the shared folder yet (${parts}). The app normally loads the shared data when it opens, which would replace them.</p>
+        <details style="margin:6px 0 10px"><summary style="cursor:pointer">Show the changes</summary><div style="max-height:180px; overflow:auto; margin-top:4px">${list}</div></details>
+        <div class="actions" style="flex-wrap:wrap; gap:8px">
+          <button class="secondary" id="up-later">Decide later</button>
+          <button class="secondary" id="up-discard" style="color:#a00">Discard mine, load shared</button>
+          <button class="primary" id="up-publish">Publish my changes</button>
+        </div>`, { closeOnBackdrop: false });
+      const done = (v) => { S.closeModal(); resolve(v); };
+      m.querySelector("#up-later").onclick = () => done("later");
+      m.querySelector("#up-publish").onclick = () => done("publish");
+      m.querySelector("#up-discard").onclick = async () => {
+        S.closeModal();
+        const ok = await S.confirmDialog("Discard your unpublished changes and load the shared data? This cannot be undone.");
+        resolve(ok ? "discard" : "later");
+      };
+    });
   }
 
   function showRefreshSummary(diff, incoming) {
@@ -799,18 +883,20 @@
     const missN = diff.events.missing.length + diff.activities.missing.length;
     const names = (arr) => arr.slice(0, 50).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.name)}</div>`).join("");
     const block = (title, arr) => arr.length ? `<details style="margin:4px 0"><summary style="cursor:pointer">${title} (${arr.length})</summary>${names(arr)}</details>` : "";
-    const missNote = missN ? `<p class="muted small" style="margin-top:10px">${missN} item(s) exist only on your copy and were kept (not deleted). To sync deletions, use Settings &rarr; Data &amp; sharing &rarr; Pull budget &amp; events.</p>` : "";
+    const missNote = "";
     const m = S.openModal(`
       <h2>Shared data updated</h2>
-      <p class="muted small">From ${S.escapeHtml(by)}${when ? " on " + S.escapeHtml(when) : ""}. Applied automatically.</p>
+      <p class="muted small">Your copy now matches the shared data (last published by ${S.escapeHtml(by)}${when ? " on " + S.escapeHtml(when) : ""}).</p>
       <div class="kpi-row" style="grid-template-columns:repeat(2,1fr)">
-        <div class="kpi"><div class="label">Events</div><div class="value" style="font-size:14px">${evA} new &middot; ${evU} updated</div></div>
-        <div class="kpi"><div class="label">Budget lines</div><div class="value" style="font-size:14px">${acA} new &middot; ${acU} updated</div></div>
+        <div class="kpi"><div class="label">Events</div><div class="value" style="font-size:14px">${evA} new &middot; ${evU} updated &middot; ${diff.events.missing.length} removed</div></div>
+        <div class="kpi"><div class="label">Budget lines</div><div class="value" style="font-size:14px">${acA} new &middot; ${acU} updated &middot; ${diff.activities.missing.length} removed</div></div>
       </div>
       ${block("New events", diff.events.adds)}
       ${block("Updated events", diff.events.updates)}
       ${block("New budget lines", diff.activities.adds)}
       ${block("Updated budget lines", diff.activities.updates)}
+      ${block("Removed events", diff.events.missing)}
+      ${block("Removed budget lines", diff.activities.missing)}
       ${missNote}
       <div class="actions"><button class="primary" id="rs-ok">Got it</button></div>
     `);
@@ -1007,6 +1093,17 @@
     if (!Object.keys(files).length && !legacyActive) return null;
 
     const rows = { activities: {}, events: {} };   // id -> { row, stamp }
+    const bin = { activities: {}, events: {} };    // id -> row (newest deletion wins)
+    const purged = new Set();
+    Object.values(files).forEach((f) => {
+      (f.obj.purgedIds || []).forEach((id) => purged.add(id));
+      ["activities", "events"].forEach((k) => ((f.obj.bin || {})[k] || []).forEach((r) => {
+        const c = bin[k][r.id];
+        if (!c || String(r.deletedAt || "") > String(c.deletedAt || "")) bin[k][r.id] = r;
+      }));
+    });
+    const deleted = new Set();
+    Object.values(files).forEach((f) => (f.obj.deletedIds || []).forEach((id) => deleted.add(id)));
     const countries = {};
     let stamp = "", by = "";
     // Per row, the most recently edited version wins (its own updatedAt, else createdAt). A file
@@ -1026,34 +1123,72 @@
     // Rows an older app version published to the old single file: added when missing, and they
     // replace a year file's row only when that row was edited more recently.
     if (legacyActive) take(legacy);
+    // A row both active and in the bin: the latest action wins (an edit or restore after the
+    // deletion keeps it active). Permanently deleted rows leave the bin.
+    ["activities", "events"].forEach((k) => {
+      Object.keys(bin[k]).forEach((id) => {
+        if (purged.has(id)) { delete bin[k][id]; return; }
+        const act = rows[k][id];
+        if (!act) return;
+        if (rowStamp(act.row) > String(bin[k][id].deletedAt || "")) delete bin[k][id];
+        else delete rows[k][id];
+      });
+      Object.keys(bin[k]).forEach((id) => deleted.add(id));
+    });
+    purged.forEach((id) => deleted.add(id));
     return {
       version: 1,
       meta: { exportedAt: stamp, exportedBy: by, exportKind: "budget-events" },
       activities: Object.values(rows.activities).map((x) => x.row),
       events: Object.values(rows.events).map((x) => x.row),
       countriesRef: Object.values(countries),
+      deletedIds: [...deleted],
+      bin: { activities: Object.values(bin.activities), events: Object.values(bin.events) },
+      purgedIds: [...purged],
       _files: files, _legacy: legacy, _legacyActive: legacyActive,
     };
   }
   // Write the given budget lines and events as per-year files. Only years whose rows differ from
   // what is in the shared folder are written. Returns the newest exportedAt written (or "").
-  async function writeSharedBE(dir, acts, evs, remote) {
+  async function writeSharedBE(dir, acts, evs, remote, bin, purged) {
     const groups = {};
-    const g = (y) => (groups[y] = groups[y] || { activities: [], events: [] });
+    const g = (y) => (groups[y] = groups[y] || { activities: [], events: [], bin: { activities: [], events: [] } });
     (acts || []).forEach((r) => g(rowYear(r)).activities.push(r));
     (evs || []).forEach((r) => g(rowYear(r)).events.push(r));
+    bin = bin || (S.ensureBin(S.state.data));
+    ["activities", "events"].forEach((k) => (bin[k] || []).forEach((r) => g(rowYear(r)).bin[k].push(r)));
+    const purgedList = (purged || S.state.data.purgedIds || []).slice().sort();
+    const extraSig = (o) => JSON.stringify({ b: rowsSig((o.bin || {}).activities, (o.bin || {}).events), p: (o.purgedIds || []).slice().sort() });
     const existing = (remote && remote._files) || {};
     const years = new Set([...Object.keys(groups), ...Object.keys(existing)]);
+    // Deleted rows are remembered (deletedIds), so other computers know to remove them too
+    // instead of mistaking them for unpublished rows of their own.
+    const allIds = new Set([...(acts || []), ...(evs || [])].map((r) => r.id));
+    const removedNow = new Set();
+    Object.values(existing).forEach((ex) => [...(ex.obj.activities || []), ...(ex.obj.events || [])].forEach((r) => { if (!allIds.has(r.id)) removedNow.add(r.id); }));
+    const tombsFor = (ex) => {
+      const t = new Set((ex && ex.obj.deletedIds) || []);
+      if (ex) [...(ex.obj.activities || []), ...(ex.obj.events || [])].forEach((r) => { if (removedNow.has(r.id)) t.add(r.id); });
+      allIds.forEach((id) => t.delete(id)); // a row that is back is no longer deleted
+      return [...t];
+    };
     let newest = "";
     const written = [];
     for (const y of [...years].sort()) {
-      const grp = groups[y] || { activities: [], events: [] };
+      const grp = groups[y] || { activities: [], events: [], bin: { activities: [], events: [] } };
       const ex = existing[y];
-      if (ex && rowsSig(ex.obj.activities, ex.obj.events) === rowsSig(grp.activities, grp.events)) continue;
-      if (!ex && !grp.activities.length && !grp.events.length) continue;
+      const tombs = tombsFor(ex);
+      const hasBin = grp.bin.activities.length || grp.bin.events.length;
+      const want = { bin: hasBin ? grp.bin : undefined, purgedIds: purgedList.length ? purgedList : undefined };
+      if (ex && rowsSig(ex.obj.activities, ex.obj.events) === rowsSig(grp.activities, grp.events) &&
+          JSON.stringify(tombs) === JSON.stringify(ex.obj.deletedIds || []) && extraSig(ex.obj) === extraSig(want)) continue;
+      if (!ex && !grp.activities.length && !grp.events.length && !hasBin) continue;
       const obj = API.stampExport(API.pickBudgetEvents({ version: S.state.data.version, meta: S.state.data.meta,
         settings: S.state.data.settings, activities: grp.activities, events: grp.events }), shareUserName(), "budget-events");
       obj.meta.year = y;
+      if (tombs.length) obj.deletedIds = tombs;
+      if (hasBin) obj.bin = grp.bin;
+      if (purgedList.length) obj.purgedIds = purgedList;
       await SH.writeJson(dir, yearFileName(y), obj);
       written.push(y);
       if (obj.meta.exportedAt > newest) newest = obj.meta.exportedAt;
@@ -1101,6 +1236,8 @@
     if (data) {
       reconcileIncomingCountries(data);
       S.state.data = API.applyBudgetEventsMerge(S.state.data, data, {});
+      if (data.bin) S.state.data.bin = JSON.parse(JSON.stringify(data.bin));
+      if (data.purgedIds) S.state.data.purgedIds = data.purgedIds.slice();
       if (data.meta && data.meta.exportedAt) localStorage.setItem(SEEN_KEY, data.meta.exportedAt);
       markPublishBaseline();
     }
@@ -1298,5 +1435,5 @@
   }
 
 
-  window.MB_DATA = { render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { shareFolderConfigured, render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();

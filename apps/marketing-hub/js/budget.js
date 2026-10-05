@@ -937,9 +937,9 @@
   async function deleteLine(id) {
     const a = S.state.data.activities.find((x) => x.id === id);
     if (!a) return;
-    const ok = await S.confirmDialog(`Delete budget line "${a.name}"? This cannot be undone.`);
+    const ok = await S.confirmDialog(`Delete budget line "${a.name}"? An admin can restore it from Settings > Deleted items.`);
     if (!ok) return;
-    S.state.data.activities = S.state.data.activities.filter((x) => x.id !== id);
+    S.softDelete("activities", id);
     S.scheduleSave(); S.notify(); S.toast("Budget line deleted", "success");
   }
   let _hdrClose = null;
