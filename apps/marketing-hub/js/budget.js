@@ -27,6 +27,7 @@
   const COLUMNS = [
     { key: "actions", label: "", def: 64 },
     { key: "date", label: "Date", def: 95 },
+    { key: "quarter", label: "Quarter", def: 80 },
     { key: "name", label: "Name", def: 240 },
     { key: "entity", label: "Entity", def: 150 },
     { key: "code", label: "Budget code", def: 120 },
@@ -65,7 +66,11 @@
   function normalizeOrder(keys) {
     const all = COLUMN_KEYS();
     const out = (keys || []).filter((k) => all.includes(k) && k !== "actions");
-    all.forEach((k) => { if (k !== "actions" && !out.includes(k)) out.push(k); });
+    all.forEach((k, i) => {
+      if (k === "actions" || out.includes(k)) return;
+      const prev = all.slice(0, i).reverse().find((p) => out.includes(p)); // place after its default neighbour
+      out.splice(prev ? out.indexOf(prev) + 1 : 0, 0, k);
+    });
     return ["actions", ...out];
   }
   function COLUMN_KEYS() { return COLUMNS.map((c) => c.key); }
@@ -132,10 +137,6 @@
           <select id="f-year">${years.sort().map(y => `<option ${y===view.year?"selected":""} value="${y}">${y}</option>`).join("")}</select>
         </div>
         <div>
-          <label>Quarters</label>
-          ${S.quarterChecks("f", view.quarters)}
-        </div>
-        <div>
           <label>Month</label>
           <select id="f-month">${S.monthOptions(view.monthFilter)}</select>
         </div>
@@ -197,7 +198,6 @@
 
     // bind filters
     root.querySelector("#f-year").onchange = (e) => { view.year = +e.target.value; render(); };
-    root.querySelectorAll(".f-q").forEach((cb) => { cb.onchange = () => { view.quarters = [...root.querySelectorAll(".f-q:checked")].map((x) => x.value); renderRows(); }; });
     root.querySelector("#f-month").onchange = (e) => { view.monthFilter = e.target.value; renderRows(); };
     S.wireScopeFilter(root, "f", view.scope, renderRows, entityFilterLabel, view.year);
     root.querySelector("#f-search").oninput = (e) => { view.search = e.target.value; renderRows(); };
@@ -290,6 +290,7 @@
   function sortValue(a, key) {
     switch (key) {
       case "date": return a.date || "";
+      case "quarter": return quarterOf(a) + (a.date || "");
       case "name": return (a.name || "").toLowerCase();
       case "entity": return ((S.entityById(a.entityId) || {}).name || "").toLowerCase();
       case "code": return S.budgetCodeForActivity(a).toLowerCase();
@@ -337,6 +338,7 @@
   function filterText(a, key) {
     switch (key) {
       case "date": return a.date || "";
+      case "quarter": return quarterOf(a);
       case "name": return a.name || "";
       case "entity": return (S.entityById(a.entityId) || {}).name || "";
       case "code": return S.budgetCodeForActivity(a);
@@ -365,8 +367,13 @@
     (S.state.data.activities || []).forEach((a) => { const t = filterText(a, key); if (t !== "") set.add(t); });
     return [...set].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" }));
   }
+  function quarterOf(a) {
+    const d = a && a.date ? new Date(a.date) : null;
+    return d && !isNaN(d) ? "Q" + (Math.floor(d.getMonth() / 3) + 1) : "";
+  }
   function matchColFilter(a, key, f) {
     const t = filterText(a, key);
+    if (f.op === "in") return Array.isArray(f.value) && f.value.includes(t);
     const v = (f.value == null ? "" : String(f.value));
     switch (f.op) {
       case "eq": return t === v;
@@ -593,6 +600,7 @@
               ${canEditRows ? `<button class="icon row-menu" title="Actions" aria-label="Actions">&#9776;</button>` : "<span class='muted'>-</span>"}
             </td>`,
           date: `<td class="bc-date">${dateHtml}</td>`,
+          quarter: `<td class="bc-quarter">${quarterOf(a) || "<span class='muted'>-</span>"}</td>`,
           name: `<td class="bc-name">${nameHtml}</td>`,
           entity: `<td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>`,
           code: `<td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>`,
@@ -955,6 +963,7 @@
         <div class="muted small" style="margin-bottom:4px">Filter: ${S.escapeHtml(col.label || "")}</div>
         <select class="hm-op" style="width:100%">
           <option value="">(no filter)</option>
+          <option value="in" ${cur.op === "in" ? "selected" : ""}>is one of</option>
           <option value="eq" ${cur.op === "eq" ? "selected" : ""}>equals</option>
           <option value="ne" ${cur.op === "ne" ? "selected" : ""}>does not equal</option>
           <option value="blank" ${cur.op === "blank" ? "selected" : ""}>is blank</option>
@@ -977,7 +986,12 @@
     const valWrap = menu.querySelector(".hm-valwrap");
     function renderVal() {
       const op = opSel.value;
-      if (op === "eq" || op === "ne") {
+      if (op === "in") {
+        const vals = distinctValues(key);
+        const sel = new Set(cur.op === "in" && Array.isArray(cur.value) ? cur.value.map(String) : []);
+        valWrap.innerHTML = `<div style="max-height:220px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${vals.map((v) =>
+          `<label style="display:flex; align-items:center; gap:6px; margin:0; padding:2px 0; font-size:13px; font-weight:400; cursor:pointer;"><input type="checkbox" class="hm-in" value="${S.escapeHtml(String(v))}" ${sel.has(String(v)) ? "checked" : ""}/> ${S.escapeHtml(String(v))}</label>`).join("")}</div>`;
+      } else if (op === "eq" || op === "ne") {
         const vals = distinctValues(key);
         valWrap.innerHTML = `<select class="hm-val" style="width:100%"><option value="">(pick a value)</option>${vals.map((v) => `<option ${String(cur.value) === String(v) ? "selected" : ""} value="${S.escapeHtml(String(v))}">${S.escapeHtml(String(v))}</option>`).join("")}</select>`;
       } else if (op === "contains" || op === "ncontains") {
@@ -994,7 +1008,11 @@
       if (!op) { delete view.colFilters[key]; }
       else {
         const valEl = menu.querySelector(".hm-val");
-        const value = valEl ? valEl.value : "";
+        let value = valEl ? valEl.value : "";
+        if (op === "in") {
+          value = [...menu.querySelectorAll(".hm-in:checked")].map((x) => x.value);
+          if (!value.length) return S.toast("Tick at least one value", "error");
+        }
         if ((op === "eq" || op === "ne") && value === "") return S.toast("Pick a value", "error");
         if ((op === "contains" || op === "ncontains") && value.trim() === "") return S.toast("Type some text", "error");
         view.colFilters[key] = { op, value };

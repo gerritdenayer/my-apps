@@ -1,5 +1,16 @@
 # Changelog
 
+## [v5.1.6] - 2026-10-05 - Quarter column, "is one of" column filter
+
+### Changed
+- Budget tab: quarters are now a "Quarter" column (Q1 to Q4) next to Date, instead of checkboxes in
+  the filter bar. Sort or filter it from the column header like any other column. A saved column
+  order keeps working; the new column is placed after Date.
+
+### Added
+- Column filters have a new "is one of" option with a checkbox per value, so you can pick several
+  values at once (for example Q1 and Q2, or two statuses). It works on every Budget column.
+
 ## [v5.1.5] - 2026-10-02 - Budget overview for any selection, per budget code
 
 ### Added
