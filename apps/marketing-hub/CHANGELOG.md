@@ -1,5 +1,23 @@
 # Changelog
 
+## [v5.1.9] - 2026-10-06 - Second shared folder (bridge), publish dates in Data & sharing
+
+### Added
+- Second shared folder (bridge), for admins, in Settings > Data & sharing. When not everyone can
+  reach the same team folder, an admin who can reach both picks the second folder once. Each time
+  that admin opens the app, clicks Refresh or publishes, the app combines both folders and writes
+  the result back to both: budget & events per row (the most recent edit wins; bins and permanent
+  deletions are combined), the setup (the most recently published one wins) and passwords (newest
+  per user). Only files that changed are written. Teammates on either folder do nothing. The header
+  shows "Shared · 2 folders", warns when the browser has no access to the second folder, and Data &
+  sharing shows the last bridge sync. "Stop bridging" ends it without deleting anything.
+
+### Fixed
+- Settings > Data & sharing now shows when each shared file was published from the app (the date
+  stored in the file, the same one the header uses), instead of the date the file landed on this
+  computer. Those can differ a lot after OneDrive syncs or after copying the files to a new folder.
+  The local file date is still shown as a hint when it differs.
+
 ## [v5.1.8] - 2026-10-05 - Shared data is the truth on opening, deleted items bin
 
 ### Added

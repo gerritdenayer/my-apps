@@ -58,6 +58,15 @@
   async function savedFolder() {
     return idbGet("dir");
   }
+  // Optional second shared folder (bridge): an admin who can reach two team folders keeps them
+  // in sync. Stored separately; the main folder stays the one the app works with.
+  async function chooseBridge() {
+    const handle = await window.showDirectoryPicker({ id: "mbhub-bridge", mode: "readwrite" });
+    await idbSet("dir2", handle);
+    return handle;
+  }
+  async function savedBridge() { return idbGet("dir2"); }
+  async function forgetBridge() { return idbDel("dir2"); }
   async function forgetFolder() {
     return idbDel("dir");
   }
@@ -117,5 +126,5 @@
     return out;
   }
 
-  window.MB_SHARE = { listFiles, supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson, fileInfo };
+  window.MB_SHARE = { chooseBridge, savedBridge, forgetBridge, listFiles, supported, chooseFolder, savedFolder, forgetFolder, ensurePerm, hasPerm, readJson, writeJson, fileInfo };
 })();

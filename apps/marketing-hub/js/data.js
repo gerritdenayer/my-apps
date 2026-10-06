@@ -509,6 +509,7 @@
       const mine = stats.insA + stats.insE, changed = stats.updA + stats.updE, removed = stats.delA + stats.delE;
       const yrs = res.written.length ? ` Updated file(s): ${res.written.join(", ")}.` : " No shared file needed changes.";
       S.toast(`Published & merged. New: ${mine}, changed: ${changed}, removed: ${removed}. Pulled in from teammates: ${stats.fromRemote}.${yrs}`, "success");
+      bridgeAfterPublish();
       return true;
     } catch (e) { S.toast("Could not publish budget & events: " + e.message, "error"); return false; }
   }
@@ -528,11 +529,19 @@
     return `
       <div class="card">
         <h2>Shared folder (Teams / OneDrive)</h2>
-        <p class="muted small">Publish and pull the master data through a folder that syncs with your team. Pick the shared folder once and the app remembers it. The setup is published by admins and pulled by everyone. Budget and events are shared: pulling always goes through the review screen, and publishing warns you if a colleague published since you last pulled.</p>
+        <p class="muted small">Publish and pull the master data through a folder that syncs with your team. Pick the shared folder once and the app remembers it. The setup is published by admins and pulled by everyone. Budget and events are shared: when the app opens, your copy is updated to match the shared files (it asks first if you have unpublished changes).</p>
         <div id="share-status" class="muted small" style="margin:6px 0 10px">Checking...</div>
         <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
           <button class="secondary" id="sh-folder">Choose shared folder...</button>
         </div>
+        ${canPushSetup() ? `<h3 style="margin:14px 0 6px">Second shared folder (bridge)</h3>
+        <p class="muted small" style="margin:0 0 6px">For admins who can reach two team folders while not everyone has access to the same one. Each time you open the app, click Refresh or publish, both folders are combined and kept in sync. Only this browser does the bridging; teammates do nothing.</p>
+        <div id="bridge-status" class="muted small" style="margin:0 0 6px">Checking...</div>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="secondary" id="sh-bridge">Choose second folder...</button>
+          <button class="primary hidden" id="sh-bridge-sync">Sync both folders now</button>
+          <button class="secondary hidden" id="sh-bridge-stop" style="color:#a00">Stop bridging</button>
+        </div>` : ""}
         <h3 style="margin:14px 0 6px">Setup (structure)</h3>
         <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
           ${canPushSetup() ? `<button class="primary" id="sh-push-setup">Publish setup</button>` : `<span class="muted small">Only admins can publish the setup.</span>`}
@@ -599,9 +608,16 @@
         const info = SH.fileInfo ? await SH.fileInfo(dir, file) : null;
         if (!info) line = `<span style="color:#b45309">not found</span>`;
         else {
-          let by = "";
-          try { const j = await SH.readJson(dir, file); by = (j && j.meta && j.meta.exportedBy) || ""; } catch (e) {}
-          line = `saved ${S.escapeHtml(fmt(info.lastModified))}${by ? ` by ${S.escapeHtml(by)}` : ""} &middot; ${Math.round(info.size / 1024)} KB`;
+          // Show when it was published from the app (stored in the file). The file system date
+          // is when the file landed on this computer (OneDrive sync, a copy to a new folder), which
+          // can be much later, so it is only shown as a hint when it differs.
+          let by = "", pub = "";
+          try { const j = await SH.readJson(dir, file); by = (j && j.meta && j.meta.exportedBy) || ""; pub = (j && j.meta && j.meta.exportedAt) || ""; } catch (e) {}
+          const pubMs = pub ? Date.parse(pub) : NaN;
+          const main = !isNaN(pubMs) ? `published ${S.escapeHtml(fmt(pubMs))}${by ? ` by ${S.escapeHtml(by)}` : ""}` : `saved ${S.escapeHtml(fmt(info.lastModified))}`;
+          const hint = !isNaN(pubMs) && Math.abs(info.lastModified - pubMs) > 5 * 60 * 1000
+            ? ` <span class="muted" title="The date the file was copied or synced onto this computer. The publish date is what counts.">(file date on this computer ${S.escapeHtml(fmt(info.lastModified))})</span>` : "";
+          line = `${main} &middot; ${Math.round(info.size / 1024)} KB${hint}`;
         }
       } catch (e) { line = `<span style="color:#b91c1c">could not read</span>`; }
       rows.push(`<div>${label}: <code>${S.escapeHtml(file)}</code> &middot; ${line}</div>`);
@@ -619,9 +635,50 @@
     return dir;
   }
 
+  async function refreshBridgeStatus(root) {
+    const el = root.querySelector("#bridge-status");
+    if (!el || !SH.savedBridge) return;
+    const b = await SH.savedBridge();
+    const chooseBtn = root.querySelector("#sh-bridge"), syncBtn = root.querySelector("#sh-bridge-sync"), stopBtn = root.querySelector("#sh-bridge-stop");
+    if (!b) {
+      el.innerHTML = "No second folder. The app uses only the shared folder above.";
+      if (chooseBtn) chooseBtn.textContent = "Choose second folder...";
+      [syncBtn, stopBtn].forEach((x) => x && x.classList.add("hidden"));
+      return;
+    }
+    let last = null; try { last = JSON.parse(localStorage.getItem(BRIDGE_LAST_KEY) || "null"); } catch (e) {}
+    const access = await SH.hasPerm(b, "readwrite");
+    el.innerHTML = `Bridging with: <strong>${S.escapeHtml(b.name)}</strong>` +
+      (access ? "" : ` <span style="color:#c2410c">&middot; no access yet (click Sync both folders now)</span>`) +
+      (last ? ` <span class="muted">&middot; last bridge sync ${S.escapeHtml(new Date(last.at).toLocaleString("en-GB"))}: ${S.escapeHtml(last.summary)}</span>` : "");
+    if (chooseBtn) chooseBtn.textContent = "Change second folder...";
+    [syncBtn, stopBtn].forEach((x) => x && x.classList.remove("hidden"));
+  }
+
   function wireShare(root) {
     if (!SH || !SH.supported()) return;
     refreshShareStatus(root);
+    refreshBridgeStatus(root);
+    const bChoose = root.querySelector("#sh-bridge");
+    if (bChoose) bChoose.onclick = async () => {
+      try {
+        const h = await SH.chooseBridge();
+        const main = await SH.savedFolder();
+        if (main && (await main.isSameEntry(h))) { await SH.forgetBridge(); return S.toast("That is the same folder as the main shared folder. Pick the other one.", "error"); }
+        S.toast(`Second folder set: ${h.name}. Syncing both...`, "success");
+        await bridgeSync({ auto: false });
+        await refreshFromShared({ auto: false });
+      } catch (e) { if (e && e.name !== "AbortError") S.toast("Could not set the folder: " + e.message, "error"); }
+      refreshBridgeStatus(root); updateShareIndicator();
+    };
+    const bSync = root.querySelector("#sh-bridge-sync");
+    if (bSync) bSync.onclick = async () => { await bridgeSync({ auto: false }); await refreshFromShared({ auto: false }); refreshBridgeStatus(root); updateShareIndicator(); };
+    const bStop = root.querySelector("#sh-bridge-stop");
+    if (bStop) bStop.onclick = async () => {
+      if (!(await S.confirmDialog("Stop keeping the second folder in sync? Nothing is deleted; the two folders simply stop being combined."))) return;
+      await SH.forgetBridge(); try { localStorage.removeItem(BRIDGE_LAST_KEY); } catch (e) {}
+      refreshBridgeStatus(root); updateShareIndicator();
+    };
 
     const folderBtn = root.querySelector("#sh-folder");
     if (folderBtn) folderBtn.onclick = async () => {
@@ -904,6 +961,96 @@
   }
 
   // Show/hide the header Refresh button and, if the browser already has access, auto-check on open.
+
+  // ---- Bridge: keep a second shared folder in sync (admins, this browser only) ----
+  // Reads both folders, combines them, and writes the combined result back to both (only files
+  // that changed). Budget & events: per row the most recent edit wins; bins and permanent
+  // deletions are combined. Setup: the most recently published one wins. Passwords: newest per user.
+  const BRIDGE_LAST_KEY = "mb_bridge_last";
+  let bridgeBusy = false;
+  function combineBE(a, b) {
+    if (!a) return b; if (!b) return a;
+    const rowStamp = (r) => String(r.updatedAt || r.createdAt || "");
+    const out = { activities: {}, events: {}, bin: { activities: {}, events: {} } };
+    const purged = new Set([...(a.purgedIds || []), ...(b.purgedIds || [])]);
+    [a, b].forEach((src) => ["activities", "events"].forEach((k) => {
+      (src[k] || []).forEach((r) => { const c = out[k][r.id]; if (!c || rowStamp(r) > rowStamp(c)) out[k][r.id] = r; });
+      (((src.bin || {})[k]) || []).forEach((r) => { const c = out.bin[k][r.id]; if (!c || String(r.deletedAt || "") > String(c.deletedAt || "")) out.bin[k][r.id] = r; });
+    }));
+    ["activities", "events"].forEach((k) => {
+      Object.keys(out.bin[k]).forEach((id) => {
+        if (purged.has(id)) { delete out.bin[k][id]; delete out[k][id]; return; }
+        const act = out[k][id];
+        if (!act) return;
+        if (rowStamp(act) > String(out.bin[k][id].deletedAt || "")) delete out.bin[k][id]; else delete out[k][id];
+      });
+      purged.forEach((id) => delete out[k][id]);
+    });
+    return {
+      activities: Object.values(out.activities), events: Object.values(out.events),
+      bin: { activities: Object.values(out.bin.activities), events: Object.values(out.bin.events) },
+      purgedIds: [...purged],
+    };
+  }
+  async function bridgeDirs(auto) {
+    if (!SH || !SH.supported() || !SH.savedBridge || !canPushSetup()) return null;
+    const a = await SH.savedFolder(), b = await SH.savedBridge();
+    if (!a || !b) return null;
+    const okA = auto ? await SH.hasPerm(a, "readwrite") : await SH.ensurePerm(a, "readwrite");
+    const okB = auto ? await SH.hasPerm(b, "readwrite") : await SH.ensurePerm(b, "readwrite");
+    if (!okA || !okB) return null;
+    return { a, b };
+  }
+  async function bridgeSync(opts) {
+    opts = opts || {};
+    if (bridgeBusy) return null;
+    const dirs = await bridgeDirs(opts.auto);
+    if (!dirs) return null;
+    bridgeBusy = true;
+    const report = { setup: "", be: [], pw: 0 };
+    try {
+      // Budget & events
+      const rA = await readSharedBE(dirs.a), rB = await readSharedBE(dirs.b);
+      if (rA) reconcileIncomingCountries(rA);
+      if (rB) reconcileIncomingCountries(rB);
+      const c = combineBE(rA, rB);
+      if (c) {
+        const wa = await writeSharedBE(dirs.a, c.activities, c.events, rA, c.bin, c.purgedIds);
+        const wb = await writeSharedBE(dirs.b, c.activities, c.events, rB, c.bin, c.purgedIds);
+        if (wa.written.length) report.be.push(`${dirs.a.name}: ${wa.written.join(", ")}`);
+        if (wb.written.length) report.be.push(`${dirs.b.name}: ${wb.written.join(", ")}`);
+      }
+      // Setup: newest published wins
+      const sA = await SH.readJson(dirs.a, SETUP_FILE), sB = await SH.readJson(dirs.b, SETUP_FILE);
+      const st = (x) => (x && x.meta && x.meta.exportedAt) || "";
+      if (sA && (!sB || (st(sA) > st(sB) && setupSig(sA.settings) !== setupSig(sB.settings)))) { await SH.writeJson(dirs.b, SETUP_FILE, sA); report.setup = `${dirs.a.name} → ${dirs.b.name}`; }
+      else if (sB && (!sA || (st(sB) > st(sA) && setupSig(sA.settings) !== setupSig(sB.settings)))) { await SH.writeJson(dirs.a, SETUP_FILE, sB); report.setup = `${dirs.b.name} → ${dirs.a.name}`; }
+      // Passwords: newest per user
+      const pA = (await SH.readJson(dirs.a, PW_FILE)) || { version: 1, users: {} };
+      const pB = (await SH.readJson(dirs.b, PW_FILE)) || { version: 1, users: {} };
+      const users = { ...(pA.users || {}) };
+      Object.entries(pB.users || {}).forEach(([id, e]) => { const cur = users[id]; if (!cur || String(e.pwChangedAt || "") > String(cur.pwChangedAt || "")) users[id] = e; });
+      const merged = { version: 1, users, meta: { exportedAt: new Date().toISOString(), exportedBy: shareUserName() } };
+      const same = (x) => JSON.stringify(x.users || {}) === JSON.stringify(users);
+      if (Object.keys(users).length) {
+        if (!same(pA)) { await SH.writeJson(dirs.a, PW_FILE, merged); report.pw++; }
+        if (!same(pB)) { await SH.writeJson(dirs.b, PW_FILE, merged); report.pw++; }
+      }
+      const changed = report.be.length || report.setup || report.pw;
+      const summary = changed
+        ? [report.be.length ? "budget & events" : "", report.setup ? "setup" : "", report.pw ? "passwords" : ""].filter(Boolean).join(", ") + " copied across"
+        : "both folders already matched";
+      try { localStorage.setItem(BRIDGE_LAST_KEY, JSON.stringify({ at: new Date().toISOString(), summary })); } catch (e) {}
+      if (!opts.quiet && (changed || !opts.auto)) S.toast(`Bridge sync: ${summary}.`, "success");
+      return report;
+    } catch (e) {
+      S.toast("Bridge sync failed: " + e.message, "error");
+      return null;
+    } finally { bridgeBusy = false; }
+  }
+  // After publishing to the main folder, carry it over to the bridge folder as well.
+  function bridgeAfterPublish() { setTimeout(() => bridgeSync({ auto: true, quiet: true }), 0); }
+
   // ---- Shared folder connection status (header dot + warning bar) ----
   // ok: access granted and the folder can be read; noaccess: a folder is set but the browser
   // needs permission (common after a browser restart); error: access but the folder cannot be
@@ -914,7 +1061,12 @@
     if (!dir) return { state: "none" };
     if (!(await SH.hasPerm(dir, "readwrite"))) return { state: "noaccess", dir };
     try { await SH.listFiles(dir); } catch (e) { return { state: "error", dir, msg: e.message }; }
-    return { state: "ok", dir };
+    const bridge = (SH.savedBridge && canPushSetup()) ? await SH.savedBridge() : null;
+    if (bridge) {
+      if (!(await SH.hasPerm(bridge, "readwrite"))) return { state: "noaccess", dir: bridge, bridge };
+      try { await SH.listFiles(bridge); } catch (e) { return { state: "error", dir: bridge, bridge, msg: e.message }; }
+    }
+    return { state: "ok", dir, bridge };
   }
   let bannerDismissed = false;
   async function updateShareIndicator() {
@@ -926,7 +1078,7 @@
     const seen = localStorage.getItem(SEEN_KEY);
     const seenTxt = seen ? new Date(seen).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
     const P = {
-      ok: { cls: "ok", text: "Shared", title: `Connected to the shared folder "${name}". Click to check for updates now.` },
+      ok: { cls: "ok", text: st.bridge ? "Shared · 2 folders" : "Shared", title: st.bridge ? `Connected to "${name}", and keeping "${st.bridge.name}" in sync (bridge). Click to sync now.` : `Connected to the shared folder "${name}". Click to check for updates now.` },
       noaccess: { cls: "warn", text: "No access", title: `The browser has no access to the shared folder "${name}" yet, so the data may be old. Click to connect.` },
       error: { cls: "err", text: "Folder not found", title: `The shared folder "${name}" cannot be read (${st.msg || "unknown error"}). It may have moved, or OneDrive is not synced. Click to fix it in Data & sharing.` },
       none: { cls: "off", text: "Local only", title: "Not connected to a shared folder: your data is only on this computer. Click to set it up." },
@@ -957,8 +1109,11 @@
     const dir = await SH.savedFolder();
     if (!dir) return;
     const ok = await SH.ensurePerm(dir, "readwrite");
+    const bridge = (SH.savedBridge && canPushSetup()) ? await SH.savedBridge() : null;
+    if (ok && bridge) await SH.ensurePerm(bridge, "readwrite");
     await updateShareIndicator();
     if (!ok) return S.toast("Access to the shared folder was not granted.", "error");
+    await bridgeSync({ auto: false });
     await syncPasswords({ auto: false });
     await checkSetup({ auto: false });
     await refreshFromShared({ auto: false });
@@ -977,10 +1132,11 @@
     const dir = await SH.savedFolder();
     if (!dir) { btn.classList.add("hidden"); return; }
     btn.classList.remove("hidden");
-    btn.onclick = async () => { await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); await updateShareIndicator(); };
+    btn.onclick = async () => { await bridgeSync({ auto: false }); await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); await updateShareIndicator(); };
     // On open: check the setup first (new entities or years may be needed by the data), then
     // pull budget & events.
     if (await SH.hasPerm(dir, "readwrite")) {
+      await bridgeSync({ auto: true });
       await syncPasswords({ auto: true });
       await checkSetup({ auto: true });
       await refreshFromShared({ auto: true });
@@ -1047,6 +1203,7 @@
     const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
     await SH.writeJson(dir, SETUP_FILE, obj);
     markSetupSynced(obj);
+    bridgeAfterPublish();
     return obj;
   }
   function pullSetupFrom(remote) {
@@ -1355,6 +1512,7 @@
       file.users[user.id] = pwEntry(user);
       file.meta = { exportedAt: new Date().toISOString(), exportedBy: shareUserName() || user.name || "" };
       await SH.writeJson(dir, PW_FILE, file);
+      bridgeAfterPublish();
       return true;
     } catch (e) {
       S.toast("Password saved on this computer only: " + e.message, "error");
@@ -1435,5 +1593,5 @@
   }
 
 
-  window.MB_DATA = { shareFolderConfigured, render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+  window.MB_DATA = { bridgeSync, combineBE, shareFolderConfigured, render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
 })();
