@@ -1,0 +1,5 @@
+# Session materials stay on this computer only. They are internal and the repo is public.
+materials/
+*.pptx
+*.pdf
+*.docx

@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Who We Are Quiz | Digital & Data</title>
+<meta name="description" content="A short phone quiz on the Orange Business Digital & Data positioning.">
+<style>
+:root{
+  --bg:#000;--card:#141414;--card2:#1B1B1B;--line:#333;--div:#262626;
+  --orange:#FF7900;--orange-dark:#1F1306;--white:#fff;--sub:#C9C9C9;--txt:#8C8C8C;
+  --green:#3FAE7B;--red:#E5484D;--blue:#3B6FE0;--purple:#6C4FD6;--gold:#E0A83B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center}
+#app{width:100%;max-width:520px;padding:20px 16px 32px;display:flex;flex-direction:column;min-height:100dvh}
+.eyebrow{color:var(--orange);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+h1{font-size:30px;line-height:1.15;margin:8px 0 10px}
+h2{font-size:21px;line-height:1.3;margin:10px 0 18px}
+p{color:var(--sub);line-height:1.45;font-size:15px}
+.muted{color:var(--txt);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.card.hl{border-color:var(--orange);background:var(--orange-dark)}
+input{width:100%;padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--white);font-size:17px;outline:none}
+input:focus{border-color:var(--orange)}
+.btn{display:block;width:100%;padding:15px;border-radius:999px;border:1px solid var(--orange);background:var(--orange);color:#000;font-weight:700;font-size:16px;cursor:pointer;margin-top:12px;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--white);border-color:var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
+.round{display:flex;align-items:center;gap:14px;cursor:pointer}
+.round .num{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--orange);flex:none}
+.round.done .num{background:var(--orange);color:#000}
+.round .meta{flex:1}
+.round .meta b{display:block;font-size:16px}
+.round .tag{font-size:12px;color:var(--txt);margin-top:3px}
+.round .right{font-size:13px;color:var(--orange);font-weight:700;text-align:right}
+.topbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--txt);margin-bottom:10px}
+.timer{height:6px;background:var(--div);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.timer i{display:block;height:100%;background:var(--orange);width:100%;transition:width .1s linear}
+.opt{display:block;width:100%;text-align:left;padding:15px 16px;margin:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--white);font-size:16px;line-height:1.35;cursor:pointer;font-family:inherit}
+.opt:active{border-color:var(--orange)}
+.opt.correct{border-color:var(--green);background:#0D2219}
+.opt.wrong{border-color:var(--red);background:#2A0E10}
+.opt.dim{opacity:.45}
+.opt .k{display:inline-block;width:26px;height:26px;border-radius:50%;border:1px solid var(--txt);text-align:center;line-height:24px;font-size:13px;margin-right:10px;color:var(--sub)}
+.picked{display:flex;flex-direction:column-reverse;gap:6px;margin:6px 0 10px;min-height:20px}
+.slot{padding:11px 14px;border-radius:10px;border:1px solid var(--orange);background:var(--orange-dark);font-size:15px;display:flex;gap:10px}
+.slot b{color:var(--orange)}
+.slot.ok{border-color:var(--green);background:#0D2219}.slot.ok b{color:var(--green)}
+.slot.no{border-color:var(--red);background:#2A0E10}.slot.no b{color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:11px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--white);font-size:15px;cursor:pointer;font-family:inherit}
+.fb{border-radius:12px;padding:16px;margin-top:14px;border:1px solid var(--line);background:var(--card)}
+.fb.good{border-color:var(--green)}.fb.bad{border-color:var(--red)}
+.fb .head{font-weight:700;font-size:18px;margin-bottom:6px}
+.fb.good .head{color:var(--green)}.fb.bad .head{color:var(--red)}
+.big{font-size:56px;font-weight:700;color:var(--orange);line-height:1}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--div);font-size:15px}
+.row:last-child{border-bottom:0}
+.row span:last-child{font-weight:700}
+.spacer{flex:1}
+.foot{color:var(--orange);font-weight:700;font-size:11px;text-align:center;margin-top:28px;letter-spacing:.04em}
+.err{color:var(--red);font-size:14px;margin-top:8px;min-height:18px}
+.link{background:none;border:0;color:var(--txt);text-decoration:underline;font-size:14px;margin-top:16px;cursor:pointer;font-family:inherit}
+.badge{display:inline-block;padding:6px 12px;border-radius:999px;border:1px solid var(--orange);color:var(--orange);font-weight:700;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="js/config.js"></script>
+<script>
+/* ================= CONTENT (edit questions here) =================
+   type: "mc" = multiple choice (first option is the correct one, options are shuffled on screen)
+         "tf" = true or false (answer: true/false)
+         "order" = tap in the right order (items listed in the correct order, shuffled on screen)
+   time: seconds for the question (default 20)
+=================================================================== */
+const ROUNDS = [
+ { code:"DATA", name:"Who we are", covers:"What we are and where we fit", qs:[
+  {type:"mc", q:"What is Digital & Data within Orange Business?",
+   options:["The consulting entity for Data, AI, Customer and Employee Experience","Orange's cybersecurity company","The team that runs the network operations centers","A software vendor that sells AI licenses"],
+   explain:"Digital & Data is the consulting entity within Orange Business, specialized in Data, AI, Customer Experience (CX) and Employee Experience (EX)."},
+  {type:"tf", q:"Orange Business is the business to business (B2B) division of Orange Group.", answer:true,
+   explain:"Correct. Orange is a global telecom provider, and Orange Business serves its business customers."},
+  {type:"mc", q:"Which of these is NOT one of our four core expertise areas?",
+   options:["Network cabling","Data","Artificial intelligence","Employee Experience"],
+   explain:"Our four areas are Data, AI, Customer Experience and Employee Experience, plus digital transformation."},
+  {type:"mc", q:"Orange Business plays three roles at once. Which three?",
+   options:["Global operator, systems integrator, platform player","Hyperscaler, reseller, telco","Bank, insurer, consultant","Hardware maker, retailer, call center"],
+   explain:"It runs its own global network (operator), combines technology from many vendors into one solution (integrator) and offers shared platforms as a service (platform player)."},
+  {type:"mc", q:"Orange Business combines 'the three Cs' with Data and AI. What are the three Cs?",
+   options:["Connectivity, cloud, cybersecurity","Customers, contracts, consulting","Cost, compliance, cloud","Contact center, CRM, chat"],
+   explain:"Connectivity, cloud and cybersecurity. Digital & Data adds the Data, AI and transformation expertise on top."},
+  {type:"mc", q:"Which Orange entity specializes in cybersecurity projects and services?",
+   options:["Orange Cyberdefense","Digital & Data","Orange Belgium","Live Intelligence"],
+   explain:"Orange Cyberdefense brings deep security expertise. Specialist entities add complementary expertise to one customer relationship."},
+  {type:"mc", q:"Where is Digital & Data present?",
+   options:["BeNeLux, Switzerland and Spain","France only","Germany, Italy and the UK","Only in Belgium"],
+   explain:"Digital & Data is present in BeNeLux, Switzerland and Spain."},
+ ]},
+ { code:"LAYERS", name:"What we do", covers:"The problems we solve and the six layers", qs:[
+  {type:"mc", q:"Which gap does Digital & Data close for customers?",
+   options:["Between a high level strategy and a solution that is implemented, operated and adopted","Between a customer's budget and their invoice","Between two data centers","Between sales and marketing teams"],
+   explain:"We turn ambition into a feasible roadmap, then design, build, run and help people adopt the solution."},
+  {type:"order", q:"Put the six layers in the right order. Start at the bottom (layer 1).", time:40,
+   items:["Digital infrastructure","Platforms","Managed services","Data","Intelligence","Business outcomes"],
+   explain:"Infrastructure, platforms and managed services come from Orange Business. Data and Intelligence are led by Digital & Data. The outcome is shared."},
+  {type:"mc", q:"Which two layers does Digital & Data lead?",
+   options:["Data and Intelligence","Infrastructure and Platforms","Platforms and Managed services","Only Business outcomes"],
+   explain:"We make data usable (layer 4) and add intelligence through analytics, AI and automation (layer 5)."},
+  {type:"mc", q:"Evolution Platform and Live Intelligence belong to which layer?",
+   options:["Platforms","Data","Business outcomes","Managed services"],
+   explain:"They are Orange Business platforms (layer 2). Live Intelligence is Orange Business's secure generative AI platform for companies."},
+  {type:"mc", q:"A customer has a promising AI proof of concept but cannot scale it. What do we bring?",
+   options:["Integration, governance, security, operations and adoption","A second proof of concept","Cheaper software licenses","Extra network bandwidth"],
+   explain:"Moving AI from proof of concept to secure, governed, enterprise scale use is one of our sharpest differentiators."},
+  {type:"tf", q:"Digital & Data only works on full end to end projects. We never provide expert capacity.", answer:false,
+   explain:"False. We do end to end delivery, one defined phase, or expert capacity (staff augmentation) for a specific need."},
+  {type:"mc", q:"Interaction analytics and intelligent routing in a contact center belong to which value proposition?",
+   options:["Customer Experience (CX)","Operational Experience (OX)","Employee Experience (EX)","Digital Infrastructure (DI)"],
+   explain:"Customer Experience: data from voice and digital channels, plus AI, leads to faster resolution and happier customers."},
+ ]},
+ { code:"PROOF", name:"Prove it", covers:"Our customer stories", qs:[
+  {type:"mc", q:"ZEISS: by how much has waste already been reduced?",
+   options:["More than 7%","More than 50%","About 1%","Nothing yet, it is all expected"],
+   explain:"More than 7% less waste is achieved. A further 15% scrap reduction is expected. Always separate achieved from expected."},
+  {type:"mc", q:"ZEISS: what did Digital & Data implement to make production data available and actionable?",
+   options:["A Unified Namespace","A new ERP system","A customer loyalty app","A private 5G network"],
+   explain:"A Unified Namespace gives one consistent, secure view of production data. On top of it: real time analytics and AI root cause analysis."},
+  {type:"mc", q:"Carrefour: what did data help them do?",
+   options:["Send the right offer to the right customer, at the right moment, through the right channel","Build new stores faster","Reduce scrap on the production line","Count fish on coral reefs"],
+   explain:"Hyperpersonalized promotions: more relevant offers for shoppers and smarter discounts that protect margin."},
+  {type:"mc", q:"Sappi: what does the AI decision system help them decide?",
+   options:["When to produce paper and whether to use self generated energy or feed it into the grid","Which paper colors to sell","Which employees to hire","Which customers to call first"],
+   explain:"It integrates fragmented data that used to live in Excel, lowering energy costs and opening new revenue."},
+  {type:"mc", q:"Tēnaka: what does the AI model do?",
+   options:["Identify and count marine species on restored coral reefs","Predict the weather for divers","Translate scientific reports","Plan boat routes"],
+   explain:"Cameras on a buoy send images over 4G to a secure Azure cloud, where AI identifies 17 local marine species."},
+  {type:"mc", q:"Which two stories are Operational Experience examples?",
+   options:["ZEISS and Sappi","Carrefour and Tēnaka","Carrefour and ZEISS","Sappi and Carrefour"],
+   explain:"ZEISS (less scrap) and Sappi (energy and production decisions) improve operations. Carrefour is Customer Experience."},
+  {type:"mc", q:"Finish the core narrative: Orange Business provides secure foundations. Digital & Data turns the data into...",
+   options:["Intelligence and business outcomes","More network capacity","Lower telecom bills","New hardware"],
+   explain:"Orange Business provides and operates secure digital foundations. Digital & Data makes the data usable, adds intelligence, and turns it into outcomes for operations, customers and employees."},
+ ]},
+];
+const DEFAULT_TIME = 20;
+const STORE_KEY = "dd_quiz_v1";
+
+/* ================= STATE ================= */
+let S = load() || { name:"", live:{}, study:{} };
+let mode = "live"; // live | study
+let run = null;    // current round run
+function load(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){} }
+const app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const fmt = n => n.toLocaleString("en-US");
+const VERSION = (window.APP_CONFIG && window.APP_CONFIG.appVersion) ? " · v" + window.APP_CONFIG.appVersion : "";
+const foot = '<div class="spacer"></div><div class="foot">Orange Business · Digital &amp; Data' + VERSION + '</div>';
+let tick = null;
+function stopTimer(){ if(tick){ clearInterval(tick); tick=null; } }
+
+/* ================= SCREENS ================= */
+function home(){
+  stopTimer();
+  if(!S.name) return welcome();
+  const totals = total(S.live);
+  app.innerHTML = `
+    <div class="eyebrow">Digital &amp; Data · Who we are</div>
+    <h1>Hi ${esc(S.name)}</h1>
+    <p>Tap a round when the presenter shows its code.</p>
+    ${ROUNDS.map((r,i)=>{ const d=S.live[i]; return `
+      <div class="card round ${d?"done":""}" data-r="${i}">
+        <div class="num">${i+1}</div>
+        <div class="meta"><b>${esc(r.name)}</b><div class="tag">${esc(r.covers)}</div></div>
+        <div class="right">${d?fmt(d.score)+"<br><span class='muted'>"+d.correct+"/"+r.qs.length+"</span>":"Locked"}</div>
+      </div>`;}).join("")}
+    <div class="card hl"><div class="row"><span>Your total</span><span>${fmt(totals.score)} points</span></div></div>
+    ${Object.keys(S.live).length===ROUNDS.length?'<button class="btn" id="final">See final score</button>':""}
+    <button class="link" id="study">Self-study mode: play all rounds without codes</button>
+    <button class="link" id="rename">Not ${esc(S.name)}? Change name</button>
+    ${foot}`;
+  app.querySelectorAll(".round").forEach(el=>el.onclick=()=>{ const i=+el.dataset.r; if(S.live[i]) return; codeScreen(i); });
+  const f=document.getElementById("final"); if(f) f.onclick=final;
+  document.getElementById("study").onclick=()=>{ mode="study"; S.study={}; startRound(0); };
+  document.getElementById("rename").onclick=()=>{ S.name=""; save(); welcome(); };
+}
+function welcome(){
+  app.innerHTML = `
+    <div class="eyebrow">Digital &amp; Data · Lunch quiz</div>
+    <h1>Who we are,<br>in 30 seconds</h1>
+    <p>Three short rounds about Orange Business Digital &amp; Data. Answer fast: the quicker you are, the more points you get.</p>
+    <div class="card">
+      <label class="muted" for="nm">Your name</label>
+      <input id="nm" maxlength="24" autocomplete="off" placeholder="First name" style="margin-top:8px">
+      <div class="err" id="er"></div>
+      <button class="btn" id="go">Start</button>
+    </div>
+    ${foot}`;
+  const nm=document.getElementById("nm"); nm.focus();
+  const go=()=>{ const v=nm.value.trim(); if(!v){ document.getElementById("er").textContent="Please enter your name"; return;} S.name=v; save(); home(); };
+  document.getElementById("go").onclick=go; nm.onkeydown=e=>{ if(e.key==="Enter") go(); };
+}
+function codeScreen(i){
+  const r=ROUNDS[i];
+  app.innerHTML = `
+    <div class="eyebrow">Round ${i+1} of ${ROUNDS.length}</div>
+    <h1>${esc(r.name)}</h1>
+    <p>Type the code shown on the screen.</p>
+    <div class="card">
+      <input id="cd" autocomplete="off" autocapitalize="characters" placeholder="Round code" style="text-transform:uppercase;letter-spacing:.15em;font-weight:700">
+      <div class="err" id="er"></div>
+      <button class="btn" id="go">Unlock</button>
+      <button class="btn ghost" id="back">Back</button>
+    </div>${foot}`;
+  const cd=document.getElementById("cd"); cd.focus();
+  const go=()=>{ if(cd.value.trim().toUpperCase()===r.code){ mode="live"; startRound(i);} else document.getElementById("er").textContent="That code is not right. Check the screen."; };
+  document.getElementById("go").onclick=go; cd.onkeydown=e=>{ if(e.key==="Enter") go(); };
+  document.getElementById("back").onclick=home;
+}
+function startRound(i){
+  const r=ROUNDS[i];
+  run={ r:i, q:0, score:0, correct:0, qs:r.qs };
+  app.innerHTML = `
+    <div class="eyebrow">Round ${i+1} of ${ROUNDS.length}${mode==="study"?" · Self-study":""}</div>
+    <h1>${esc(r.name)}</h1>
+    <p>${r.qs.length} questions. Correct answers earn 500 points, plus up to 500 bonus points for speed.</p>
+    <button class="btn" id="go">I'm ready</button>${foot}`;
+  document.getElementById("go").onclick=question;
+}
+function question(){
+  const q=run.qs[run.q], t=q.time||DEFAULT_TIME;
+  const head=`<div class="topbar"><span>Question ${run.q+1} of ${run.qs.length}</span><span>${fmt(run.score)} pts</span></div>
+    <div class="timer"><i id="bar"></i></div><div class="muted" id="sec">${t}s</div><h2>${esc(q.q)}</h2>`;
+  let body="";
+  if(q.type==="mc"){
+    run.opts=shuffle(q.options.map((o,k)=>({o,ok:k===0})));
+    body=run.opts.map((x,k)=>`<button class="opt" data-k="${k}"><span class="k">${"ABCD"[k]}</span>${esc(x.o)}</button>`).join("");
+  } else if(q.type==="tf"){
+    run.opts=[{o:"True",ok:q.answer===true},{o:"False",ok:q.answer===false}];
+    body=run.opts.map((x,k)=>`<button class="opt" data-k="${k}">${x.o}</button>`).join("");
+  } else {
+    run.pick=[]; run.pool=shuffle(q.items);
+    body=`<div class="muted">Tap from bottom (1) to top (${q.items.length})</div><div class="picked" id="pk"></div><div class="chips" id="pool"></div><button class="btn ghost" id="undo">Undo last</button>`;
+  }
+  app.innerHTML=head+body+'<div id="fbx"></div>';
+  run.answered=false; run.t0=Date.now(); run.limit=t*1000;
+  if(q.type==="order") drawOrder(q);
+  else app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answerChoice(+b.dataset.k));
+  stopTimer();
+  tick=setInterval(()=>{
+    const left=Math.max(0,run.limit-(Date.now()-run.t0));
+    const bar=document.getElementById("bar"); if(bar) bar.style.width=(left/run.limit*100)+"%";
+    const sc=document.getElementById("sec"); if(sc) sc.textContent=Math.ceil(left/1000)+"s";
+    if(left<=0){ stopTimer(); timeUp(); }
+  },100);
+}
+function drawOrder(q){
+  const pk=document.getElementById("pk"), pool=document.getElementById("pool");
+  pk.innerHTML=run.pick.map((x,k)=>`<div class="slot"><b>${k+1}</b>${esc(x)}</div>`).join("");
+  pool.innerHTML=run.pool.filter(x=>!run.pick.includes(x)).map(x=>`<button class="chip">${esc(x)}</button>`).join("");
+  pool.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ if(run.answered) return; run.pick.push(b.textContent); drawOrder(q); if(run.pick.length===q.items.length) answerOrder(q); });
+  document.getElementById("undo").onclick=()=>{ if(run.answered) return; run.pick.pop(); drawOrder(q); };
+}
+function points(){ const left=Math.max(0,run.limit-(Date.now()-run.t0)); return 500+Math.round(500*left/run.limit); }
+function answerChoice(k){
+  if(run.answered) return; run.answered=true; stopTimer();
+  const ok=run.opts[k].ok, pts=ok?points():0;
+  app.querySelectorAll(".opt").forEach((b,j)=>{ b.disabled=true; if(run.opts[j].ok) b.classList.add("correct"); else if(j===k) b.classList.add("wrong"); else b.classList.add("dim"); });
+  feedback(ok,pts);
+}
+function answerOrder(q){
+  if(run.answered) return; run.answered=true; stopTimer();
+  const ok=run.pick.every((x,k)=>x===q.items[k]), pts=ok?points():0;
+  showOrderResult(q); feedback(ok,pts);
+}
+function showOrderResult(q){
+  const pk=document.getElementById("pk");
+  pk.innerHTML=q.items.map((x,k)=>`<div class="slot ${run.pick[k]===x?"ok":"no"}"><b>${k+1}</b>${esc(x)}</div>`).join("");
+  document.getElementById("pool").innerHTML=""; const u=document.getElementById("undo"); if(u) u.remove();
+}
+function timeUp(){
+  if(run.answered) return; run.answered=true;
+  const q=run.qs[run.q];
+  if(q.type==="order") showOrderResult(q);
+  else app.querySelectorAll(".opt").forEach((b,j)=>{ b.disabled=true; b.classList.add(run.opts[j].ok?"correct":"dim"); });
+  feedback(false,0,true);
+}
+function feedback(ok,pts,timeout){
+  run.score+=pts; if(ok) run.correct++;
+  const q=run.qs[run.q], last=run.q===run.qs.length-1;
+  document.getElementById("fbx").innerHTML=`
+    <div class="fb ${ok?"good":"bad"}"><div class="head">${ok?"Correct  +"+fmt(pts):(timeout?"Time is up":"Not quite")}</div><p>${esc(q.explain)}</p></div>
+    <button class="btn" id="nx">${last?"See round result":"Next question"}</button>`;
+  document.getElementById("nx").onclick=()=>{ if(last) endRound(); else { run.q++; question(); } };
+  document.getElementById("nx").scrollIntoView({behavior:"smooth",block:"end"});
+}
+function endRound(){
+  const store = mode==="live"?S.live:S.study;
+  store[run.r]={score:run.score,correct:run.correct}; save();
+  const r=ROUNDS[run.r], lastRound=run.r===ROUNDS.length-1, tot=total(store);
+  app.innerHTML=`
+    <div class="eyebrow">Round ${run.r+1} done${mode==="study"?" · Self-study":""}</div>
+    <h1>${esc(r.name)}</h1>
+    <div class="card hl"><div class="muted">Round score</div><div class="big">${fmt(run.score)}</div><p style="margin-top:8px">${run.correct} of ${r.qs.length} correct</p></div>
+    <div class="card"><div class="row"><span>Total so far</span><span>${fmt(tot.score)} points</span></div></div>
+    ${mode==="live"
+      ? (Object.keys(S.live).length===ROUNDS.length?'<button class="btn" id="fin">See final score</button>':'<p>Wait for the next round code on the screen.</p><button class="btn ghost" id="hm">Back to rounds</button>')
+      : (lastRound?'<button class="btn" id="fin">See final score</button>':'<button class="btn" id="nr">Next round</button>')}
+    ${foot}`;
+  const b=id=>document.getElementById(id);
+  if(b("fin")) b("fin").onclick=final;
+  if(b("hm")) b("hm").onclick=home;
+  if(b("nr")) b("nr").onclick=()=>startRound(run.r+1);
+}
+function total(store){ let score=0,correct=0; Object.values(store).forEach(x=>{score+=x.score;correct+=x.correct;}); return {score,correct}; }
+function final(){
+  const store = mode==="live"?S.live:S.study, tot=total(store);
+  const n=ROUNDS.reduce((a,r)=>a+r.qs.length,0), pct=tot.correct/n;
+  const level = pct>=.85?"Digital & Data ambassador":pct>=.6?"Confident storyteller":"Ready for a replay";
+  app.innerHTML=`
+    <div class="eyebrow">Final score${mode==="study"?" · Self-study":""}</div>
+    <h1>${esc(S.name)}</h1>
+    <div class="card hl" style="text-align:center"><div class="big" style="font-size:64px">${fmt(tot.score)}</div><p>points · ${tot.correct} of ${n} correct</p><div class="badge">${esc(level)}</div></div>
+    <div class="card">${ROUNDS.map((r,i)=>`<div class="row"><span>${i+1}. ${esc(r.name)}</span><span>${store[i]?fmt(store[i].score):"-"}</span></div>`).join("")}</div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:8px">The core narrative</div><p>Orange Business provides and operates secure digital foundations. Digital &amp; Data makes the resulting data usable, adds intelligence through analytics and AI, and turns that intelligence into outcomes for operations, customers and employees.</p></div>
+    <button class="btn ghost" id="hm">Back to rounds</button>
+    ${foot}`;
+  document.getElementById("hm").onclick=()=>{ mode="live"; home(); };
+}
+home();
+</script>
+</body>
+</html>
