@@ -73,24 +73,24 @@ input:focus{border-color:var(--orange)}
    type: "mc" = multiple choice (first option is the correct one, options are shuffled on screen)
          "tf" = true or false (answer: true/false)
          "order" = tap in the right order (items listed in the correct order, shuffled on screen)
-   time: seconds for the question (default 20)
+   time: seconds for the question (default 30)
 =================================================================== */
 const ROUNDS = [
  { code:"DATA", name:"Who we are", covers:"What we are and where we fit", qs:[
   {type:"mc", q:"What is Digital & Data within Orange Business?",
-   options:["The consulting entity for Data, AI, Customer and Employee Experience","Orange's cybersecurity company","The team that runs the network operations centers","A software vendor that sells AI licenses"],
-   explain:"Digital & Data is the consulting entity within Orange Business, specialized in Data, AI, Customer Experience (CX) and Employee Experience (EX)."},
+   options:["The Data & AI consulting entity of Orange Business","Orange's cybersecurity company","The team that runs the network operations centers","A software vendor that sells AI licenses"],
+   explain:"Digital & Data is the Data & AI consulting entity within Orange Business. It covers Data, AI, Customer Experience (CX), Employee Experience (EX) and digital transformation."},
   {type:"tf", q:"Orange Business is the business to business (B2B) division of Orange Group.", answer:true,
    explain:"Correct. Orange is a global telecom provider, and Orange Business serves its business customers."},
-  {type:"mc", q:"Which of these is NOT one of our four core expertise areas?",
-   options:["Network cabling","Data","Artificial intelligence","Employee Experience"],
-   explain:"Our four areas are Data, AI, Customer Experience and Employee Experience, plus digital transformation."},
+  {type:"mc", q:"Orange Business has three Strategic Value Propositions (SVP). Which ones?",
+   options:["Operational, Customer and Employee Experience (OX, CX, EX)","Network, Cloud and Security","Sales, Marketing and Service","Data, AI and Automation"],
+   explain:"OX, CX and EX are the three SVPs. Digital & Data brings the Data and AI that turn them into results."},
   {type:"mc", q:"Orange Business plays three roles at once. Which three?",
    options:["Global operator, systems integrator, platform player","Hyperscaler, reseller, telco","Bank, insurer, consultant","Hardware maker, retailer, call center"],
-   explain:"It runs its own global network (operator), combines technology from many vendors into one solution (integrator) and offers shared platforms as a service (platform player)."},
-  {type:"mc", q:"Orange Business combines 'the three Cs' with Data and AI. What are the three Cs?",
-   options:["Connectivity, cloud, cybersecurity","Customers, contracts, consulting","Cost, compliance, cloud","Contact center, CRM, chat"],
-   explain:"Connectivity, cloud and cybersecurity. Digital & Data adds the Data, AI and transformation expertise on top."},
+   explain:"It runs its own global network (operator), combines technology from many vendors into one solution (integrator) and offers shared platforms as a service (platform player). Digital & Data brings the integrator capability."},
+  {type:"mc", q:"Together, the three Cs (connectivity, cloud and cybersecurity) are called...",
+   options:["Digital Infrastructure (DI)","Data & AI","Customer Experience (CX)","Managed services"],
+   explain:"Connectivity, cloud and cybersecurity form Digital Infrastructure. Orange Business combines DI and the value propositions with Data and AI."},
   {type:"mc", q:"Which Orange entity specializes in cybersecurity projects and services?",
    options:["Orange Cyberdefense","Digital & Data","Orange Belgium","Live Intelligence"],
    explain:"Orange Cyberdefense brings deep security expertise. Specialist entities add complementary expertise to one customer relationship."},
@@ -101,8 +101,8 @@ const ROUNDS = [
  { code:"LAYERS", name:"What we do", covers:"The problems we solve and the six layers", qs:[
   {type:"mc", q:"Which gap does Digital & Data close for customers?",
    options:["Between a high level strategy and a solution that is implemented, operated and adopted","Between a customer's budget and their invoice","Between two data centers","Between sales and marketing teams"],
-   explain:"We turn ambition into a feasible roadmap, then design, build, run and help people adopt the solution."},
-  {type:"order", q:"Put the six layers in the right order. Start at the bottom (layer 1).", time:40,
+   explain:"We turn strategy into solutions that are implemented, operated and adopted, and we turn data into business outcomes for a company's most complex challenges."},
+  {type:"order", q:"Put the six layers in the right order. Start at the bottom (layer 1).", time:60,
    items:["Digital infrastructure","Platforms","Managed services","Data","Intelligence","Business outcomes"],
    explain:"Infrastructure, platforms and managed services come from Orange Business. Data and Intelligence are led by Digital & Data. The outcome is shared."},
   {type:"mc", q:"Which two layers does Digital & Data lead?",
@@ -144,7 +144,7 @@ const ROUNDS = [
    explain:"Orange Business provides and operates secure digital foundations. Digital & Data makes the data usable, adds intelligence, and turns it into outcomes for operations, customers and employees."},
  ]},
 ];
-const DEFAULT_TIME = 20;
+const DEFAULT_TIME = 30;
 const STORE_KEY = "dd_quiz_v1";
 
 /* ================= STATE ================= */

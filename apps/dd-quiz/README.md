@@ -20,7 +20,7 @@ A phone quiz for the 30 minute Digital & Data lunch session ("Who we are, in 30 
 
 - Everyone scans the QR code on the deck and enters their first name.
 - Each round is locked. The code is on the round slide: **DATA**, **LAYERS**, **PROOF**.
-- 7 questions per round, 20 seconds each (the "order the layers" question has 40).
+- 7 questions per round, 30 seconds each (the "order the layers" question has 60).
 - Correct answer = 500 points plus up to 500 bonus points for speed. Max 21,000.
 - After round 3, each phone shows the final score. Find the winner by asking people to stand up above a score.
 - Self-study mode (link on the home screen) plays all rounds without codes. Good for newcomers.
