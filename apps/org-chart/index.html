@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Org Chart | Digital & Data</title>
+<meta name="description" content="Interactive, editable org chart. Data stays in your browser and in your own org.json file.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="eyebrow">Orange Business</span>
+    <span id="chartTitle" class="title">Org chart</span>
+  </div>
+  <div class="search">
+    <input id="search" type="search" placeholder="Search name or team" autocomplete="off">
+    <span id="searchInfo" class="muted"></span>
+  </div>
+  <div class="tools">
+    <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+    <span class="sep"></span>
+    <button id="btnExpand" title="Open all levels">Expand all</button>
+    <button id="btnCollapse" title="Show only the top levels">Collapse</button>
+    <button id="btnFit" title="Fit the chart on screen">Fit</button>
+    <button id="btnZoomOut" title="Zoom out">-</button>
+    <button id="btnZoomIn" title="Zoom in">+</button>
+    <span class="sep"></span>
+    <button id="btnImport" title="Open an org.json file">Open file</button>
+    <button id="btnExport" class="primary" title="Download the chart as org.json">Save file</button>
+    <input id="fileInput" type="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main id="viewport">
+  <div id="stage">
+    <svg id="links"></svg>
+    <div id="nodes"></div>
+  </div>
+
+  <div id="empty" class="empty" hidden>
+    <div class="empty-card">
+      <div class="eyebrow">Org chart</div>
+      <h1>Open your org chart</h1>
+      <p>This app does not store names on GitHub. Open your <b>org.json</b> file, or start a new chart. Your work is kept in this browser until you save it as a file.</p>
+      <button id="emptyImport" class="primary big">Open org.json</button>
+      <button id="emptyNew" class="big">Start a new chart</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="lg-line"></i>Digital &amp; Data reporting line</span>
+    <span class="muted">Drag a box onto another box to move it · Double-click to open or close a team</span>
+  </div>
+  <div id="status" class="status muted"></div>
+</main>
+
+<aside id="panel" class="panel" hidden>
+  <div class="panel-head">
+    <span class="eyebrow">Edit</span>
+    <button id="panelClose" class="icon" title="Close (Esc)">×</button>
+  </div>
+  <label>Name<input id="fName" type="text" placeholder="Person name (leave empty for a team)"></label>
+  <label>Role or team<input id="fRole" type="text" placeholder="Title, team or function"></label>
+  <label>Note<textarea id="fNote" rows="2" placeholder="Optional, for example: dotted line to..."></textarea></label>
+  <label class="check"><input id="fLine" type="checkbox"> On the Digital &amp; Data reporting line (orange)</label>
+  <label class="check"><input id="fHighlight" type="checkbox"> Highlight this box (filled orange)</label>
+
+  <div class="group">
+    <div class="group-title">Add</div>
+    <div class="row">
+      <button id="addChild">Add person below</button>
+      <button id="addSibling">Add person next to</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="group-title">Move</div>
+    <div class="row">
+      <button id="moveLeft">Move left</button>
+      <button id="moveRight">Move right</button>
+    </div>
+    <label>Report to
+      <select id="fParent"></select>
+    </label>
+  </div>
+  <div class="group">
+    <div class="group-title">Remove</div>
+    <div id="delInfo" class="muted small"></div>
+    <div class="row">
+      <button id="delKeep" class="danger-soft">Remove, keep team</button>
+      <button id="delAll" class="danger">Remove with team</button>
+    </div>
+    <div id="delConfirm" class="confirm" hidden>
+      <span id="delConfirmText"></span>
+      <div class="row"><button id="delYes" class="danger">Yes, remove</button><button id="delNo">Cancel</button></div>
+    </div>
+  </div>
+</aside>
+
+<div id="toast" class="toast" hidden></div>
+<footer id="version" class="version muted"></footer>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# The people data stays on this computer. Never push it.
+org.json
+*.json
