@@ -24,6 +24,7 @@ A phone quiz for the 30 minute Digital & Data lunch session ("Who we are, in 30 
 - Correct answer = 500 points plus up to 500 bonus points for speed. Max 21,000.
 - After round 3, each phone shows the final score. Find the winner by asking people to stand up above a score.
 - Self-study mode (link on the home screen) plays all rounds without codes. Good for newcomers.
+- "Start over" (link on the home screen) clears the name and all scores on that phone, for example before a new session.
 
 ## Edit questions
 

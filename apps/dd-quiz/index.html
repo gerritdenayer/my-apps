@@ -12,6 +12,7 @@
   --green:#3FAE7B;--red:#E5484D;--blue:#3B6FE0;--purple:#6C4FD6;--gold:#E0A83B;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center}
 #app{width:100%;max-width:520px;padding:20px 16px 32px;display:flex;flex-direction:column;min-height:100dvh}
@@ -181,11 +182,20 @@ function home(){
     ${Object.keys(S.live).length===ROUNDS.length?'<button class="btn" id="final">See final score</button>':""}
     <button class="link" id="study">Self-study mode: play all rounds without codes</button>
     <button class="link" id="rename">Not ${esc(S.name)}? Change name</button>
+    <button class="link" id="restart">Start over: clear my name and all scores</button>
+    <div class="card" id="restartBox" hidden>
+      <p>This removes your name and every score on this phone, so the quiz starts clean. Continue?</p>
+      <button class="btn" id="restartYes">Yes, start over</button>
+      <button class="btn ghost" id="restartNo">Cancel</button>
+    </div>
     ${foot}`;
   app.querySelectorAll(".round").forEach(el=>el.onclick=()=>{ const i=+el.dataset.r; if(S.live[i]) return; codeScreen(i); });
   const f=document.getElementById("final"); if(f) f.onclick=final;
   document.getElementById("study").onclick=()=>{ mode="study"; S.study={}; startRound(0); };
   document.getElementById("rename").onclick=()=>{ S.name=""; save(); welcome(); };
+  document.getElementById("restart").onclick=()=>{ const bx=document.getElementById("restartBox"); bx.hidden=false; bx.scrollIntoView({behavior:"smooth",block:"center"}); };
+  document.getElementById("restartNo").onclick=()=>{ document.getElementById("restartBox").hidden=true; };
+  document.getElementById("restartYes").onclick=()=>{ S={ name:"", live:{}, study:{} }; mode="live"; run=null; save(); welcome(); };
 }
 function welcome(){
   app.innerHTML = `
