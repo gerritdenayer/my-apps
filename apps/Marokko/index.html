@@ -80,8 +80,9 @@ input[type=range]{padding:0;border:0;accent-color:var(--green);height:32px}
 <script>
 // ===== JSONBin settings: paste your Access Key between the quotes below =====
 const BIN_ID = '6ad518b7ffd5d160537690a6';
-const ACCESS_KEY = '$2a$10$kQmRhVq8OOsfmXSBjDG.ouLlDeMUNB9dfW7DvsAHrdTI66jJMoKOa';
+const ACCESS_KEY = 'PASTE_YOUR_ACCESS_KEY_HERE';
 // ===========================================================================
+const PLAYERS = ['Gerrit','Tom','Kathleen','Tania','Peter','Cynthia','Hans','Liesbeth'];
 const BUILT_IN = ACCESS_KEY && !ACCESS_KEY.startsWith('PASTE_');
 const API = 'https://api.jsonbin.io/v3/b/';
 const MAX = 3;
@@ -113,6 +114,7 @@ async function sha(t){ const b=await crypto.subtle.digest('SHA-256', new TextEnc
 function normalize(d){
   d = (d && typeof d==='object') ? d : {};
   d.players = Array.isArray(d.players) ? d.players : [];
+  PLAYERS.forEach(p=>{ if(!d.players.some(x=>x.toLowerCase()===p.toLowerCase())) d.players.push(p); });
   d.categories = Array.isArray(d.categories) ? d.categories : [];
   d.votes = Array.isArray(d.votes) ? d.votes : [];
   return d;
