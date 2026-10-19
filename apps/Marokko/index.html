@@ -38,6 +38,7 @@ label{display:block;font-weight:600;font-size:14px;margin-bottom:4px}
 .btn.inline{display:inline-block;width:auto;padding:10px 14px;font-size:15px}
 .link{background:none;border:0;color:var(--green);font-size:15px;text-decoration:underline;cursor:pointer;padding:8px}
 .link.light{color:#fff;opacity:.9}
+.link.del{color:var(--flag);font-size:14px;padding:4px 0}
 details.newcat{margin-top:10px}
 details.newcat summary{cursor:pointer;color:var(--green);font-weight:600;padding:8px 0}
 .score{display:flex;align-items:baseline;gap:12px;justify-content:center}
@@ -80,7 +81,7 @@ input[type=range]{padding:0;border:0;accent-color:var(--green);height:32px}
 <script>
 // ===== JSONBin settings: paste your Access Key between the quotes below =====
 const BIN_ID = '6ad518b7ffd5d160537690a6';
-const ACCESS_KEY = '$2a$10$kQmRhVq8OOsfmXSBjDG.ouLlDeMUNB9dfW7DvsAHrdTI66jJMoKOa';
+const ACCESS_KEY = 'PASTE_YOUR_ACCESS_KEY_HERE';
 // ===========================================================================
 const PLAYERS = ['Gerrit','Tom','Kathleen','Tania','Peter','Cynthia','Hans','Liesbeth'];
 const BUILT_IN = ACCESS_KEY && !ACCESS_KEY.startsWith('PASTE_');
@@ -114,7 +115,7 @@ async function sha(t){ const b=await crypto.subtle.digest('SHA-256', new TextEnc
 function normalize(d){
   d = (d && typeof d==='object') ? d : {};
   d.players = Array.isArray(d.players) ? d.players : [];
-  PLAYERS.forEach(p=>{ if(!d.players.some(x=>x.toLowerCase()===p.toLowerCase())) d.players.push(p); });
+  if(!d.seeded){ PLAYERS.forEach(p=>{ if(!d.players.some(x=>x.toLowerCase()===p.toLowerCase())) d.players.push(p); }); d.seeded=true; }
   d.categories = Array.isArray(d.categories) ? d.categories : [];
   d.votes = Array.isArray(d.votes) ? d.votes : [];
   return d;
@@ -164,15 +165,14 @@ const VIEWS = {
       ${BUILT_IN ? '' : `<label>JSONBin Bin ID<input id="sBin" autocomplete="off" placeholder="e.g. 671a2b3c4d5e6f..."></label>
       <label>JSONBin Access Key<input id="sKey" autocomplete="off" placeholder="$2a$10$..."></label>`}
       <label>Your organizer PIN<input id="sPin" type="password" inputmode="numeric" placeholder="Pick a PIN only you know"></label>
-      <label>Players (optional, comma separated)<input id="sPlayers" placeholder="Gerrit, Jan, Piet, Luc"></label>
       <button class="btn main" data-act="setup">Start the game</button></div></main>`;
   },
 
   who(){
     const d=S.data;
     $('#app').innerHTML = head('Who are you?', 'Pick your name. This phone will remember it.') + `<main>
-      <div class="card">${d.players.length ? `<div class="chips">${d.players.map(p=>`<button class="chip" data-who="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : '<p class="muted">No players yet. Add your name below.</p>'}</div>
-      <div class="card"><h2>Not on the list?</h2><input id="newName" maxlength="20" placeholder="Your first name"><button class="btn sec" data-act="join">Join the game</button></div>
+      <div class="card">${d.players.length ? `<div class="chips">${d.players.map(p=>`<button class="chip" data-who="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : '<p class="muted">No players yet. Ask the organizer to add you.</p>'}</div>
+      <p class="muted center small">Not on the list? Ask the organizer to add you.</p>
       <p class="center"><button class="link" data-act="admin">Organizer</button></p></main>`;
   },
 
@@ -206,7 +206,7 @@ const VIEWS = {
 
   admin(){
     const d=S.data, t=S.tab;
-    const tabs=[['overall','🏆 Overall'],['cats','🏅 Categories'],['feed','📝 All votes'],['today','📅 Today'],['link','🔗 Invite']];
+    const tabs=[['overall','🏆 Overall'],['cats','🏅 Categories'],['feed','📝 All votes'],['today','📅 Today'],['manage','⚙️ Manage'],['link','🔗 Invite']];
     let h = head('Scoreboard', `${d.votes.length} votes so far · ${d.players.length} players`, `<button class="link light" data-act="refresh">Refresh</button>`) + '<main>';
     h += `<div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${t===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
     if(t==='overall'){
@@ -218,10 +218,15 @@ const VIEWS = {
       });
     } else if(t==='feed'){
       const vs=[...d.votes].reverse();
-      h += `<div class="card">${vs.length ? vs.map(v=>{ const c=catById(v.cat); return `<div class="vote"><span class="badge">${v.score}</span><b>${esc(v.from)}</b> → <b>${esc(v.to)}</b><br><span class="muted">${esc(c.emoji)} ${esc(c.name)} · ${esc(v.day)}</span>${v.note?`<q>${esc(v.note)}</q>`:''}</div>`; }).join('') : '<p class="muted">No votes yet.</p>'}</div>`;
+      h += `<div class="card">${vs.length ? vs.map(v=>{ const c=catById(v.cat); return `<div class="vote"><span class="badge">${v.score}</span><b>${esc(v.from)}</b> → <b>${esc(v.to)}</b><br><span class="muted">${esc(c.emoji)} ${esc(c.name)} · ${esc(v.day)}</span>${v.note?`<q>${esc(v.note)}</q>`:''}<div><button class="link del" data-delvote="${v.ts}|${esc(v.from)}">🗑 Remove vote</button></div></div>`; }).join('') : '<p class="muted">No votes yet.</p>'}</div>`;
     } else if(t==='today'){
       const td=today();
       h += `<div class="card"><h2>Votes used today</h2>${d.players.map(p=>{ const n=d.votes.filter(v=>v.from===p&&v.day===td).length; return `<div class="rank"><span class="nm">${esc(p)}</span><span class="pts">${n}/${MAX}</span></div>`; }).join('') || '<p class="muted">No players yet.</p>'}</div>`;
+    } else if(t==='manage'){
+      h += `<div class="card"><h2>👥 Players</h2>${d.players.map(p=>`<div class="rank"><span class="nm">${esc(p)}</span><button class="link del" data-delplayer="${esc(p)}">Remove</button></div>`).join('') || '<p class="muted">No players yet.</p>'}
+        <div class="row" style="margin-top:10px"><input id="npName" maxlength="20" placeholder="New player name"><button class="btn sec inline" data-act="addplayer" style="margin:6px 0 10px">Add</button></div></div>
+        <div class="card"><h2>🏅 Categories</h2>${d.categories.map(c=>`<div class="rank"><span class="nm">${esc(c.emoji||'🏅')} ${esc(c.name)}${c.by&&c.by!=='Organizer'?`<small>Added by ${esc(c.by)}</small>`:''}</span><button class="link del" data-delcat="${esc(c.id)}">Remove</button></div>`).join('') || '<p class="muted">No categories.</p>'}</div>
+        <p class="muted small center">Removing a player or category also removes the votes linked to it. A removed vote gives that vote back to the voter for that day.</p>`;
     } else {
       const link=inviteLink();
       h += `<div class="card"><h2>Invite your friends</h2><p class="muted">Send this link in your group chat. Everyone opens it, picks their name and starts voting. Nothing else to fill in.</p>
@@ -253,7 +258,6 @@ const ACT = {
 
   async setup(btn){
     const b=BUILT_IN?BIN_ID:$('#sBin').value.trim(), k=BUILT_IN?ACCESS_KEY:$('#sKey').value.trim(), pin=$('#sPin').value.trim();
-    const players=$('#sPlayers').value.split(',').map(x=>x.trim()).filter(Boolean);
     if(!b||!k||!pin) return toast(BUILT_IN?'Please pick a PIN.':'Please fill in Bin ID, Access Key and PIN.');
     busy(btn,true); S.cfg={b,k};
     try{
@@ -262,22 +266,11 @@ const ACT = {
         if(d.adminPinHash && d.adminPinHash!==h) throw new Error('This game already has a different organizer PIN.');
         d.adminPinHash=h;
         if(!d.categories.length) d.categories=SEED.map((c,i)=>({id:'s'+i, ...c, by:'Organizer'}));
-        players.forEach(p=>{ if(!d.players.some(x=>x.toLowerCase()===p.toLowerCase())) d.players.push(p); });
       });
       save('gp_cfg',S.cfg); save('gp_admin',h);
       if(!BUILT_IN) history.replaceState(null,'',inviteLink());
       S.tab='link'; go('admin');
     }catch(e){ if(!BUILT_IN) S.cfg=null; busy(btn,false); toast(e.message); }
-  },
-
-  async join(btn){
-    const name=$('#newName').value.trim().replace(/\s+/g,' ');
-    if(!name) return toast('Type your name first.');
-    busy(btn,true);
-    try{
-      const final=await mutate(d=>{ const ex=d.players.find(x=>x.toLowerCase()===name.toLowerCase()); if(ex) return ex; d.players.push(name); return name; });
-      pickMe(final);
-    }catch(e){ busy(btn,false); toast(e.message); }
   },
 
   switch(){ S.me=null; save('gp_me',null); S.pick={}; go('who'); },
@@ -304,6 +297,7 @@ const ACT = {
       await mutate(d=>{
         if(votesLeft(d,me)<=0) throw new Error('No votes left today. Back tomorrow!');
         if(to===me) throw new Error('Nice try. No points for yourself.');
+        if(!d.players.includes(me)||!d.players.includes(to)) throw new Error('This player is no longer in the game.');
         d.votes.push({from:me,to,cat,score,note,day:today(),ts:Date.now()});
       });
       S.pick={}; celebrate(); go('home');
@@ -330,10 +324,24 @@ const ACT = {
 
   back(){ home(); },
 
+  async addplayer(btn){
+    const name=$('#npName').value.trim().replace(/\s+/g,' ');
+    if(!name) return toast('Type a name first.');
+    busy(btn,true);
+    try{
+      await mutate(d=>{ if(d.players.some(x=>x.toLowerCase()===name.toLowerCase())) throw new Error(name+' is already in.'); d.players.push(name); });
+      toast(name+' added!'); render();
+    }catch(e){ busy(btn,false); toast(e.message); }
+  },
+
   async copy(){ try{ await navigator.clipboard.writeText(inviteLink()); toast('Link copied!'); }catch(e){ toast('Copy failed. Select the link and copy it.'); } },
   async share(){ try{ await navigator.share({title:'Golf Trip Points', text:'Give your golf buddies points! ⛳', url:inviteLink()}); }catch(e){} }
 };
 
+async function adminDelete(question, fn, done){
+  if(!window.confirm(question)) return;
+  try{ await mutate(fn); toast(done); render(); }catch(e){ toast(e.message); }
+}
 function pickMe(name){ S.me=name; save('gp_me',name); S.pick={}; go('home'); }
 
 document.addEventListener('click', e=>{
@@ -342,6 +350,12 @@ document.addEventListener('click', e=>{
   if(t.dataset.cat!==undefined){ S.pick.cat=t.dataset.cat; return render(); }
   if(t.dataset.who!==undefined){ return pickMe(t.dataset.who); }
   if(t.dataset.tab){ S.tab=t.dataset.tab; return render(); }
+  if(t.dataset.delplayer!==undefined) return adminDelete(`Remove ${t.dataset.delplayer}? All votes given by and to ${t.dataset.delplayer} are removed too.`, d=>{
+    const n=t.dataset.delplayer; d.players=d.players.filter(x=>x!==n); d.votes=d.votes.filter(v=>v.from!==n&&v.to!==n); }, 'Player removed');
+  if(t.dataset.delcat!==undefined){ const c=catById(t.dataset.delcat); return adminDelete(`Remove the category "${c.name}"? Its votes are removed too.`, d=>{
+    const id=t.dataset.delcat; d.categories=d.categories.filter(x=>x.id!==id); d.votes=d.votes.filter(v=>v.cat!==id); }, 'Category removed'); }
+  if(t.dataset.delvote!==undefined) return adminDelete('Remove this vote?', d=>{
+    const [ts,from]=t.dataset.delvote.split('|'); const i=d.votes.findIndex(v=>String(v.ts)===ts&&v.from===from); if(i<0) throw new Error('Vote not found. Tap Refresh.'); d.votes.splice(i,1); }, 'Vote removed');
   const a=t.dataset.act; if(a && ACT[a]) ACT[a](t);
 });
 document.addEventListener('input', e=>{
@@ -350,7 +364,7 @@ document.addEventListener('input', e=>{
 });
 document.addEventListener('visibilitychange', async ()=>{
   if(document.hidden || !S.cfg || !['home','who'].includes(S.view)) return;
-  try{ S.data=await fetchData(); render(); }catch(e){}
+  try{ S.data=await fetchData(); if(S.me && !S.data.players.includes(S.me)){ S.me=null; return go('who'); } render(); }catch(e){}
 });
 
 async function init(){
