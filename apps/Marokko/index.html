@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Golf Trip Points</title>
+<meta name="theme-color" content="#1f5f3a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>">
+<style>
+:root{--green:#1f5f3a;--green2:#2e7d4f;--fair:#e8f3ea;--sand:#f6ecd2;--ink:#1b2a21;--muted:#5d6b62;--line:#d5e2d6;--card:#fff;--bg:#f4f7f2;--flag:#d64545;--gold:#d9a400}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:40px}
+header{background:linear-gradient(160deg,var(--green),var(--green2));color:#fff;padding:18px 16px 26px;border-radius:0 0 24px 24px}
+header .top{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:15px;opacity:.95}
+header h1{margin:16px 0 4px;font-size:28px}
+header .sub{margin:0;opacity:.85;font-size:15px}
+main{max-width:560px;margin:0 auto;padding:16px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h2{font-size:17px;margin:0 0 12px}
+.muted{color:var(--muted)}.small{font-size:13px}.center{text-align:center}
+.big{font-size:48px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:10px 16px;font-size:16px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff}
+.cats{display:grid;gap:8px}
+.cat{display:flex;gap:12px;align-items:center;text-align:left;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:14px;padding:10px 12px;font-size:15px;cursor:pointer}
+.cat .em{font-size:26px;width:34px;text-align:center}
+.cat small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.cat.on{border-color:var(--green);background:var(--fair);box-shadow:inset 0 0 0 1px var(--green)}
+input,select{width:100%;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);margin:6px 0 10px}
+label{display:block;font-weight:600;font-size:14px;margin-bottom:4px}
+.row{display:flex;gap:8px}.emoji-in{width:70px;flex:none;text-align:center}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:700;cursor:pointer}
+.btn.main{background:var(--flag);color:#fff;box-shadow:0 4px 12px rgba(214,69,69,.3)}
+.btn.sec{background:var(--fair);color:var(--green)}
+.btn:disabled{opacity:.6}
+.btn.inline{display:inline-block;width:auto;padding:10px 14px;font-size:15px}
+.link{background:none;border:0;color:var(--green);font-size:15px;text-decoration:underline;cursor:pointer;padding:8px}
+.link.light{color:#fff;opacity:.9}
+.link.del{color:var(--flag);font-size:14px;padding:4px 0}
+details.newcat{margin-top:10px}
+details.newcat summary{cursor:pointer;color:var(--green);font-weight:600;padding:8px 0}
+.score{display:flex;align-items:baseline;gap:12px;justify-content:center}
+#scoreNum{font-size:56px;font-weight:800;color:var(--green)}
+#scoreLbl{font-size:20px;font-weight:600;color:var(--muted)}
+input[type=range]{padding:0;border:0;accent-color:var(--green);height:32px}
+.scale{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:-6px;margin-bottom:8px}
+.balls{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:15px}
+.ball{width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:inset -2px -2px 0 rgba(0,0,0,.12)}
+.ball.used{background:transparent;border:2px dashed rgba(255,255,255,.6);box-shadow:none}
+.balls span:last-child{margin-left:6px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px}
+.tab{flex:none;border:0;background:#fff;border-radius:999px;padding:9px 14px;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer}
+.tab.on{background:var(--green);color:#fff}
+.rank{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg)}
+.rank:last-child{border-bottom:0}
+.rank .pos{width:30px;text-align:center;font-size:20px;font-weight:700;color:var(--muted)}
+.rank .nm{flex:1;font-weight:600}
+.rank .nm small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.rank .pts{font-weight:800;font-size:18px;color:var(--green)}
+.vote{padding:10px 0;border-bottom:1px solid var(--bg);font-size:15px}
+.vote:last-child{border-bottom:0}
+.vote .badge{float:right;background:var(--sand);border-radius:8px;padding:2px 8px;font-weight:800}
+.vote q{display:block;color:var(--muted);font-style:italic;margin-top:4px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:15px;z-index:20;max-width:90%;text-align:center}
+.cel{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(31,95,58,.92);color:#fff;z-index:30;animation:fade 1.8s forwards}
+.cel .hole{font-size:80px;animation:pop .5s ease-out}
+.cel b{font-size:26px;margin-top:10px}
+.conf{position:fixed;font-size:26px;z-index:31;animation:fly 1.5s ease-out forwards;pointer-events:none}
+@keyframes pop{0%{transform:scale(.2)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes fade{0%,80%{opacity:1}100%{opacity:0}}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(360deg);opacity:0}}
+.linkbox{word-break:break-all;font-size:13px;background:var(--bg);padding:10px;border-radius:10px;margin:8px 0}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.spin{text-align:center;padding:60px 0;font-size:40px;animation:pop 1s infinite alternate}
+</style>
+</head>
+<body>
+<div id="app"><div class="spin">⛳</div></div>
+<script>
+// ===== JSONBin settings: paste your Access Key between the quotes below =====
+const BIN_ID = '6ad518b7ffd5d160537690a6';
+const ACCESS_KEY = '$2a$10$kQmRhVq8OOsfmXSBjDG.ouLlDeMUNB9dfW7DvsAHrdTI66jJMoKOa';
+// ===========================================================================
+const PLAYERS = ['Gerrit','Tom','Kathleen','Tania','Peter','Cynthia','Hans','Liesbeth'];
+const BUILT_IN = ACCESS_KEY && !ACCESS_KEY.startsWith('PASTE_');
+const API = 'https://api.jsonbin.io/v3/b/';
+const MAX = 3;
+const SEED = [
+  {emoji:'🎯', name:'Shot of the day', hint:'The one everybody will talk about tonight'},
+  {emoji:'🤥', name:'Best excuse', hint:'The wind, the shoes, the bird...'},
+  {emoji:'🏖️', name:'Sandcastle builder', hint:'Most time spent in bunkers'},
+  {emoji:'💦', name:'Splash award', hint:'Found the water. Again.'},
+  {emoji:'🌲', name:'Tree hugger', hint:'More forest than fairway'},
+  {emoji:'🪄', name:'Putting magician', hint:'That long putt that dropped'},
+  {emoji:'🎭', name:'Drama queen', hint:'Best reaction to a bad shot'},
+  {emoji:'👔', name:'Fashion police', hint:'Best (or worst) golf outfit'},
+  {emoji:'🍀', name:'Lucky bounce', hint:'Off the tree, onto the green'},
+  {emoji:'🍺', name:'19th hole hero', hint:'Star of the bar after the round'},
+  {emoji:'😇', name:'Mulligan master', hint:'"That one did not count"'},
+  {emoji:'😴', name:'Roommate of the year', hint:'Snoring included'}
+];
+const LABELS = {1:'Ouch',2:'Meh',3:'Not great',4:'OK-ish',5:'Solid',6:'Nice',7:'Very nice',8:'Great',9:'Superb',10:'Legendary'};
+
+const S = {cfg:null, data:null, me:null, view:'loading', pick:{}, tab:'overall', err:''};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function load(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+async function sha(t){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t+'|golfpoints')); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+
+function normalize(d){
+  d = (d && typeof d==='object') ? d : {};
+  d.players = Array.isArray(d.players) ? d.players : [];
+  if(!d.seeded){ PLAYERS.forEach(p=>{ if(!d.players.some(x=>x.toLowerCase()===p.toLowerCase())) d.players.push(p); }); d.seeded=true; }
+  d.categories = Array.isArray(d.categories) ? d.categories : [];
+  d.votes = Array.isArray(d.votes) ? d.votes : [];
+  return d;
+}
+async function fetchData(){
+  const r = await fetch(API+S.cfg.b+'/latest', {headers:{'X-Access-Key':S.cfg.k,'X-Bin-Meta':'false'}, cache:'no-store'});
+  if(!r.ok) throw new Error('Could not load the game (error '+r.status+'). Check the link.');
+  return normalize(await r.json());
+}
+async function mutate(fn){
+  const d = await fetchData();
+  const res = fn(d);
+  const r = await fetch(API+S.cfg.b, {method:'PUT', headers:{'Content-Type':'application/json','X-Access-Key':S.cfg.k}, body:JSON.stringify(d)});
+  if(!r.ok) throw new Error('Could not save (error '+r.status+'). Try again.');
+  S.data = d;
+  return res;
+}
+function votesLeft(d, me){ const t=today(); return Math.max(0, MAX - d.votes.filter(v=>v.from===me && v.day===t).length); }
+function catById(id){ return S.data.categories.find(c=>c.id===id) || {name:'(removed)', emoji:'❔'}; }
+
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 2600); }
+function celebrate(){
+  const c=document.createElement('div'); c.className='cel';
+  c.innerHTML='<div class="hole">⛳</div><b>Points sent!</b><span>Shhh, they stay secret.</span>';
+  document.body.appendChild(c);
+  const em=['🎉','⛳','🏌️','⭐','⚪','🍺'];
+  for(let i=0;i<18;i++){ const s=document.createElement('span'); s.className='conf'; s.textContent=em[i%em.length];
+    s.style.left='50%'; s.style.top='45%'; s.style.setProperty('--dx',(Math.random()*320-160)+'px'); s.style.setProperty('--dy',(Math.random()*-360+60)+'px');
+    document.body.appendChild(s); setTimeout(()=>s.remove(),1600); }
+  setTimeout(()=>c.remove(), 1800);
+}
+function head(title, sub, right){
+  return `<header><div class="top"><span>⛳ Golf Trip Points</span>${right||''}</div><h1>${title}</h1>${sub?`<p class="sub">${sub}</p>`:''}</header>`;
+}
+
+/* ---------- Views ---------- */
+const VIEWS = {
+  loading(){ $('#app').innerHTML='<div class="spin">⛳</div>'; },
+
+  error(){
+    $('#app').innerHTML = head('Oops', '') + `<main><div class="card center"><div class="big">🌧️</div><p>${esc(S.err)}</p>
+      <button class="btn sec" data-act="retry">Try again</button></div></main>`;
+  },
+
+  setup(){
+    $('#app').innerHTML = head('Set up the game', 'For the organizer only. This screen shows once.') + `<main><div class="card">
+      ${BUILT_IN ? '' : `<label>JSONBin Bin ID<input id="sBin" autocomplete="off" placeholder="e.g. 671a2b3c4d5e6f..."></label>
+      <label>JSONBin Access Key<input id="sKey" autocomplete="off" placeholder="$2a$10$..."></label>`}
+      <label>Your organizer PIN<input id="sPin" type="password" inputmode="numeric" placeholder="Pick a PIN only you know"></label>
+      <button class="btn main" data-act="setup">Start the game</button></div></main>`;
+  },
+
+  who(){
+    const d=S.data;
+    $('#app').innerHTML = head('Who are you?', 'Pick your name. This phone will remember it.') + `<main>
+      <div class="card">${d.players.length ? `<div class="chips">${d.players.map(p=>`<button class="chip" data-who="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : '<p class="muted">No players yet. Ask the organizer to add you.</p>'}</div>
+      <p class="muted center small">Not on the list? Ask the organizer to add you.</p>
+      <p class="center"><button class="link" data-act="admin">Organizer</button></p></main>`;
+  },
+
+  home(){
+    const d=S.data, me=S.me, left=votesLeft(d,me), p=S.pick;
+    const others=d.players.filter(x=>x!==me);
+    const sc=p.score||5;
+    let h = head(`Hi ${esc(me)}!`, '', `<button class="link light" data-act="switch">Not ${esc(me)}?</button>`);
+    h = h.replace('</h1>', `</h1><div class="balls">${[0,1,2].map(i=>`<span class="ball ${i<left?'':'used'}"></span>`).join('')}<span>${left} of ${MAX} votes left today</span></div>`);
+    h += '<main>';
+    if(left<=0){
+      h += `<div class="card center"><div class="big">🏌️</div><h2>All votes used today</h2><p class="muted">Come back tomorrow, first tee. The scores stay secret until the prize-giving.</p></div>`;
+    } else {
+      h += `<div class="card"><h2>1. Who gets points?</h2>${others.length ? `<div class="chips">${others.map(x=>`<button class="chip ${p.to===x?'on':''}" data-to="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '<p class="muted">No other players yet. Share the link with your friends.</p>'}</div>
+      <div class="card"><h2>2. For what?</h2><div class="cats">${d.categories.map(c=>`<button class="cat ${p.cat===c.id?'on':''}" data-cat="${esc(c.id)}"><span class="em">${esc(c.emoji||'🏅')}</span><span><b>${esc(c.name)}</b>${c.hint?`<small>${esc(c.hint)}</small>`:''}</span></button>`).join('')}</div>
+        <details class="newcat"><summary>+ Add a new category</summary><div class="row"><input id="ncEmoji" class="emoji-in" maxlength="4" placeholder="🏅"><input id="ncName" maxlength="40" placeholder="e.g. Longest drive"></div><button class="btn sec" data-act="addcat">Add category</button></details></div>
+      <div class="card"><h2>3. How many points?</h2><div class="score"><span id="scoreNum">${sc}</span><span id="scoreLbl">${LABELS[sc]}</span></div>
+        <input type="range" id="score" min="1" max="10" step="1" value="${sc}"><div class="scale"><span>1</span><span>10</span></div>
+        <input id="note" maxlength="80" placeholder="Why? (optional, the organizer loves a good story)" value="${esc(p.note||'')}"></div>
+      <button class="btn main" data-act="send">Send points</button>`;
+    }
+    h += `<p class="muted center small">🤫 Scores are secret. Only the organizer sees them.</p><p class="center"><button class="link" data-act="admin">Organizer</button></p></main>`;
+    $('#app').innerHTML = h;
+  },
+
+  gate(){
+    $('#app').innerHTML = head('Organizer', 'Enter your PIN to see the scores.') + `<main><div class="card">
+      <input id="pin" type="password" inputmode="numeric" placeholder="PIN"><button class="btn main" data-act="checkpin">Open scoreboard</button></div>
+      <p class="center"><button class="link" data-act="back">Back</button></p></main>`;
+  },
+
+  admin(){
+    const d=S.data, t=S.tab;
+    const tabs=[['overall','🏆 Overall'],['cats','🏅 Categories'],['feed','📝 All votes'],['today','📅 Today'],['manage','⚙️ Manage'],['link','🔗 Invite']];
+    let h = head('Scoreboard', `${d.votes.length} votes so far · ${d.players.length} players`, `<button class="link light" data-act="refresh">Refresh</button>`) + '<main>';
+    h += `<div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${t===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</div>`;
+    if(t==='overall'){
+      h += `<div class="card"><h2>Total points</h2>${rankList(d.votes)}</div>`;
+    } else if(t==='cats'){
+      d.categories.forEach(c=>{
+        const vs=d.votes.filter(v=>v.cat===c.id);
+        h += `<div class="card"><h2>${esc(c.emoji||'🏅')} ${esc(c.name)}</h2>${vs.length?rankList(vs):'<p class="muted">No votes yet.</p>'}${c.by&&c.by!=='Organizer'?`<p class="muted small">Added by ${esc(c.by)}</p>`:''}</div>`;
+      });
+    } else if(t==='feed'){
+      const vs=[...d.votes].reverse();
+      h += `<div class="card">${vs.length ? vs.map(v=>{ const c=catById(v.cat); return `<div class="vote"><span class="badge">${v.score}</span><b>${esc(v.from)}</b> → <b>${esc(v.to)}</b><br><span class="muted">${esc(c.emoji)} ${esc(c.name)} · ${esc(v.day)}</span>${v.note?`<q>${esc(v.note)}</q>`:''}<div><button class="link del" data-delvote="${v.ts}|${esc(v.from)}">🗑 Remove vote</button></div></div>`; }).join('') : '<p class="muted">No votes yet.</p>'}</div>`;
+    } else if(t==='today'){
+      const td=today();
+      h += `<div class="card"><h2>Votes used today</h2>${d.players.map(p=>{ const n=d.votes.filter(v=>v.from===p&&v.day===td).length; return `<div class="rank"><span class="nm">${esc(p)}</span><span class="pts">${n}/${MAX}</span></div>`; }).join('') || '<p class="muted">No players yet.</p>'}</div>`;
+    } else if(t==='manage'){
+      h += `<div class="card"><h2>👥 Players</h2>${d.players.map(p=>`<div class="rank"><span class="nm">${esc(p)}</span><button class="link del" data-delplayer="${esc(p)}">Remove</button></div>`).join('') || '<p class="muted">No players yet.</p>'}
+        <div class="row" style="margin-top:10px"><input id="npName" maxlength="20" placeholder="New player name"><button class="btn sec inline" data-act="addplayer" style="margin:6px 0 10px">Add</button></div></div>
+        <div class="card"><h2>🏅 Categories</h2>${d.categories.map(c=>`<div class="rank"><span class="nm">${esc(c.emoji||'🏅')} ${esc(c.name)}${c.by&&c.by!=='Organizer'?`<small>Added by ${esc(c.by)}</small>`:''}</span><button class="link del" data-delcat="${esc(c.id)}">Remove</button></div>`).join('') || '<p class="muted">No categories.</p>'}</div>
+        <p class="muted small center">Removing a player or category also removes the votes linked to it. A removed vote gives that vote back to the voter for that day.</p>`;
+    } else {
+      const link=inviteLink();
+      h += `<div class="card"><h2>Invite your friends</h2><p class="muted">Send this link in your group chat. Everyone opens it, picks their name and starts voting. Nothing else to fill in.</p>
+        <div class="linkbox">${esc(link)}</div><div class="btnrow"><button class="btn sec inline" data-act="copy">Copy link</button>${navigator.share?'<button class="btn sec inline" data-act="share">Share</button>':''}</div></div>`;
+    }
+    h += `<p class="center"><button class="link" data-act="back">Back to voting</button></p></main>`;
+    $('#app').innerHTML = h;
+  }
+};
+
+function rankList(votes){
+  const m={};
+  votes.forEach(v=>{ (m[v.to] ||= {name:v.to,sum:0,n:0}); m[v.to].sum+=Number(v.score)||0; m[v.to].n++; });
+  const rows=Object.values(m).sort((a,b)=>b.sum-a.sum||b.n-a.n);
+  if(!rows.length) return '<p class="muted">No votes yet.</p>';
+  const medal=['🥇','🥈','🥉'];
+  return rows.map((r,i)=>`<div class="rank"><span class="pos">${medal[i]||i+1}</span><span class="nm">${esc(r.name)}<small>${r.n} vote${r.n>1?'s':''} · avg ${(r.sum/r.n).toFixed(1)}</small></span><span class="pts">${r.sum}</span></div>`).join('');
+}
+function inviteLink(){ if(BUILT_IN) return location.origin+location.pathname; return location.origin+location.pathname+'#b='+encodeURIComponent(S.cfg.b)+'&k='+encodeURIComponent(S.cfg.k); }
+
+function go(v){ S.view=v; VIEWS[v](); window.scrollTo(0,0); }
+function render(){ VIEWS[S.view](); }
+function busy(btn,on,txt){ if(!btn) return; if(on){ btn.dataset.t=btn.textContent; btn.textContent='One moment...'; btn.disabled=true; } else { btn.textContent=btn.dataset.t||txt||btn.textContent; btn.disabled=false; } }
+function home(){ go(S.me ? 'home' : 'who'); }
+
+/* ---------- Actions ---------- */
+const ACT = {
+  async retry(){ init(); },
+
+  async setup(btn){
+    const b=BUILT_IN?BIN_ID:$('#sBin').value.trim(), k=BUILT_IN?ACCESS_KEY:$('#sKey').value.trim(), pin=$('#sPin').value.trim();
+    if(!b||!k||!pin) return toast(BUILT_IN?'Please pick a PIN.':'Please fill in Bin ID, Access Key and PIN.');
+    busy(btn,true); S.cfg={b,k};
+    try{
+      const h=await sha(pin);
+      await mutate(d=>{
+        if(d.adminPinHash && d.adminPinHash!==h) throw new Error('This game already has a different organizer PIN.');
+        d.adminPinHash=h;
+        if(!d.categories.length) d.categories=SEED.map((c,i)=>({id:'s'+i, ...c, by:'Organizer'}));
+      });
+      save('gp_cfg',S.cfg); save('gp_admin',h);
+      if(!BUILT_IN) history.replaceState(null,'',inviteLink());
+      S.tab='link'; go('admin');
+    }catch(e){ if(!BUILT_IN) S.cfg=null; busy(btn,false); toast(e.message); }
+  },
+
+  switch(){ S.me=null; save('gp_me',null); S.pick={}; go('who'); },
+
+  async addcat(btn){
+    const name=$('#ncName').value.trim(), emoji=$('#ncEmoji').value.trim()||'🏅';
+    if(!name) return toast('Give the category a name.');
+    busy(btn,true);
+    try{
+      const id=await mutate(d=>{
+        if(d.categories.some(c=>c.name.toLowerCase()===name.toLowerCase())) throw new Error('That category already exists.');
+        const id='c'+Date.now().toString(36); d.categories.push({id,name,emoji,by:S.me}); return id;
+      });
+      S.pick.cat=id; toast('Category added!'); render();
+    }catch(e){ busy(btn,false); toast(e.message); }
+  },
+
+  async send(btn){
+    const {to,cat}=S.pick, score=S.pick.score||5, note=(S.pick.note||'').trim(), me=S.me;
+    if(!to) return toast('Pick who gets the points.');
+    if(!cat) return toast('Pick a category.');
+    busy(btn,true);
+    try{
+      await mutate(d=>{
+        if(votesLeft(d,me)<=0) throw new Error('No votes left today. Back tomorrow!');
+        if(to===me) throw new Error('Nice try. No points for yourself.');
+        if(!d.players.includes(me)||!d.players.includes(to)) throw new Error('This player is no longer in the game.');
+        d.votes.push({from:me,to,cat,score,note,day:today(),ts:Date.now()});
+      });
+      S.pick={}; celebrate(); go('home');
+    }catch(e){ busy(btn,false); toast(e.message); }
+  },
+
+  async admin(){
+    const saved=load('gp_admin');
+    if(saved && S.data.adminPinHash && saved===S.data.adminPinHash){ S.tab='overall'; return ACT.refresh(); }
+    go('gate');
+  },
+
+  async checkpin(btn){
+    const pin=$('#pin').value.trim(); if(!pin) return;
+    busy(btn,true);
+    const h=await sha(pin);
+    if(h===S.data.adminPinHash){ save('gp_admin',h); S.tab='overall'; return ACT.refresh(); }
+    busy(btn,false); toast('Wrong PIN.');
+  },
+
+  async refresh(){
+    try{ S.data=await fetchData(); go('admin'); }catch(e){ toast(e.message); }
+  },
+
+  back(){ home(); },
+
+  async addplayer(btn){
+    const name=$('#npName').value.trim().replace(/\s+/g,' ');
+    if(!name) return toast('Type a name first.');
+    busy(btn,true);
+    try{
+      await mutate(d=>{ if(d.players.some(x=>x.toLowerCase()===name.toLowerCase())) throw new Error(name+' is already in.'); d.players.push(name); });
+      toast(name+' added!'); render();
+    }catch(e){ busy(btn,false); toast(e.message); }
+  },
+
+  async copy(){ try{ await navigator.clipboard.writeText(inviteLink()); toast('Link copied!'); }catch(e){ toast('Copy failed. Select the link and copy it.'); } },
+  async share(){ try{ await navigator.share({title:'Golf Trip Points', text:'Give your golf buddies points! ⛳', url:inviteLink()}); }catch(e){} }
+};
+
+async function adminDelete(question, fn, done){
+  if(!window.confirm(question)) return;
+  try{ await mutate(fn); toast(done); render(); }catch(e){ toast(e.message); }
+}
+function pickMe(name){ S.me=name; save('gp_me',name); S.pick={}; go('home'); }
+
+document.addEventListener('click', e=>{
+  const t=e.target.closest('button'); if(!t) return;
+  if(t.dataset.to!==undefined){ S.pick.to=t.dataset.to; return render(); }
+  if(t.dataset.cat!==undefined){ S.pick.cat=t.dataset.cat; return render(); }
+  if(t.dataset.who!==undefined){ return pickMe(t.dataset.who); }
+  if(t.dataset.tab){ S.tab=t.dataset.tab; return render(); }
+  if(t.dataset.delplayer!==undefined) return adminDelete(`Remove ${t.dataset.delplayer}? All votes given by and to ${t.dataset.delplayer} are removed too.`, d=>{
+    const n=t.dataset.delplayer; d.players=d.players.filter(x=>x!==n); d.votes=d.votes.filter(v=>v.from!==n&&v.to!==n); }, 'Player removed');
+  if(t.dataset.delcat!==undefined){ const c=catById(t.dataset.delcat); return adminDelete(`Remove the category "${c.name}"? Its votes are removed too.`, d=>{
+    const id=t.dataset.delcat; d.categories=d.categories.filter(x=>x.id!==id); d.votes=d.votes.filter(v=>v.cat!==id); }, 'Category removed'); }
+  if(t.dataset.delvote!==undefined) return adminDelete('Remove this vote?', d=>{
+    const [ts,from]=t.dataset.delvote.split('|'); const i=d.votes.findIndex(v=>String(v.ts)===ts&&v.from===from); if(i<0) throw new Error('Vote not found. Tap Refresh.'); d.votes.splice(i,1); }, 'Vote removed');
+  const a=t.dataset.act; if(a && ACT[a]) ACT[a](t);
+});
+document.addEventListener('input', e=>{
+  if(e.target.id==='score'){ const v=+e.target.value; S.pick.score=v; $('#scoreNum').textContent=v; $('#scoreLbl').textContent=LABELS[v]; }
+  if(e.target.id==='note') S.pick.note=e.target.value;
+});
+document.addEventListener('visibilitychange', async ()=>{
+  if(document.hidden || !S.cfg || !['home','who'].includes(S.view)) return;
+  try{ S.data=await fetchData(); if(S.me && !S.data.players.includes(S.me)){ S.me=null; return go('who'); } render(); }catch(e){}
+});
+
+async function init(){
+  const p=new URLSearchParams(location.hash.slice(1));
+  if(BUILT_IN) S.cfg={b:BIN_ID, k:ACCESS_KEY};
+  else if(p.get('b') && p.get('k')){ S.cfg={b:p.get('b'), k:p.get('k')}; save('gp_cfg',S.cfg); }
+  else S.cfg=load('gp_cfg');
+  S.me=load('gp_me');
+  if(!S.cfg) return go('setup');
+  go('loading');
+  try{
+    S.data=await fetchData();
+    if(!S.data.adminPinHash) return go('setup');
+    if(S.me && !S.data.players.includes(S.me)) S.me=null;
+    home();
+  }catch(e){ S.err=e.message; go('error'); }
+}
+init();
+</script>
+</body>
+</html>

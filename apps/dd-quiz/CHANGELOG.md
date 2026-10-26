@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.3.0
+
+- New "Start over" option on the home screen. After a confirmation it clears the name and all scores on that phone, so the quiz starts clean.
+
 ## 0.2.0
 
 - More time to answer: 30 seconds per question (was 20), 60 seconds for the layer order question (was 40).
