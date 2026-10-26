@@ -569,9 +569,13 @@
   function tlFmtDT(iso){ if(!iso) return "-"; const d=new Date(iso); if(isNaN(d)) return "-"; return d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 
   // ---------- add / edit campaign ----------
-  function openCampaignModal(id){
+  // opts.preset: fields to pre-fill a new item (used by the email inbox); opts.onSaved(event)
+  // is called after a successful save.
+  function openCampaignModal(id, opts){
+    opts=opts||{};
     const data=S.state.data;
     const isEdit=!!id;
+    const presetBmode=(opts.preset&&opts.preset._bmode)||"";
     const e=isEdit ? data.events.find(x=>x.id===id) : {
       id:API.uid(), name:"", kind:"Event", activityTypeId:"",
       start:new Date().toISOString().slice(0,10), end:"",
@@ -579,7 +583,9 @@
       domains:[], scope:[], info:"",
       partners:[], content:[], outcomes:{},
       createdBy:S.state.currentUserId, createdAt:new Date().toISOString(),
+      ...(opts.preset||{}),
     };
+    if(!isEdit) delete e._bmode;
     const partnerNames=(data.settings.partners||[]).map(p=>p.name);
 
     // Budget link: the campaign manages one "primary" budget line. Prefill from it if present.
@@ -639,7 +645,7 @@
 
     // Existing budget lines (for linking) and the budget-section mode
     const linkedExisting=(data.activities||[]).filter(a=>(a.eventIds||[]).includes(e.id));
-    const bMode = managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new"));
+    const bMode = presetBmode || (managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new")));
     const existingLinesHtml=(data.activities||[]).slice()
       .sort((x,y)=>(x.name||"").localeCompare(y.name||""))
       .map(a=>{
@@ -1118,6 +1124,7 @@
       else data.events.push(updated);
       S.scheduleSave(); S.notify(); S.closeModal();
       S.toast((isEdit?"Campaign updated":"Campaign created")+" and linked to the budget","success");
+      if(opts.onSaved) opts.onSaved(updated);
     };
   }
 
@@ -1156,5 +1163,5 @@
     return JSON.stringify(c);
   }
 
-  window.MB_TIMELINE = { render };
+  window.MB_TIMELINE = { render, openCampaignModal };
 })();

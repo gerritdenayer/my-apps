@@ -1036,9 +1036,19 @@
         if (!same(pA)) { await SH.writeJson(dirs.a, PW_FILE, merged); report.pw++; }
         if (!same(pB)) { await SH.writeJson(dirs.b, PW_FILE, merged); report.pw++; }
       }
-      const changed = report.be.length || report.setup || report.pw;
+      // Email inbox: combine both folders' proposals (a decided item wins over a pending one).
+      if (window.MB_INBOX && window.MB_INBOX.mergeFiles) {
+        const iA = await SH.readJson(dirs.a, "marketing-hub-inbox.json"), iB = await SH.readJson(dirs.b, "marketing-hub-inbox.json");
+        if (iA || iB) {
+          const m = window.MB_INBOX.mergeFiles(iA, iB);
+          const sig = (x) => JSON.stringify(((x && x.items) || []).slice().sort((p, q) => String(p.id).localeCompare(String(q.id))));
+          if (sig(iA) !== sig(m)) { await SH.writeJson(dirs.a, "marketing-hub-inbox.json", m); report.inbox = true; }
+          if (sig(iB) !== sig(m)) { await SH.writeJson(dirs.b, "marketing-hub-inbox.json", m); report.inbox = true; }
+        }
+      }
+      const changed = report.be.length || report.setup || report.pw || report.inbox;
       const summary = changed
-        ? [report.be.length ? "budget & events" : "", report.setup ? "setup" : "", report.pw ? "passwords" : ""].filter(Boolean).join(", ") + " copied across"
+        ? [report.be.length ? "budget & events" : "", report.setup ? "setup" : "", report.pw ? "passwords" : "", report.inbox ? "email inbox" : ""].filter(Boolean).join(", ") + " copied across"
         : "both folders already matched";
       try { localStorage.setItem(BRIDGE_LAST_KEY, JSON.stringify({ at: new Date().toISOString(), summary })); } catch (e) {}
       if (!opts.quiet && (changed || !opts.auto)) S.toast(`Bridge sync: ${summary}.`, "success");
@@ -1074,6 +1084,7 @@
     const banner = document.getElementById("share-banner");
     if (!pill) return;
     const st = await shareState();
+    if (window.MB_INBOX) window.MB_INBOX.refresh(st.state === "ok");
     const name = st.dir ? st.dir.name : "";
     const seen = localStorage.getItem(SEEN_KEY);
     const seenTxt = seen ? new Date(seen).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";

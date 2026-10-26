@@ -96,3 +96,43 @@ private, since it never leaves the browser.
 - Local storage is per-browser. If you use Chrome at home and Edge at work, those are two separate datasets.
 - Clearing browser data (cookies + site data) will wipe the app's data. Export regularly.
 - The IT spec for moving to enterprise SharePoint storage is in `IT-SPEC-multi-tenant-SharePoint.md` if you decide to go that route later.
+
+## Email inbox
+
+Events can be proposed from emails. Claude reads the email and adds a proposal to
+`marketing-hub-inbox.json` in the shared folder. The app shows "Inbox N" in the header for anyone
+who can edit campaigns. "Review & add" opens the normal event form, pre-filled; saving it adds the
+event and publishes it. "Reject" drops it. Nothing reaches the real data without a person saving it.
+
+File format (names, not ids: the app matches them to entities, users, SVPs, countries and campaigns,
+and warns when a name is not found):
+
+```json
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "unique-id",
+      "receivedAt": "2026-10-26T09:00:00Z",
+      "status": "pending",
+      "source": { "subject": "Invitation: Cloud Expo", "from": "Jane Doe", "date": "2026-10-25" },
+      "proposal": {
+        "kind": "Event",
+        "name": "Cloud Expo Brussels",
+        "start": "2026-11-18",
+        "end": "2026-11-19",
+        "entity": "Belgium",
+        "owner": "Gerrit Denayer",
+        "svp": "Data & AI",
+        "campaign": "",
+        "countries": ["Belgium"],
+        "partners": [{ "name": "Microsoft", "role": "Co-host", "coFunding": 0 }],
+        "links": [{ "label": "Event page", "url": "https://..." }],
+        "notes": "Short summary of the email"
+      }
+    }
+  ]
+}
+```
+
+Status becomes `accepted` (with `eventId`) or `rejected`, with `decidedBy` and `decidedAt`.

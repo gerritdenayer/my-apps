@@ -1,5 +1,17 @@
 # Changelog
 
+## [v5.1.10] - 2026-10-26 - Email inbox
+
+### Added
+- Email inbox. Events proposed from emails (Claude reads the email and adds a proposal to
+  marketing-hub-inbox.json in the shared folder) show up as an orange "Inbox N" button in the header
+  for everyone who can edit campaigns. The inbox lists each proposal with the email subject, sender
+  and the proposed type, dates, entity, owner, countries, partners and notes, and warns about names
+  it could not match (an unknown entity, owner or country). "Review & add" opens the normal event
+  form already filled in (agenda only by default; add a budget line there if needed); saving adds
+  the event and publishes it. "Reject" drops the proposal. Handled proposals stay visible under
+  "Show handled". The inbox file is kept in sync through the bridge too. Format: see README.
+
 ## [v5.1.9] - 2026-10-06 - Second shared folder (bridge), publish dates in Data & sharing
 
 ### Added
