@@ -1,5 +1,13 @@
 # Changelog
 
+## [v5.1.11] - 2026-10-29 - Inbox spots proposals already on the agenda
+
+### Added
+- Email inbox: a proposal that is already on the agenda (an event with the same start date and the
+  same name, or one name containing the other) shows "Already in Marketing Hub" with the existing
+  event, instead of "Review & add", so nothing gets added twice. "Mark as handled" clears it. Such
+  proposals do not count in the "Inbox N" number and are listed last.
+
 ## [v5.1.10] - 2026-10-26 - Email inbox
 
 ### Added

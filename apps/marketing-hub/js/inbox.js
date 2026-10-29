@@ -35,7 +35,7 @@
     return { version: 1, items: Object.values(m).sort((x, y) => String(y.receivedAt || "").localeCompare(String(x.receivedAt || ""))) };
   }
 
-  const pending = () => (cache.items || []).filter((x) => !x.status || x.status === "pending");
+  const pending = () => (cache.items || []).filter((x) => (!x.status || x.status === "pending") && !existingFor(x));
 
   async function refresh(connected) {
     const pill = document.getElementById("inbox-pill");
@@ -90,6 +90,18 @@
     return { preset, warn, entName: ent ? ent.name : (p.entity || "") };
   }
 
+  // Is this proposal already on the agenda? Same start date, and the same name or one name
+  // containing the other (ignoring case and punctuation). Also true when its event id exists.
+  function existingFor(it) {
+    const p = it.proposal || {};
+    const evs = S.state.data.events || [];
+    if (it.eventId) { const e = evs.find((x) => x.id === it.eventId); if (e) return e; }
+    const clean = (x) => norm(x).replace(/\(date tbc\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    const n = clean(p.name);
+    if (!n || !p.start) return null;
+    return evs.find((e) => e.start === p.start && (clean(e.name) === n || clean(e.name).includes(n) || n.includes(clean(e.name)))) || null;
+  }
+
   async function decide(id, status, eventId) {
     const d = await dir(true);
     if (!d) { S.toast("No access to the shared folder.", "error"); return false; }
@@ -107,13 +119,15 @@
   }
 
   function openInbox() {
-    const items = (cache.items || []).filter((x) => showDone || !x.status || x.status === "pending");
+    const items = (cache.items || []).filter((x) => showDone || !x.status || x.status === "pending")
+      .sort((a, b) => (existingFor(a) ? 1 : 0) - (existingFor(b) ? 1 : 0));
     const doneN = (cache.items || []).length - pending().length;
     const card = (it) => {
       const p = { ...(it.proposal || {}), _source: it.source };
       const { warn, entName } = toPreset(p);
       const src = it.source || {};
       const done = it.status && it.status !== "pending";
+      const exists = !done ? existingFor(it) : null;
       return `<div class="ib-item${done ? " done" : ""}">
         <div class="ib-head"><span class="ib-title">${S.escapeHtml(p.name || src.subject || "(no name)")}</span>
           ${done ? `<span class="ib-status ${it.status}">${it.status === "accepted" ? "Added" : "Rejected"}${it.decidedBy ? " by " + S.escapeHtml(it.decidedBy) : ""}</span>` : ""}</div>
@@ -127,8 +141,10 @@
           ${(p.partners || []).length ? `<span class="k">Partners</span><span>${S.escapeHtml(p.partners.map((x) => typeof x === "string" ? x : x.name).join(", "))}</span>` : ""}
           ${p.notes ? `<span class="k">Notes</span><span>${S.escapeHtml(p.notes).slice(0, 300)}</span>` : ""}
         </div>
-        ${!done && warn.length ? `<div class="ib-warn">${warn.map(S.escapeHtml).join("<br>")}</div>` : ""}
-        ${!done ? `<div class="ib-actions"><button class="secondary ib-reject" data-id="${it.id}">Reject</button><button class="primary ib-review" data-id="${it.id}">Review &amp; add</button></div>` : ""}
+        ${exists ? `<div class="ib-warn" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">Already in Marketing Hub as "${S.escapeHtml(exists.name)}" (${fmtD(exists.start)}). Nothing to add.</div>` : ""}
+        ${!done && !exists && warn.length ? `<div class="ib-warn">${warn.map(S.escapeHtml).join("<br>")}</div>` : ""}
+        ${!done && exists ? `<div class="ib-actions"><button class="secondary ib-handled" data-id="${it.id}" data-ev="${exists.id}">Mark as handled</button></div>` : ""}
+        ${!done && !exists ? `<div class="ib-actions"><button class="secondary ib-reject" data-id="${it.id}">Reject</button><button class="primary ib-review" data-id="${it.id}">Review &amp; add</button></div>` : ""}
       </div>`;
     };
     const m = S.openModal(`
@@ -147,6 +163,10 @@
       await refresh(true); openInbox();
     }; });
     m.querySelectorAll(".ib-review").forEach((b) => { b.onclick = () => review(b.dataset.id); });
+    m.querySelectorAll(".ib-handled").forEach((b) => { b.onclick = async () => {
+      if (await decide(b.dataset.id, "accepted", b.dataset.ev)) S.toast("Marked as handled", "success");
+      await refresh(true); openInbox();
+    }; });
   }
 
   function review(id) {
