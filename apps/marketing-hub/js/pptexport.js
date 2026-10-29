@@ -18,13 +18,15 @@
     s.addShape("roundRect", { x: 0.3, y: 0.22, w: 9.4, h: 0.72, rectRadius: 0.04, fill: { color: WHITE }, line: { color: WHITE } });
     s.addText(model.title || "Campaign roadmap", { x: 0.45, y: 0.22, w: 9.1, h: 0.72, fontFace: "Arial", fontSize: 26, bold: true, color: BLACK, align: "left", valign: "middle" });
 
-    // Legend
-    s.addShape("rect", { x: 10.55, y: 0.22, w: 2.45, h: 0.7, fill: { color: BLACK }, line: { color: WHITE, width: 1 } });
-    s.addText([
-      { text: "Campaign / event name", options: { bold: true, fontSize: 9, color: WHITE, breakLine: true } },
-      { text: "Detail", options: { fontSize: 8.5, color: WHITE, bullet: { code: "2022", indent: 8 }, breakLine: true } },
-      { text: "Detail", options: { fontSize: 8.5, color: WHITE, bullet: { code: "2022", indent: 8 }, breakLine: true } },
-    ], { x: 10.68, y: 0.24, w: 2.28, h: 0.66, fontFace: "Arial", align: "left", valign: "middle", margin: 1 });
+    // Legend: the box name plus the detail fields chosen in the export pop-up.
+    if (model.showLegend !== false) {
+      const labels = (model.detailLabels || ["Detail", "Detail"]).slice(0, 3);
+      const lh = 0.3 + labels.length * 0.17;
+      const leg = [{ text: "Campaign / event name", options: { bold: true, fontSize: 9, color: WHITE, breakLine: true } }];
+      labels.forEach((l) => leg.push({ text: l, options: { fontSize: 8.5, color: WHITE, bullet: { code: "2022", indent: 8 }, breakLine: true } }));
+      s.addShape("rect", { x: 10.55, y: 0.22, w: 2.45, h: lh, fill: { color: BLACK }, line: { color: WHITE, width: 1 } });
+      s.addText(leg, { x: 10.68, y: 0.24, w: 2.28, h: lh - 0.04, fontFace: "Arial", align: "left", valign: "middle", margin: 1 });
+    }
 
     // Month axis
     const axisY = 1.55, tileH = 0.28;
@@ -34,7 +36,7 @@
       s.addShape("rect", { x: cx - 0.22, y: axisY, w: 0.44, h: tileH, fill: { color: ORANGE }, line: { color: ORANGE } });
       s.addText(MON[m], { x: cx - 0.35, y: axisY, w: 0.7, h: tileH, fontFace: "Arial", fontSize: 9, bold: true, color: WHITE, align: "center", valign: "middle" });
     }
-    for (let q = 0; q < 4; q++) {
+    if (model.showQuarters !== false) for (let q = 0; q < 4; q++) {
       const cx = X0 + ((q * 3 + 1.5) / 12) * W;
       s.addText("Q" + (q + 1), { x: cx - 0.4, y: axisY - 0.3, w: 0.8, h: 0.26, fontFace: "Arial", fontSize: 12, bold: true, color: WHITE, align: "center" });
     }
@@ -52,10 +54,13 @@
         let a = frac(it.start), b = frac(it.end || it.start);
         if (b - a < 0.055) b = Math.min(1, a + 0.11);
         return { name: it.name, lines: it.lines || [], kind: it.kind, a, b };
-      }).sort((p, q) => p.a - q.a);
+      });
+      // Items arrive in the order chosen in the export pop-up (keepOrder); otherwise by start.
+      if (!model.keepOrder) items.sort((p, q) => p.a - q.a);
+      // Each item goes in the first row where it does not overlap anything already there.
       const rows = [];
       items.forEach((it) => {
-        let r = rows.find((row) => row[row.length - 1].b + 0.008 <= it.a);
+        let r = rows.find((row) => row.every((o) => o.b + 0.008 <= it.a || it.b + 0.008 <= o.a));
         if (!r) { r = []; rows.push(r); }
         r.push(it);
       });
@@ -66,6 +71,19 @@
     const totalRows = lanes.reduce((n, l) => n + l.rows.length, 0) || 1;
     let boxH = (bottom - laneTop - (lanes.length - 1) * laneGap) / totalRows - boxGap;
     boxH = Math.max(0.42, Math.min(0.9, boxH));
+
+    // Text size: estimate how many text lines each box needs at full size (name wraps by box width,
+    // each detail line may wrap too) and shrink all box text evenly so the busiest box still fits.
+    const boxW = (it) => Math.max(0.9, (it.b - it.a) * W) - 0.12;
+    const wrap = (txt, w, cpi) => Math.max(1, Math.ceil(String(txt || "").length / Math.max(1, w * cpi)));
+    let scale = 1;
+    lanes.forEach((ln) => ln.rows.forEach((row) => row.forEach((it) => {
+      const w = boxW(it);
+      const need = 0.05 + wrap(it.name, w, 13) * 0.165 + (it.lines || []).slice(0, 3).reduce((n, l) => n + wrap(l, w - 0.1, 16) * 0.14, 0);
+      scale = Math.min(scale, boxH / need);
+    })));
+    scale = Math.max(0.6, Math.min(1, scale));
+    const nameSize = Math.round(10 * scale * 2) / 2, lineSize = Math.round(8.5 * scale * 2) / 2;
 
     let y = laneTop;
     lanes.forEach((ln, li) => {
@@ -78,9 +96,9 @@
           const isC = (it.kind || "Campaign") === "Campaign";
           const fill = isC ? ORANGE : GREY, txt = isC ? BLACK : WHITE;
           s.addShape("roundRect", { x: bx, y: ry, w: bw, h: boxH, rectRadius: 0.05, fill: { color: fill }, line: { color: fill } });
-          const body = [{ text: it.name || "(no name)", options: { bold: true, fontSize: 10, color: txt, breakLine: true } }];
-          (it.lines || []).slice(0, 3).forEach((l) => body.push({ text: String(l), options: { fontSize: 8.5, color: txt, bullet: { code: "2022", indent: 8 }, breakLine: true } }));
-          s.addText(body, { x: bx + 0.06, y: ry + 0.02, w: bw - 0.12, h: boxH - 0.04, fontFace: "Arial", align: "left", valign: "middle", margin: 1 });
+          const body = [{ text: it.name || "(no name)", options: { bold: true, fontSize: nameSize, color: txt, breakLine: true } }];
+          (it.lines || []).slice(0, 3).forEach((l) => body.push({ text: String(l), options: { fontSize: lineSize, color: txt, bullet: { code: "2022", indent: 6 }, breakLine: true } }));
+          s.addText(body, { x: bx + 0.06, y: ry + 0.02, w: bw - 0.12, h: boxH - 0.04, fontFace: "Arial", align: "left", valign: "middle", margin: 1, fit: "shrink" });
         });
       });
       y += bandH + laneGap;

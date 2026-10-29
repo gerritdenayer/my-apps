@@ -233,9 +233,7 @@
     const pptBtn=root.querySelector("#tl-ppt");
     if(pptBtn) pptBtn.onclick=()=>{
       if(!window.MB_PPT) return S.toast("Export not available.","error");
-      const model=buildRoadmapModel();
-      if(!model.lanes.length) return S.toast("No campaigns or events in the current view.","error");
-      window.MB_PPT.exportRoadmap(model);
+      openAgendaOptions();
     };
 
     buildMonths(events);
@@ -325,41 +323,168 @@
     const globalIds=new Set((S.state.data.settings.countries||[]).filter(c=>c.global).map(c=>c.id));
     return ids.some(id=>globalIds.has(id));
   }
-  // Build the roadmap model (lanes + dated items) from the current filtered, grouped view.
-  function buildRoadmapModel(){
-    const data=S.state.data;
-    const events=filtered(data.events||[]);
-    let year=view.year?+view.year:0;
-    if(!year){
-      const ys=events.map(e=>{const d=parseISO(e.start);return d?d.getFullYear():null;}).filter(Boolean).sort();
-      year=ys.length?ys[0]:new Date().getFullYear();
-    }
-    const inYear=events.filter(e=>{ const s=parseISO(e.start), en=parseISO(e.end||e.start); return s&&en&&s.getFullYear()<=year&&en.getFullYear()>=year; });
-    const map={};
-    inYear.forEach(e=>{ const k=dimValue(e,view.groupBy); (map[k]=map[k]||[]).push(e); });
-    const lanes=Object.keys(map).sort().map(k=>({
-      label:k,
-      items: map[k].map(e=>{
-        // Only non-financial, structured fields go on the slide. Free-text notes are deliberately
-        // left out so no budget figure typed into a note can ever appear. No amounts anywhere.
-        const typeName=e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):"";
-        const ownerName=S.eventOwnerName(e)||"";
-        const lines=[typeName, ownerName].filter(Boolean);
-        return { name:e.name, lines, start:e.start, end:e.end||e.start, kind:e.kind||"Event" };
-      })
-    }));
+  // ---- Agenda (PowerPoint) export options ----
+  // Only non-financial, structured fields can go on the slide. Free-text notes and amounts are
+  // deliberately not offered, so no budget figure can ever appear on an exported agenda.
+  const MON3=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function fmtRange(a,b){
+    const d1=parseISO(a), d2=parseISO(b||a);
+    if(!d1) return "";
+    const f=d=>d.getDate()+" "+MON3[d.getMonth()];
+    if(!d2 || +d1===+d2) return f(d1);
+    if(d1.getMonth()===d2.getMonth() && d1.getFullYear()===d2.getFullYear()) return d1.getDate()+"-"+f(d2);
+    return f(d1)+" - "+f(d2);
+  }
+  const AGENDA_FIELDS=[
+    {key:"dates",    label:"Dates",             get:e=>fmtRange(e.start,e.end)},
+    {key:"type",     label:"Event type",        get:e=>e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):""},
+    {key:"owner",    label:"Owner",             get:e=>S.eventOwnerName(e)||""},
+    {key:"entity",   label:"Organising entity", get:e=>S.eventEntityName(e)||""},
+    {key:"cluster",  label:"Cluster",           get:e=>{const c=clusterOf(e);return c==="Unspecified"?"":c;}},
+    {key:"countries",label:"Countries",         get:e=>shortList(S.countryNamesOf(e.countryIds||[]))},
+    {key:"campaign", label:"Campaign",          get:e=>{ if((e.kind||"Event")==="Campaign") return ""; const n=campaignNameOf(e); return n==="No campaign"?"":n; }},
+    {key:"partners", label:"Partners",          get:e=>shortList((e.partners||[]).map(p=>p.name).filter(Boolean))},
+  ];
+  // Long lists would not fit in a slide box: show the first three and count the rest.
+  function shortList(arr){ return arr.length>3 ? arr.slice(0,3).join(", ")+" +"+(arr.length-3)+" more" : arr.join(", "); }
+  const AGENDA_KEY="mb-agenda-opts";
+  const AGENDA_DEFAULTS={kind:"",groupBy:"",laneSort:"az",itemSort:"start",fields:["type","owner"],legend:true,quarters:true};
+  function loadAgendaOpts(){
+    try{ const o=JSON.parse(localStorage.getItem(AGENDA_KEY)||"null"); if(o&&typeof o==="object") return Object.assign({},AGENDA_DEFAULTS,o); }catch(_){}
+    return Object.assign({},AGENDA_DEFAULTS);
+  }
+  function saveAgendaOpts(o){ try{ localStorage.setItem(AGENDA_KEY,JSON.stringify(o)); }catch(_){} }
+
+  function agendaYears(events){
+    const ys=new Set();
+    events.forEach(e=>{ const a=parseISO(e.start), b=parseISO(e.end||e.start); if(!a||!b) return; for(let y=a.getFullYear();y<=b.getFullYear();y++) ys.add(y); });
+    return [...ys].sort();
+  }
+  function defaultAgendaYear(events){
+    if(view.year) return +view.year;
+    const ys=events.map(e=>{const d=parseISO(e.start);return d?d.getFullYear():null;}).filter(Boolean).sort();
+    return ys.length?ys[0]:new Date().getFullYear();
+  }
+  function defaultAgendaTitle(year){
     let scope="";
     if(view.country && view.country!=="__untagged"){ const c=S.countryById(view.country); if(c) scope=c.name; }
     else if(view.scope && view.scope.cluster) scope=view.scope.cluster;
     else if(view.scope && view.scope.entityId){ const en=S.entityById(view.scope.entityId); if(en) scope=en.name; }
-    const title="Campaign roadmap"+(scope?" - "+scope:"")+" ("+year+")";
-    return { title, year, lanes };
+    return "Campaign roadmap"+(scope?" - "+scope:"")+" ("+year+")";
   }
-  function filtered(events){
+
+  function openAgendaOptions(){
+    const base=filtered(S.state.data.events||[], {ignoreKind:true});
+    if(!base.length) return S.toast("No campaigns or events in the current view.","error");
+    const o=loadAgendaOpts();
+    const kind=o.kind||(view.kind==="all"?"all":view.kind);
+    const groupBy=o.groupBy||view.groupBy;
+    const years=agendaYears(base); let year=defaultAgendaYear(base); if(!years.includes(year)) years.push(year), years.sort();
+    const opt=(list,cur)=>list.map(([v,l])=>`<option value="${v}" ${String(v)===String(cur)?"selected":""}>${S.escapeHtml(l)}</option>`).join("");
+    const ordered=[...o.fields.filter(k=>AGENDA_FIELDS.some(f=>f.key===k)), ...AGENDA_FIELDS.map(f=>f.key).filter(k=>!o.fields.includes(k))];
+    const m=S.openModal(`
+      <h2>Download agenda</h2>
+      <p class="muted small" style="margin:0 0 8px">Choose what goes on the slide. It uses the filters you set on this page (scope, country, period, search). Amounts and notes are never included.</p>
+      <label>Title</label><input id="ag-title" type="text" value="${S.escapeHtml(defaultAgendaTitle(year))}" />
+      <div class="row">
+        <div><label>Year</label><select id="ag-year">${opt(years.map(y=>[y,y]),year)}</select></div>
+        <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
+      </div>
+      <div class="row">
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
+      </div>
+      <div class="row">
+        <div><label>Order of the items in a lane</label><select id="ag-itemsort">${opt([["start","By start date"],["name","By name (A to Z)"],["campaigns","Campaigns first, then by date"]],o.itemSort)}</select></div>
+        <div></div>
+      </div>
+      <label>Details under each name <span class="muted small">(pick up to 3, shown in this order)</span></label>
+      <div id="ag-fields" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 6px">
+        ${ordered.map(k=>{const f=AGENDA_FIELDS.find(x=>x.key===k);return `<label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:normal"><input type="checkbox" value="${k}" ${o.fields.includes(k)?"checked":""}/> ${S.escapeHtml(f.label)}</label>`;}).join("")}
+      </div>
+      <div style="display:flex;gap:18px;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:normal"><input type="checkbox" id="ag-legend" ${o.legend?"checked":""}/> Show legend</label>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:normal"><input type="checkbox" id="ag-quarters" ${o.quarters?"checked":""}/> Show quarter labels</label>
+      </div>
+      <div id="ag-count" class="muted small" style="margin-top:10px"></div>
+      <div class="actions">
+        <button class="secondary" id="ag-reset">Reset to defaults</button>
+        <span style="flex:1"></span>
+        <button class="secondary" id="ag-cancel">Cancel</button>
+        <button class="primary" id="ag-go">Download</button>
+      </div>`, {cls:"modal-agenda"});
+    // Keep the order in which boxes were ticked, so the user decides the line order.
+    let picked=o.fields.filter(k=>AGENDA_FIELDS.some(f=>f.key===k)).slice(0,3);
+    const boxes=[...m.querySelectorAll("#ag-fields input")];
+    let titleTouched=false;
+    const read=()=>({
+      kind:m.querySelector("#ag-kind").value, groupBy:m.querySelector("#ag-group").value,
+      laneSort:m.querySelector("#ag-lanesort").value, itemSort:m.querySelector("#ag-itemsort").value,
+      fields:picked.slice(), legend:m.querySelector("#ag-legend").checked, quarters:m.querySelector("#ag-quarters").checked,
+      year:+m.querySelector("#ag-year").value, title:m.querySelector("#ag-title").value.trim()
+    });
+    const refresh=()=>{
+      boxes.forEach(b=>{ b.disabled=!b.checked && picked.length>=3; });
+      const model=buildRoadmapModel(read());
+      const n=model.lanes.reduce((t,l)=>t+l.items.length,0);
+      m.querySelector("#ag-count").textContent=n?`${n} item${n===1?"":"s"} in ${model.lanes.length} lane${model.lanes.length===1?"":"s"} will be on the slide.`:"Nothing matches these choices.";
+      m.querySelector("#ag-go").disabled=!n;
+    };
+    boxes.forEach(b=>b.onchange=()=>{ if(b.checked){ if(!picked.includes(b.value)) picked.push(b.value); } else picked=picked.filter(k=>k!==b.value); refresh(); });
+    m.querySelector("#ag-title").oninput=()=>{ titleTouched=true; };
+    m.querySelector("#ag-year").onchange=e=>{ if(!titleTouched) m.querySelector("#ag-title").value=defaultAgendaTitle(+e.target.value); refresh(); };
+    ["#ag-kind","#ag-group","#ag-lanesort","#ag-itemsort"].forEach(id=>m.querySelector(id).onchange=refresh);
+    m.querySelector("#ag-reset").onclick=()=>{ try{localStorage.removeItem(AGENDA_KEY);}catch(_){} S.closeModal(); openAgendaOptions(); };
+    m.querySelector("#ag-cancel").onclick=S.closeModal;
+    m.querySelector("#ag-go").onclick=()=>{
+      const r=read();
+      saveAgendaOpts({kind:r.kind,groupBy:r.groupBy,laneSort:r.laneSort,itemSort:r.itemSort,fields:r.fields,legend:r.legend,quarters:r.quarters});
+      const model=buildRoadmapModel(r);
+      if(!model.lanes.length) return S.toast("Nothing matches these choices.","error");
+      S.closeModal();
+      window.MB_PPT.exportRoadmap(model);
+    };
+    refresh();
+  }
+
+  // Build the roadmap model (lanes + dated items) from the current filtered view and the
+  // options chosen in the export pop-up.
+  function buildRoadmapModel(opts){
+    opts=Object.assign({},AGENDA_DEFAULTS,opts||{});
+    const kind=opts.kind||view.kind, groupBy=opts.groupBy||view.groupBy;
+    let events=filtered(S.state.data.events||[], {ignoreKind:true});
+    if(kind && kind!=="all") events=events.filter(e=>(e.kind||"Event")===kind);
+    const year=opts.year||defaultAgendaYear(events);
+    const inYear=events.filter(e=>{ const s=parseISO(e.start), en=parseISO(e.end||e.start); return s&&en&&s.getFullYear()<=year&&en.getFullYear()>=year; });
+    const fields=(opts.fields||[]).map(k=>AGENDA_FIELDS.find(f=>f.key===k)).filter(Boolean).slice(0,3);
+    const map={};
+    inYear.forEach(e=>{ const k=dimValue(e,groupBy); (map[k]=map[k]||[]).push(e); });
+    const byName=(a,b)=>(a.name||"").localeCompare(b.name||"",undefined,{sensitivity:"base"});
+    const byStart=(a,b)=>(a.start||"").localeCompare(b.start||"")||byName(a,b);
+    const itemCmp = opts.itemSort==="name" ? byName
+      : opts.itemSort==="campaigns" ? ((a,b)=>((a.kind||"Event")==="Campaign"?0:1)-((b.kind||"Event")==="Campaign"?0:1)||byStart(a,b))
+      : byStart;
+    let keys=Object.keys(map);
+    const az=(a,b)=>a.localeCompare(b,undefined,{sensitivity:"base"});
+    if(opts.laneSort==="count") keys.sort((a,b)=>map[b].length-map[a].length||az(a,b));
+    else if(opts.laneSort==="start") keys.sort((a,b)=>{ const m=k=>map[k].map(e=>e.start||"9999").sort()[0]; return m(a).localeCompare(m(b))||az(a,b); });
+    else keys.sort(az);
+    const lanes=keys.map(k=>({
+      label: groupBy==="none" ? "" : k,
+      items: map[k].slice().sort(itemCmp).map(e=>({
+        name:e.name, lines:fields.map(f=>f.get(e)).filter(Boolean),
+        start:e.start, end:e.end||e.start, kind:e.kind||"Event"
+      }))
+    }));
+    const title=(opts.title||"").trim()||defaultAgendaTitle(year);
+    return { title, year, lanes, detailLabels:fields.map(f=>f.label), showLegend:opts.legend!==false, showQuarters:opts.quarters!==false, keepOrder:true };
+  }
+  function filtered(events, fopts){
     const q=view.q.trim().toLowerCase();
     const ranges=periodRanges();
+    const ignoreKind=!!(fopts&&fopts.ignoreKind);
     return events.filter(e=>{
-      if(view.kind!=="all"&&(e.kind||"Event")!==view.kind) return false;
+      if(!ignoreKind&&view.kind!=="all"&&(e.kind||"Event")!==view.kind) return false;
       if(!matchesScope(e)) return false;
       if(!matchesCountry(e)) return false;
       if(ranges){

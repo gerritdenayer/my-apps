@@ -1,5 +1,21 @@
 # Changelog
 
+## [v5.1.12] - 2026-10-29 - Customizable agenda export
+
+### Added
+- Download agenda now opens a pop-up first, so you can shape the slide: the title, the year,
+  campaigns and/or events, what the lanes are (cluster, campaign, entity, type, owner or one lane),
+  the order of the lanes (A to Z, most items first, earliest first), the order of items in a lane
+  (by date, by name, campaigns first) and up to three details under each name (dates, event type,
+  owner, organising entity, cluster, countries, campaign, partners), in the order you tick them.
+  The legend and quarter labels can be switched off. The pop-up shows how many items will be on
+  the slide and remembers your choices for next time ("Reset to defaults" clears them). Amounts and
+  notes are still never put on the slide.
+
+### Changed
+- Agenda slide: long country and partner lists show the first three plus "+N more", and the text in
+  the boxes shrinks evenly when a box would otherwise overflow.
+
 ## [v5.1.11] - 2026-10-29 - Inbox spots proposals already on the agenda
 
 ### Added
