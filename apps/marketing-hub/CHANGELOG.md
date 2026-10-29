@@ -1,5 +1,10 @@
 # Changelog
 
+## [v5.1.13] - 2026-10-29 - SVP lanes in the agenda export
+
+### Added
+- Download agenda: the lanes can now be one per SVP. Items without an SVP go in a "No SVP" lane.
+
 ## [v5.1.12] - 2026-10-29 - Customizable agenda export
 
 ### Added

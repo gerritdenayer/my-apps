@@ -113,6 +113,7 @@
     if(dim==="type"){ const t=e.activityTypeId?S.actTypeById(e.activityTypeId):null; return t?t.name:"Unspecified"; }
     if(dim==="cluster") return clusterOf(e);
     if(dim==="campaign") return campaignNameOf(e);
+    if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP"; }
     return e[dim]||"Unspecified";
   }
   // The campaign an item belongs to: a campaign is itself; an event uses its linked campaign.
@@ -391,7 +392,7 @@
         <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
       </div>
       <div class="row">
-        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP"],["none","None (one lane)"]],groupBy)}</select></div>
         <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
       </div>
       <div class="row">
