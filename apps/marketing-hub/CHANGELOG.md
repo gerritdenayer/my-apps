@@ -1,5 +1,14 @@
 # Changelog
 
+## [v5.1.16] - 2026-10-30 - Multi-slide agenda, fully partner funded
+
+### Added
+- Download agenda: when the items do not fit on one slide, the export makes as many slides as
+  needed. Lanes stay together on a slide; a lane too big for one slide continues on the next,
+  marked "(cont.)". Slides are numbered at the bottom, and the pop-up says how many you will get.
+- "Fully partner funded" checkbox on the event form's Budget tab (for a new budget line) and on the
+  budget line form. When ticked, the partner amounts follow gross and are locked, so net is 0.
+
 ## [v5.1.15] - 2026-10-30 - Online help
 
 ### Added

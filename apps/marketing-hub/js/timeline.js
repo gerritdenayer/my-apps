@@ -428,7 +428,8 @@
       boxes.forEach(b=>{ b.disabled=!b.checked && picked.length>=3; });
       const model=buildRoadmapModel(read());
       const n=model.lanes.reduce((t,l)=>t+l.items.length,0);
-      m.querySelector("#ag-count").textContent=n?`${n} item${n===1?"":"s"} in ${model.lanes.length} lane${model.lanes.length===1?"":"s"} will be on the slide.`:"Nothing matches these choices.";
+      const slides=(n&&window.MB_PPT.slideCount)?window.MB_PPT.slideCount(model):1;
+      m.querySelector("#ag-count").textContent=n?`${n} item${n===1?"":"s"} in ${model.lanes.length} lane${model.lanes.length===1?"":"s"}, on ${slides} slide${slides===1?"":"s"}${slides>1?" (lanes are kept together; a lane too big for one slide continues on the next)":""}.`:"Nothing matches these choices.";
       m.querySelector("#ag-go").disabled=!n;
     };
     boxes.forEach(b=>b.onchange=()=>{ if(b.checked){ if(!picked.includes(b.value)) picked.push(b.value); } else picked=picked.filter(k=>k!==b.value); refresh(); });
@@ -853,7 +854,7 @@
         <div class="row-3">
           <div><label>Vendor / Partner</label><input id="c-bvendor" type="text" value="${S.escapeHtml(presetVendor)}" /></div>
           <div><label>PO number</label><input id="c-bpo" type="text" value="${S.escapeHtml(bPO)}" /></div>
-          <div></div>
+          <div><label>&nbsp;</label><label class="chk-line" title="The partner pays the whole cost: partner funds follow gross, so net is 0"><input type="checkbox" id="c-bfull" ${(managed&&managed.fullyPartnerFunded)?"checked":""} /> Fully partner funded</label></div>
         </div>
         <div class="row-3">
           <div><label>Forecast gross (EUR)</label><input id="c-bfg" type="number" step="0.01" value="${bFG}" /></div>
@@ -1073,6 +1074,8 @@
     function recomputePartnerBudget(){
       const bfp=modal.querySelector("#c-bfp");
       if(!bfp) return; // only when creating a new budget line
+      const full=modal.querySelector("#c-bfull");
+      if(full&&full.checked) return; // fully partner funded: partner follows gross instead
       let sum=0, any=false;
       partnersBox.querySelectorAll("input.pf-cof").forEach(inp=>{
         const t=(inp.value||"").trim();
@@ -1092,7 +1095,23 @@
     }
     (e.partners||[]).forEach(partnerRow);
     (e.content||[]).forEach(contentRow);
+    // Fully partner funded: partner amounts follow gross (locked), so the line's net is 0.
+    const bFull=modal.querySelector("#c-bfull");
+    const syncFull=()=>{
+      if(!bFull) return;
+      [["#c-bfg","#c-bfp"],["#c-bag","#c-bap"]].forEach(([g,p])=>{
+        const pi=modal.querySelector(p); if(!pi) return;
+        pi.readOnly=bFull.checked; pi.classList.toggle("locked",bFull.checked);
+        if(bFull.checked) pi.value=modal.querySelector(g).value||0;
+      });
+      if(!bFull.checked) recomputePartnerBudget();
+    };
+    if(bFull){
+      bFull.addEventListener("change",syncFull);
+      ["#c-bfg","#c-bag"].forEach(sel=>{ const el=modal.querySelector(sel); if(el) el.addEventListener("input",()=>{ if(bFull.checked) syncFull(); }); });
+    }
     recomputePartnerBudget();
+    syncFull();
     modal.querySelector("#c-addpartner").onclick=()=>partnerRow();
     modal.querySelector("#c-addcontent").onclick=()=>contentRow();
 
@@ -1182,6 +1201,8 @@
           vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
         });
+        if(modal.querySelector("#c-bfull").checked){ line.fullyPartnerFunded=true; line.forecastPartner=fg; line.actualPartner=ag; }
+        else delete line.fullyPartnerFunded;
         // A line with an actual value cannot stay "Planned": bump it to "Committed".
         line.statusId=S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
         // Stamp the managed line's update only if it already existed and its content changed.

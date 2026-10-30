@@ -754,6 +754,7 @@
             <input id="m-ap" type="number" step="0.01" value="${a.actualPartner || 0}" />
             <div class="amt-net" id="m-an"></div>
           </div>
+          <label class="chk-line" title="The partner pays the whole cost: partner funds follow gross, so net is 0"><input type="checkbox" id="m-full" ${a.fullyPartnerFunded ? "checked" : ""} /> Fully partner funded <span class="muted small">(partner pays it all, net is 0)</span></label>
           <label>Notes</label>
           <textarea id="m-notes" rows="3">${S.escapeHtml(a.notes || "")}</textarea>
         </div>
@@ -770,8 +771,21 @@
       modal.querySelector("#m-fn").textContent = S.fmtMoney(v("#m-fg") - v("#m-fp"));
       modal.querySelector("#m-an").textContent = S.fmtMoney(v("#m-ag") - v("#m-ap"));
     };
+    // Fully partner funded: partner funds follow gross (locked), so net is always 0.
+    const fullChk = modal.querySelector("#m-full");
+    const syncFull = () => {
+      const on = fullChk.checked;
+      [["#m-fg", "#m-fp"], ["#m-ag", "#m-ap"]].forEach(([g, p]) => {
+        const pi = modal.querySelector(p);
+        pi.readOnly = on; pi.classList.toggle("locked", on);
+        if (on) pi.value = modal.querySelector(g).value || 0;
+      });
+      updNet();
+    };
+    fullChk.addEventListener("change", syncFull);
+    ["#m-fg", "#m-ag"].forEach((sel) => modal.querySelector(sel).addEventListener("input", () => { if (fullChk.checked) syncFull(); }));
     ["#m-fg", "#m-fp", "#m-ag", "#m-ap"].forEach((sel) => modal.querySelector(sel).addEventListener("input", updNet));
-    updNet();
+    syncFull();
 
     // Populate Entity dropdown filtered by selected Group (deduped by name) and by the line's
     // year, so only entities in use that year show. The currently selected entity is always kept,
@@ -874,6 +888,10 @@
         actualPartner: parseFloat(modal.querySelector("#m-ap").value) || 0,
         notes: modal.querySelector("#m-notes").value,
       };
+      if (modal.querySelector("#m-full").checked) {
+        base.fullyPartnerFunded = true;
+        base.forecastPartner = base.forecastGross; base.actualPartner = base.actualGross;
+      } else delete base.fullyPartnerFunded;
       // A line with an actual value cannot stay "Planned": bump it to "Committed".
       base.statusId = S.autoCommitStatus(base.statusId, base.actualGross, base.actualPartner);
       // Stamp "updated by/on" only when the content really changed (a no-op save or a brand-new

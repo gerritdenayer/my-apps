@@ -46,7 +46,7 @@
       <h4>Budget left</h4>
       <p>The card above the table shows the yearly budget, planned (forecast net), spent (actual net), left after planned and left after actual. Pick one entity to see its budget code; open <b>Per budget code</b> to see every code in your selection. Red means over budget. The card always covers the whole year: quarter, month and search do not change it.</p>
       <h4>Adding a line</h4>
-      <p>Click <b>+ New budget line</b>, or click a row to edit. Name, date, cluster and entity are required. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
+      <p>Click <b>+ New budget line</b>, or click a row to edit. Name, date, cluster and entity are required. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
       <p>When you are done, click <b>Publish changes</b> so the team sees it.</p>` },
 
     { id: "events", title: "Campaigns & events", tabs: ["timeline"], html: `
@@ -58,7 +58,7 @@
       <table class="help-table">
         <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
-        <tr><td><b>Budget</b></td><td>Type, and the budget link: create a new line, link existing lines, or "No budget line (agenda only)".</td></tr>
+        <tr><td><b>Budget</b></td><td>Type, and the budget link: create a new line, link existing lines, or "No budget line (agenda only)". For a new line, tick <b>Fully partner funded</b> when a partner pays it all (net is 0).</td></tr>
         <tr><td><b>Outcomes</b></td><td>Targets and actuals: engagement, attendees, registrations, MQL, SQL, revenue.</td></tr>
       </table>
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
@@ -66,7 +66,8 @@
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
       <p><b>Download agenda</b> makes one roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
       <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP or one lane), the order of the lanes and of the items, and up to three details per item (dates, type, owner, entity, cluster, countries, campaign, partners), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
-      <p>Amounts and notes never go on the slide. For a readable slide use one or two details, or filter on one cluster or quarter first.</p>` },
+      <p>When everything does not fit on one slide, you get as many slides as needed. Lanes are kept together on a slide; a lane too big for one slide continues on the next, marked "(cont.)". The pop-up tells you how many slides you will get, and each slide shows its number at the bottom.</p>
+      <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
       <p>The budget by month. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
@@ -117,7 +118,7 @@
         <tr><td>Chrome says "Can't open this folder"</td><td>Pick the MarketingHub folder itself, not Documents or the OneDrive root.</td></tr>
         <tr><td>"A newer setup is available"</td><td>An admin changed the setup. The pop-up lists what. Click <b>Pull the new setup</b>.</td></tr>
         <tr><td>I deleted something by mistake</td><td>An admin restores it in Settings &gt; Deleted items.</td></tr>
-        <tr><td>The agenda slide is crowded</td><td>Fewer details per box, or filter on one cluster or quarter.</td></tr>
+        <tr><td>The agenda has many slides</td><td>Use fewer details per box, or filter on one cluster or quarter.</td></tr>
         <tr><td>I work on two computers</td><td>Publish on the first before you switch, then Refresh on the second.</td></tr>
       </table>` },
 
