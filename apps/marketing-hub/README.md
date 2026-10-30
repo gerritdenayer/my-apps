@@ -136,3 +136,9 @@ and warns when a name is not found):
 ```
 
 Status becomes `accepted` (with `eventId`) or `rejected`, with `decidedBy` and `decidedAt`.
+
+## Online help
+
+The help window (the "?" button in the header) lives in `js/help.js`. Update it whenever a change
+affects what users see or do. "What's new" is read from CHANGELOG.md. See CLAUDE.md for the full
+release routine.

@@ -1210,6 +1210,34 @@
     const years = Object.keys(s.yearlyBudgets || {}).filter((y) => Object.keys(s.yearlyBudgets[y] || {}).length).sort();
     return `${ents} entities, budget years ${years.length ? years.join(", ") : "none"}`;
   }
+  // Plain-language list of what differs between two setups ("from" = the one being replaced),
+  // so the pop-up shows the actual change instead of two identical summaries.
+  function setupDiff(fromS, toS) {
+    fromS = fromS || {}; toS = toS || {};
+    const out = [];
+    const nm = (x) => (x && (x.name || x.code || x.id)) || "?";
+    const sig = (x) => { const c = {}; Object.keys(x || {}).sort().forEach((k) => { if (!PW_FIELDS[k] && k !== "updatedAt") c[k] = x[k]; }); return JSON.stringify(c); };
+    const lists = [["users", "user"], ["entities", "entity"], ["svps", "SVP"], ["activityTypes", "event type"],
+      ["budgetCodes", "budget code"], ["partners", "partner"], ["statuses", "status"], ["apCategories", "category"], ["countryGroups", "country group"]];
+    const names = (arr) => arr.length > 4 ? arr.slice(0, 4).join(", ") + " and " + (arr.length - 4) + " more" : arr.join(", ");
+    lists.forEach(([k, label]) => {
+      if (!Array.isArray(fromS[k] || []) || !Array.isArray(toS[k] || [])) return;
+      const a = Object.fromEntries((fromS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
+      const b = Object.fromEntries((toS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
+      const added = Object.keys(b).filter((id) => !a[id]).map((id) => nm(b[id]));
+      const removed = Object.keys(a).filter((id) => !b[id]).map((id) => nm(a[id]));
+      const changed = Object.keys(b).filter((id) => a[id] && sig(a[id]) !== sig(b[id])).map((id) => nm(b[id]));
+      const plural = (n) => n === 1 ? label : (label === "entity" ? "entities" : label === "status" ? "statuses" : label === "category" ? "categories" : label + "s");
+      if (added.length) out.push("New " + plural(added.length) + ": " + names(added));
+      if (removed.length) out.push("Removed " + plural(removed.length) + ": " + names(removed));
+      if (changed.length) out.push("Changed " + plural(changed.length) + ": " + names(changed));
+    });
+    const ya = fromS.yearlyBudgets || {}, yb = toS.yearlyBudgets || {};
+    const yrs = [...new Set([...Object.keys(ya), ...Object.keys(yb)])].filter((y) => JSON.stringify(ya[y] || {}) !== JSON.stringify(yb[y] || {})).sort();
+    if (yrs.length) out.push("Yearly budgets changed for " + yrs.join(", "));
+    if (!out.length) out.push("Small changes to other settings");
+    return out;
+  }
   async function publishSetupTo(dir) {
     const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
     await SH.writeJson(dir, SETUP_FILE, obj);
@@ -1560,7 +1588,10 @@
         <div class="kpi"><div class="label">Shared setup (${S.escapeHtml(who)}, ${S.escapeHtml(when)})</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(remote.settings))}</div></div>
         <div class="kpi"><div class="label">Your setup on this computer</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(S.state.data.settings))}</div></div>
       </div>`;
-    const keepNote = `<p class="muted small">Your budget lines and events are never touched by this choice.</p>`;
+    const diff = status === "local-changes" ? setupDiff(remote.settings, S.state.data.settings) : setupDiff(S.state.data.settings, remote.settings);
+    const diffHead = status === "local-changes" ? "What you changed" : status === "remote-newer" ? "What changed" : "What is different in the shared setup";
+    const diffBox = `<div style="margin:6px 0 4px"><strong>${diffHead}:</strong><ul style="margin:4px 0 0 18px; padding:0">${diff.map((d) => `<li>${S.escapeHtml(d)}</li>`).join("")}</ul></div>`;
+    const keepNote = diffBox + `<p class="muted small">Your budget lines and events are never touched by this choice.</p>`;
     let html;
     if (status === "remote-newer") {
       html = `<h2>A newer setup is available</h2>
@@ -1577,7 +1608,7 @@
         <p>${status === "both-changed"
           ? "Both your copy and the shared setup have changed since you last synced. Choose which one to keep."
           : "This computer has not synced the setup before, and the two versions differ. Choose which one is right."}</p>
-        ${compare}
+        ${compare}${diffBox}
         <p class="muted small">Using the shared setup replaces yours. ${admin ? "Publishing yours replaces the shared one for everyone." : ""} Your budget lines and events are never touched.</p>
         <div class="actions" style="flex-wrap:wrap; gap:8px">
           <button class="secondary" id="su-later">Decide later</button>

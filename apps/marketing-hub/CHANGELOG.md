@@ -1,5 +1,21 @@
 # Changelog
 
+## [v5.1.15] - 2026-10-30 - Online help
+
+### Added
+- Online help. A "?" button in the top bar (or the ? key) opens a help window: topics on the left, a
+  search box, and the text on the right. It opens on the topic for the tab you are on. Topics cover
+  getting started, roles and passwords, Budget, Campaigns & events, the agenda download, Reporting,
+  Outcomes, publishing and updates, the email inbox, Settings and common problems. "What's new" shows
+  the latest release notes from this changelog.
+
+## [v5.1.14] - 2026-10-30 - Setup pop-up shows what changed
+
+### Changed
+- The "newer setup" pop-up now lists what actually changed (for example "New users: William
+  Herberich, Dariya Abramova, Arthur Mariani", or "Yearly budgets changed for 2027"). Before, it only
+  showed entity count and budget years, which looked identical when only users had changed.
+
 ## [v5.1.13] - 2026-10-29 - SVP lanes in the agenda export
 
 ### Added

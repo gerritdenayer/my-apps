@@ -317,3 +317,29 @@ button.danger:disabled, button.secondary:disabled { opacity: .5; cursor: default
 .ib-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .ib-status { font-size: 12px; font-weight: 600; }
 .ib-status.accepted { color: #0a7d33; } .ib-status.rejected { color: #6b7280; }
+
+/* Online help */
+.help-btn { width: 22px; height: 22px; border: 1.5px solid currentColor; border-radius: 50%; padding: 0; justify-content: center; font-weight: 700; font-size: 13px; line-height: 1; }
+.help-btn:hover { color: #ff6a00; text-decoration: none; }
+.modal.modal-help { width: 920px; max-width: 96vw; height: 80vh; max-height: 90vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.help-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #eef0f3; }
+.help-head h2 { margin: 0; font-size: 18px; }
+.help-head input { flex: 1; max-width: 360px; margin-left: auto; padding: 6px 10px; }
+.help-head .link { font-size: 22px; color: #6b7280; padding: 0 6px; }
+.help-body { flex: 1; display: flex; min-height: 0; }
+.help-nav { width: 220px; flex-shrink: 0; border-right: 1px solid #eef0f3; padding: 8px 0; overflow-y: auto; }
+.help-nav a { display: block; padding: 7px 18px; color: #374151; text-decoration: none; font-size: 14px; }
+.help-nav a:hover { background: #f9fafb; }
+.help-nav a.active { background: #fff3e8; color: #c2410c; font-weight: 600; border-left: 3px solid #ff6a00; padding-left: 15px; }
+.help-nav a.hidden { display: none; }
+.help-tag { font-size: 10px; background: #eef0f3; color: #6b7280; border-radius: 8px; padding: 1px 6px; font-weight: 500; }
+.help-content { flex: 1; overflow-y: auto; padding: 16px 24px 24px; font-size: 14px; line-height: 1.55; color: #1f2937; }
+.help-content h3 { margin: 0 0 10px; font-size: 17px; }
+.help-content h4 { margin: 16px 0 4px; font-size: 14px; }
+.help-content ul, .help-content ol { padding-left: 20px; margin: 6px 0; }
+.help-content li { margin: 3px 0; }
+.help-table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 13.5px; }
+.help-table td, .help-table th { border-bottom: 1px solid #eef0f3; padding: 6px 8px; text-align: left; vertical-align: top; }
+.help-table td:first-child { width: 34%; }
+.help-foot { padding: 8px 18px; border-top: 1px solid #eef0f3; }
+@media (max-width: 700px) { .help-body { flex-direction: column; } .help-nav { width: auto; border-right: 0; border-bottom: 1px solid #eef0f3; max-height: 30%; } }
