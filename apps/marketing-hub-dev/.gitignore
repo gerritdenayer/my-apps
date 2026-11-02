@@ -1,0 +1,14 @@
+# --- Keep your dataset private: never commit data ---
+# Marketing Hub stores data in the browser; exports are JSON files. Don't track them.
+*.json
+_backups/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Node (only used for local headless testing, not part of the app)
+node_modules/
+package-lock.json

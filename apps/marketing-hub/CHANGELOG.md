@@ -1,5 +1,18 @@
 # Changelog
 
+## [v5.1.18] - 2026-11-02 - Dev and production copies
+
+### Added
+- Dev and production copies. All changes are now made and tested in a separate dev copy
+  (apps/marketing-hub-dev) on its own test folder (MarketingHub-TEST), and reach the team in one
+  release. The dev copy shows an orange DEV banner and a "-dev" version, keeps its own data in the
+  browser, and refuses to write to any folder whose name does not contain "TEST".
+- No more hard refresh after a release: the app's files carry the version number, so browsers load
+  the new version by themselves.
+
+### Changed
+- "What's new" in the help shows released versions only (the dev copy also shows unreleased work).
+
 ## [v5.1.17] - 2026-11-02 - SVP / vertical with N.A., year-based clusters, CustomerLink, partner funded option
 
 ### Changed

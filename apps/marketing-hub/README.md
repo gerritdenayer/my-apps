@@ -142,3 +142,11 @@ Status becomes `accepted` (with `eventId`) or `rejected`, with `decidedBy` and `
 The help window (the "?" button in the header) lives in `js/help.js`. Update it whenever a change
 affects what users see or do. "What's new" is read from CHANGELOG.md. See CLAUDE.md for the full
 release routine.
+
+## Dev and production
+
+The app has two copies in this repo: `apps/marketing-hub-dev` (dev, for building and testing) and
+`apps/marketing-hub` (production, used by the team). Changes are made in dev, tested at the dev link
+on the MarketingHub-TEST folder, and released with `python3 tools/mh-release.py <version> "<title>"`,
+which copies dev over production (except `js/env.js`). The dev copy keeps separate browser storage
+and only writes to a folder whose name contains "TEST".

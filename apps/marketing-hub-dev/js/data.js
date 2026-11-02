@@ -1,0 +1,1639 @@
+// Data tab: export, import and merge of the JSON data. Available to Admin and Budget owner,
+// so budget owners can exchange budget & events files and load a setup, without opening Settings.
+(function () {
+  const S = window.MB_STATE;
+  const API = window.MB_API;
+
+  function render() {
+    const root = document.getElementById("tab-data");
+    root.innerHTML = `
+      <div class="card">
+        <h2>Data management</h2>
+        <p class="muted small">Data lives in this browser. The setup (entities, clusters, M1, types, SVPs, statuses, users, yearly budgets, codes) is best owned by the admin and shared as one file. Budget and events are exchanged and merged between people. Every export is stamped with who made it and when.</p>
+        <h3 style="margin-bottom:6px">Export</h3>
+        <div class="actions" style="justify-content:flex-start; flex-wrap: wrap; gap: 8px;">
+          <button class="primary" id="dm-export-all">Export everything (backup)</button>
+          <button class="secondary" id="dm-export-setup">Export setup only</button>
+          <button class="secondary" id="dm-export-be">Export budget &amp; events</button>
+        </div>
+        <h3 style="margin:14px 0 6px">Import / merge</h3>
+        <p class="muted small" style="margin-top:0">Load a file. The app detects whether it is a setup file, a budget &amp; events file, or a full backup, and offers the right action. A merge never deletes on its own: it shows you what is new, what changed, and what is missing, and lets you decide.</p>
+        <div class="actions" style="justify-content:flex-start; flex-wrap: wrap; gap: 8px;">
+          <button class="secondary" id="dm-load">Load a file...</button>
+          <button class="danger" id="dm-clear">Clear all local data</button>
+        </div>
+        <input type="file" id="dm-file-input" accept=".json,application/json" style="display:none" />
+      </div>
+      ${xlsxExportHtml()}
+      ${datasetGridHtml()}
+      ${shareCardHtml()}
+    `;
+
+    const fileInput = root.querySelector("#dm-file-input");
+    const exporterName = () => {
+      const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
+      return u ? u.name : "";
+    };
+    const today = () => new Date().toISOString().slice(0, 10);
+
+    root.querySelector("#dm-export-all").onclick = () => {
+      API.exportToFile(S.state.data, `marketing-budget-all-${today()}.json`, exporterName(), "full");
+      S.toast("Full backup downloaded", "success");
+    };
+    root.querySelector("#dm-export-setup").onclick = () => {
+      API.exportToFile(API.pickSetup(S.state.data), `marketing-setup-${today()}.json`, exporterName(), "setup");
+      S.toast("Setup file downloaded", "success");
+    };
+    root.querySelector("#dm-export-be").onclick = () => {
+      API.exportToFile(API.pickBudgetEvents(S.state.data), `marketing-budget-events-${today()}.json`, exporterName(), "budget-events");
+      S.toast("Budget & events file downloaded", "success");
+    };
+
+    root.querySelector("#dm-load").onclick = () => { fileInput.value = ""; fileInput.click(); };
+    fileInput.onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const incoming = await API.readJsonFile(file);
+        const kind = API.detectKind(incoming);
+        if (kind === "setup") return loadSetupFile(incoming, file.name);
+        if (kind === "budget-events") return mergeBudgetEventsFile(incoming, file.name);
+        const choice = await fullFileChoice(file.name);
+        if (choice === "replace") {
+          S.state.data = incoming; S.scheduleSave(); S.notify();
+          S.toast("All data replaced", "success");
+        } else if (choice === "setup") {
+          S.state.data = API.replaceSetup(S.state.data, incoming); S.scheduleSave(); S.notify();
+          S.toast("Setup replaced from file", "success");
+        } else if (choice === "merge") {
+          mergeBudgetEventsFile(incoming, file.name);
+        }
+      } catch (err) {
+        console.error(err);
+        S.toast("Could not read file: " + err.message, "error");
+      }
+    };
+
+    root.querySelector("#dm-clear").onclick = async () => {
+      const ok = await S.confirmDialog(
+        "Clear ALL local data on this computer? This wipes budget lines, settings, users and budgets. Export first if you want a backup."
+      );
+      if (!ok) return;
+      API.clearAll();
+      location.reload();
+    };
+
+    wireShare(root);
+    wireXlsxExport(root);
+    renderDatasetGrid();
+  }
+
+  // ---- Excel export (budget lines and campaigns/events), filtered by year + quarters ----
+  function xlsxExportHtml() {
+    const yrs = new Set();
+    (S.state.data.activities || []).forEach((a) => { if (a.date) { const y = new Date(a.date).getFullYear(); if (!isNaN(y)) yrs.add(y); } });
+    (S.state.data.events || []).forEach((e) => { if (e.start) { const y = new Date(e.start).getFullYear(); if (!isNaN(y)) yrs.add(y); } });
+    yrs.add(new Date().getFullYear());
+    const years = [...yrs].sort();
+    const cur = new Date().getFullYear();
+    return `
+      <div class="card">
+        <h2>Export to Excel</h2>
+        <p class="muted small">Export budget lines and campaigns / events as separate Excel files. Pick a year and tick the quarters to include. No quarter ticked means the whole year.</p>
+        <div style="display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap; margin-bottom:10px;">
+          <div><label class="muted small">Year</label><br/><select id="xe-year"><option value="all">All years</option>${years.map((y) => `<option ${y === cur ? "selected" : ""} value="${y}">${y}</option>`).join("")}</select></div>
+          <div><label class="muted small">Quarters</label>${S.quarterChecks("xe", [])}</div>
+        </div>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="primary" id="xe-budget">Export budget lines</button>
+          <button class="primary" id="xe-events">Export campaigns &amp; events</button>
+        </div>
+      </div>`;
+  }
+  function wireXlsxExport(root) {
+    const getSel = () => ({ year: root.querySelector("#xe-year").value, quarters: [...root.querySelectorAll(".xe-q:checked")].map((x) => x.value) });
+    const b = root.querySelector("#xe-budget");
+    if (b) b.onclick = () => { const s = getSel(); exportBudgetXlsx(s.year, s.quarters); };
+    const ev = root.querySelector("#xe-events");
+    if (ev) ev.onclick = () => { const s = getSel(); exportEventsXlsx(s.year, s.quarters); };
+  }
+  function writeSheet(kind, sheetName, header, rows) {
+    if (!window.XLSX) return S.toast("Excel library not loaded.", "error");
+    if (!rows.length) return S.toast("No rows match the selected period.", "error");
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `marketing-${kind}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    S.toast(`Exported ${rows.length} row(s) to Excel.`, "success");
+  }
+  function exportBudgetXlsx(year, quarters) {
+    const D = S.state.data;
+    const ap = (id) => ((D.settings.apCategories || []).find((c) => c.id === id) || {}).name || "";
+    const rows = (D.activities || []).filter((a) => S.inPeriodQ(a.date, year, quarters, "")).map((a) => {
+      const e = S.entityById(a.entityId) || {};
+      return [a.date || "", a.name || "", e.group || "", e.name || "",
+        (S.actTypeById(a.activityTypeId) || {}).name || "", ap(a.apCategoryId),
+        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "",
+        (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
+        a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
+        a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
+    });
+    writeSheet("budget-lines", "Budget lines",
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      rows);
+  }
+  function exportEventsXlsx(year, quarters) {
+    const D = S.state.data;
+    const campN = (e) => (e.kind === "Campaign") ? "" : (e.campaignId ? ((S.eventById(e.campaignId) || {}).name || "") : "");
+    const rows = (D.events || []).filter((e) => S.inPeriodQ(e.start, year, quarters, "")).map((e) => {
+      const en = S.entityById(e.entityId) || {};
+      return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
+        (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
+        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", campN(e),
+        S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
+    });
+    writeSheet("campaigns-events", "Events",
+      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
+      rows);
+  }
+
+  // ---- Budget & events table with multi-row edit ----
+  const gridState = { ds: "activities", sortBy: "", sortDir: "asc", sel: new Set() };
+
+  function datasetGridHtml() {
+    return `
+      <div class="card">
+        <h2>Budget &amp; events table</h2>
+        <p class="muted small">A tabular view for quick edits across many rows. Tick the rows, pick a field and a value, and apply to all ticked at once. Click a header to sort.</p>
+        <div id="ds-grid"></div>
+      </div>`;
+  }
+
+  function gridCols(ds) {
+    const D = S.state.data;
+    const entN = (id) => (S.entityById(id) || {}).name || "";
+    const svpN = (id) => (S.svpById(id) || {}).name || "";
+    const typeN = (id) => (S.actTypeById(id) || {}).name || "";
+    const statN = (id) => (S.statusById(id) || {}).name || "";
+    const userN = (id) => (S.userById(id) || {}).name || "";
+    const campN = (e) => (e.kind === "Campaign") ? "" : (e.campaignId ? ((S.eventById(e.campaignId) || {}).name || "") : "");
+    if (ds === "activities") return [
+      { key: "date", label: "Date", text: (a) => a.date || "", sort: (a) => a.date || "" },
+      { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
+      { key: "entity", label: "Entity", text: (a) => entN(a.entityId), sort: (a) => entN(a.entityId).toLowerCase() },
+      { key: "svp", label: "SVP / vertical", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
+      { key: "type", label: "Type", text: (a) => typeN(a.activityTypeId), sort: (a) => typeN(a.activityTypeId).toLowerCase() },
+      { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
+      { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
+      { key: "fN", label: "Forecast net", num: true, text: (a) => S.fmtMoney((a.forecastGross || 0) - (a.forecastPartner || 0)), sort: (a) => (a.forecastGross || 0) - (a.forecastPartner || 0) },
+      { key: "aN", label: "Actual net", num: true, text: (a) => S.fmtMoney((a.actualGross || 0) - (a.actualPartner || 0)), sort: (a) => (a.actualGross || 0) - (a.actualPartner || 0) },
+    ];
+    return [
+      { key: "start", label: "Start", text: (e) => e.start || "", sort: (e) => e.start || "" },
+      { key: "name", label: "Name", text: (e) => e.name || "", sort: (e) => (e.name || "").toLowerCase() },
+      { key: "kind", label: "Kind", text: (e) => e.kind || "Event", sort: (e) => (e.kind || "").toLowerCase() },
+      { key: "entity", label: "Entity", text: (e) => entN(e.entityId), sort: (e) => entN(e.entityId).toLowerCase() },
+      { key: "type", label: "Type", text: (e) => typeN(e.activityTypeId), sort: (e) => typeN(e.activityTypeId).toLowerCase() },
+      { key: "owner", label: "Owner", text: (e) => userN(e.ownerId), sort: (e) => userN(e.ownerId).toLowerCase() },
+      { key: "svp", label: "SVP / vertical", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
+      { key: "campaign", label: "Campaign", text: (e) => campN(e), sort: (e) => campN(e).toLowerCase() },
+      { key: "countries", label: "Countries", text: (e) => S.countryNamesOf(e.countryIds).join(", "), sort: (e) => S.countryNamesOf(e.countryIds).join(", ").toLowerCase() },
+    ];
+  }
+
+  function gridEditFields(ds) {
+    const D = S.state.data;
+    const opt = (arr) => arr.map((x) => ({ v: x.id, l: x.name }));
+    const users = () => opt((D.settings.users || []).filter((u) => u.active !== false));
+    if (ds === "activities") return [
+      { field: "statusId", label: "Status", opts: () => opt(D.settings.statuses || []) },
+      { field: "ownerId", label: "Owner", opts: users },
+      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
+      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
+      { field: "date", label: "Date", date: true },
+    ];
+    return [
+      { field: "ownerId", label: "Owner", opts: users },
+      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
+      { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
+      { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
+      { field: "kind", label: "Kind", opts: () => [{ v: "Event", l: "Event" }, { v: "Campaign", l: "Campaign" }] },
+    ];
+  }
+
+  function dsValControl(fieldDef) {
+    if (!fieldDef) return "";
+    if (fieldDef.date) return `<input id="ds-val" type="date" />`;
+    const opts = fieldDef.opts ? fieldDef.opts() : [];
+    return `<select id="ds-val"><option value="">(clear / none)</option>${opts.map((o) => `<option value="${o.v}">${S.escapeHtml(o.l)}</option>`).join("")}</select>`;
+  }
+
+  function renderDatasetGrid() {
+    const host = document.getElementById("ds-grid");
+    if (!host) return;
+    const ds = gridState.ds;
+    const cols = gridCols(ds);
+    const fields = gridEditFields(ds);
+    let rows = (S.state.data[ds] || []).slice();
+    if (gridState.sortBy) {
+      const col = cols.find((c) => c.key === gridState.sortBy);
+      if (col) {
+        const dir = gridState.sortDir === "desc" ? -1 : 1;
+        rows.sort((a, b) => {
+          const va = col.sort(a), vb = col.sort(b);
+          if (typeof va === "string" && typeof vb === "string") return va.localeCompare(vb) * dir;
+          return ((+va || 0) - (+vb || 0)) * dir;
+        });
+      }
+    }
+    const arrow = (k) => gridState.sortBy !== k ? ` <span class="muted">⇅</span>` : (gridState.sortDir === "asc" ? " ▲" : " ▼");
+    const acts = (S.state.data.activities || []).length, evs = (S.state.data.events || []).length;
+    host.innerHTML = `
+      <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+        <button class="ds-tab ${ds === "activities" ? "primary" : "secondary"}" data-ds="activities">Budget lines (${acts})</button>
+        <button class="ds-tab ${ds === "events" ? "primary" : "secondary"}" data-ds="events">Events (${evs})</button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; padding:8px; background:#f8fafc; border:1px solid #eef0f3; border-radius:6px;">
+        <span class="small"><strong id="ds-selcount">${gridState.sel.size}</strong> selected</span>
+        <label class="muted small">Set</label>
+        <select id="ds-field">${fields.map((f) => `<option value="${f.field}">${S.escapeHtml(f.label)}</option>`).join("")}</select>
+        <label class="muted small">to</label>
+        <span id="ds-valwrap">${dsValControl(fields[0])}</span>
+        <button id="ds-apply" class="primary" ${gridState.sel.size ? "" : "disabled"}>Apply to selected</button>
+        <button id="ds-clearsel" class="secondary">Clear selection</button>
+      </div>
+      <div class="table-wrap" style="max-height:460px; overflow:auto;">
+        <table>
+          <thead><tr>
+            <th style="width:34px"><input type="checkbox" id="ds-all" /></th>
+            ${cols.map((c) => `<th data-k="${c.key}" style="cursor:pointer; white-space:nowrap;${c.num ? "text-align:right;" : ""}">${S.escapeHtml(c.label)}${arrow(c.key)}</th>`).join("")}
+          </tr></thead>
+          <tbody>
+            ${rows.map((r) => `<tr data-id="${r.id}">
+              <td><input type="checkbox" class="ds-row" value="${r.id}" ${gridState.sel.has(r.id) ? "checked" : ""} /></td>
+              ${cols.map((c) => `<td${c.num ? ' class="num"' : ""}>${S.escapeHtml(c.text(r))}</td>`).join("")}
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+
+    host.querySelectorAll(".ds-tab").forEach((b) => { b.onclick = () => { gridState.ds = b.dataset.ds; gridState.sel = new Set(); gridState.sortBy = ""; renderDatasetGrid(); }; });
+    const fieldSel = host.querySelector("#ds-field");
+    fieldSel.onchange = () => { const fd = fields.find((f) => f.field === fieldSel.value); host.querySelector("#ds-valwrap").innerHTML = dsValControl(fd); };
+    host.querySelectorAll("thead th[data-k]").forEach((th) => {
+      th.onclick = () => { const k = th.dataset.k; if (gridState.sortBy === k) gridState.sortDir = gridState.sortDir === "asc" ? "desc" : "asc"; else { gridState.sortBy = k; gridState.sortDir = "asc"; } renderDatasetGrid(); };
+    });
+    const updateSel = () => { host.querySelector("#ds-selcount").textContent = gridState.sel.size; host.querySelector("#ds-apply").disabled = !gridState.sel.size; };
+    host.querySelectorAll(".ds-row").forEach((cb) => { cb.onchange = () => { if (cb.checked) gridState.sel.add(cb.value); else gridState.sel.delete(cb.value); updateSel(); }; });
+    host.querySelector("#ds-all").onchange = (e) => {
+      host.querySelectorAll(".ds-row").forEach((cb) => { cb.checked = e.target.checked; if (e.target.checked) gridState.sel.add(cb.value); else gridState.sel.delete(cb.value); });
+      updateSel();
+    };
+    host.querySelector("#ds-clearsel").onclick = () => { gridState.sel = new Set(); renderDatasetGrid(); };
+    host.querySelector("#ds-apply").onclick = () => applyBulk(fields);
+  }
+
+  async function applyBulk(fields) {
+    const ds = gridState.ds;
+    const field = document.getElementById("ds-field").value;
+    const fieldDef = fields.find((f) => f.field === field);
+    const valEl = document.getElementById("ds-val");
+    const value = valEl ? valEl.value : "";
+    const list = S.state.data[ds] || [];
+    const targets = list.filter((r) => gridState.sel.has(r.id));
+    if (!targets.length) return S.toast("No rows selected.", "error");
+    const label = fieldDef ? fieldDef.label : field;
+    const valLabel = value === "" ? "(cleared)" : (fieldDef && fieldDef.opts ? ((fieldDef.opts().find((o) => o.v === value) || {}).l || value) : value);
+    const ok = await S.confirmDialog(`Set ${label} to "${valLabel}" for ${targets.length} ${ds === "activities" ? "budget line(s)" : "event(s)"}?`);
+    if (!ok) return;
+    let n = 0;
+    targets.forEach((row) => {
+      if ((row[field] || "") === (value || "")) return;
+      row[field] = value;
+      if (ds === "events" && field === "entityId") { const ent = S.entityById(value); row.cluster = ent ? (ent.group || "") : ""; }
+      row.updatedBy = S.state.currentUserId; row.updatedAt = new Date().toISOString();
+      n++;
+    });
+    if (!n) { S.toast("No change (rows already had that value).", "error"); return; }
+    S.scheduleSave(); S.notify();
+    S.toast(`Updated ${n} ${ds === "activities" ? "budget line(s)" : "event(s)"}.`, "success");
+    renderDatasetGrid();
+  }
+
+  // ---- Shared folder (Teams / OneDrive) ----
+  const SETUP_FILE = "marketing-hub-setup.json";
+  const DATA_FILE = "marketing-hub-budget-events.json"; // old single file (before per-year files)
+  const SEEN_KEY = "mb_share_data_seen";
+  const BASE_KEY = "mb_share_pub_base"; // signature of budget & events at the last publish/pull
+  const PW_FILE = "marketing-hub-passwords.json"; // login passwords (hashed), newest change wins
+  const SETUP_SEEN_KEY = "mb_share_setup_seen"; // exportedAt of the shared setup at the last sync
+  const SETUP_BASE_KEY = "mb_share_setup_base"; // signature of the shared setup at the last sync
+  const SH = window.MB_SHARE;
+
+  // Signature of the local budget & events, to tell whether there are unpublished changes.
+  function beSig() {
+    return JSON.stringify({ a: S.state.data.activities || [], e: S.state.data.events || [] });
+  }
+  function markPublishBaseline() {
+    try { localStorage.setItem(BASE_KEY, beSig()); } catch (e) {}
+  }
+  // Show, in the header, the date of the shared file as of this browser's last sync.
+  function updateSharedHeader() {
+    const el = document.getElementById("shared-updated");
+    if (!el) return;
+    const f = (iso) => {
+      const d = new Date(iso || "");
+      if (!iso || isNaN(d)) return "";
+      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " " +
+        d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    };
+    const data = f(localStorage.getItem(SEEN_KEY));
+    const setup = f(localStorage.getItem(SETUP_SEEN_KEY));
+    // One line each, shown in the "last updated" pop-up in the header.
+    const parts = [];
+    if (data) parts.push("Shared budget &amp; events: " + S.escapeHtml(data));
+    if (setup) parts.push("Shared setup: " + S.escapeHtml(setup));
+    el.innerHTML = parts.map((x) => `<div>${x}</div>`).join("");
+  }
+  // True when the local budget & events differ from what was last published or pulled.
+  function budgetEventsDirty() {
+    const cur = beSig();
+    const base = localStorage.getItem(BASE_KEY);
+    if (base === null) { try { localStorage.setItem(BASE_KEY, cur); } catch (e) {} return false; }
+    return cur !== base;
+  }
+  async function shareFolderConfigured() {
+    if (!SH || !SH.supported()) return false;
+    return !!(await SH.savedFolder());
+  }
+  // Wire up a "Publish changes" button that lives on the Budget and Events tabs: shown only when
+  // a shared folder is set, enabled only when there are unpublished budget & events changes.
+  async function wirePublishButton(btn) {
+    if (!btn) return;
+    if (!(await shareFolderConfigured())) { btn.style.display = "none"; return; }
+    btn.style.display = "";
+    const dirty = budgetEventsDirty();
+    btn.disabled = !dirty;
+    btn.style.opacity = dirty ? "1" : "0.45";
+    btn.style.cursor = dirty ? "pointer" : "default";
+    btn.textContent = dirty ? "Publish changes" : "No changes to publish";
+    btn.title = dirty ? "You have unpublished budget & events changes. Click to publish them to the shared folder." : "No unpublished changes.";
+    btn.onclick = async () => { const ok = await publishBudgetEvents(); if (ok) wirePublishButton(btn); };
+  }
+  // A "Check for updates" button: shows whether the shared file is newer than your last sync,
+  // without pulling anything, and offers to refresh from there.
+  async function wireCheckButton(btn) {
+    if (!btn) return;
+    if (!(await shareFolderConfigured())) { btn.style.display = "none"; return; }
+    btn.style.display = "";
+    btn.title = "See if a newer shared version exists, without changing your copy.";
+    btn.onclick = () => checkForShared();
+  }
+  async function checkForShared() {
+    if (!SH || !SH.supported()) return S.toast("Shared folder is not available in this browser.", "error");
+    const dir = await SH.savedFolder();
+    if (!dir) return S.toast("Choose the shared folder first (Settings > Data & sharing).", "error");
+    if (!(await SH.ensurePerm(dir, "readwrite"))) return S.toast("Access to the shared folder was not granted.", "error");
+    await syncPasswords({ auto: false });
+    await checkSetup({ auto: false });
+    let remote;
+    try { remote = await readSharedBE(dir); }
+    catch (e) { return S.toast("Could not read the shared file: " + e.message, "error"); }
+    if (!remote) return S.toast("No budget & events file in the shared folder yet.", "error");
+    const seen = localStorage.getItem(SEEN_KEY) || "";
+    const stamp = (remote.meta && remote.meta.exportedAt) || "";
+    const who = (remote.meta && remote.meta.exportedBy) || "a teammate";
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-GB") : "unknown";
+    if (!stamp || stamp === seen) {
+      return S.toast("You have the latest shared version" + (stamp ? ` (from ${fmt(stamp)})` : "") + ".", "success");
+    }
+    const m = S.openModal(`
+      <h2>A newer shared version is available</h2>
+      <p>The shared budget &amp; events file was published by <strong>${S.escapeHtml(who)}</strong> on ${S.escapeHtml(fmt(stamp))}.</p>
+      <p class="muted small">Your copy last synced: ${S.escapeHtml(seen ? fmt(seen) : "never")}. Refresh pulls the new and changed rows into your copy. Nothing you have is deleted.</p>
+      <div class="actions">
+        <button class="secondary" id="ck-close">Not now</button>
+        <button class="primary" id="ck-refresh">Refresh now</button>
+      </div>`);
+    m.querySelector("#ck-close").onclick = S.closeModal;
+    m.querySelector("#ck-refresh").onclick = () => { S.closeModal(); refreshFromShared({ auto: false }); };
+  }
+  // Guarded publish of budget & events, reused by the Data tab and the tab buttons.
+  // Signature of a single row's content, ignoring audit fields, to compare versions.
+  function rowSig(o) {
+    const skip = { createdAt: 1, updatedAt: 1, createdBy: 1, updatedBy: 1 };
+    const c = {}; Object.keys(o).sort().forEach((k) => { if (!skip[k]) c[k] = o[k]; });
+    return JSON.stringify(c);
+  }
+  // Three-way merge of one list (activities or events): start from the shared/remote rows, then
+  // overlay the rows this user inserted or changed since the last sync (baseline). Rows the user
+  // did not touch keep the shared version, so teammates' changes are preserved. Deletions are not
+  // propagated here (handled by the Review & merge screen), so nothing is removed by surprise.
+  function mergeList(baseArr, localArr, remoteArr) {
+    const B = Object.fromEntries((baseArr || []).map((x) => [x.id, x]));
+    const Rmap = Object.fromEntries((remoteArr || []).map((x) => [x.id, x]));
+    const localIds = new Set((localArr || []).map((x) => x.id));
+    const result = Object.fromEntries((remoteArr || []).map((x) => [x.id, x]));
+    let inserts = 0, updates = 0, deletes = 0;
+    (localArr || []).forEach((row) => {
+      const b = B[row.id];
+      if (!b) {
+        result[row.id] = row;
+        if (Object.prototype.hasOwnProperty.call(Rmap, row.id)) updates++; else inserts++;
+      } else if (rowSig(row) !== rowSig(b)) {
+        result[row.id] = row; updates++;
+      }
+    });
+    // Rows you deleted since the last sync: remove them from the shared file too, so they do not
+    // come back. Exception: if a teammate changed that same row in the meantime, keep their version
+    // rather than deleting, so their edit is not lost.
+    Object.keys(B).forEach((id) => {
+      if (localIds.has(id)) return;            // still present locally, not a deletion
+      const r = Rmap[id];
+      if (!r) return;                          // already gone from the shared file
+      if (rowSig(r) === rowSig(B[id])) { delete result[id]; deletes++; }
+    });
+    return { list: Object.values(result), inserts, updates, deletes };
+  }
+  // How many merged rows came from teammates (differ from the local copy before merge).
+  function countFromRemote(localArr, mergedArr) {
+    const L = Object.fromEntries((localArr || []).map((x) => [x.id, x]));
+    let n = 0;
+    (mergedArr || []).forEach((x) => { const l = L[x.id]; if (!l || rowSig(l) !== rowSig(x)) n++; });
+    return n;
+  }
+
+  async function publishBudgetEvents(opts) {
+    opts = opts || {};
+    const dir = await shareDir();
+    if (!dir) return false;
+    try {
+      const ok = opts.skipConfirm || await S.confirmDialog("Publish your budget & events? Your new, changed and deleted rows are merged into the shared file, and any changes teammates already published are pulled into your copy. A teammate's row you did not touch is never removed.");
+      if (!ok) return false;
+      const remote = reconcileIncomingCountries(await readSharedBE(dir));
+      let baseline = null;
+      try { baseline = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { baseline = null; }
+      const localA = S.state.data.activities || [], localE = S.state.data.events || [];
+      let stats = { insA: 0, updA: 0, delA: 0, insE: 0, updE: 0, delE: 0, fromRemote: 0 };
+      if (remote && (Array.isArray(remote.activities) || Array.isArray(remote.events))) {
+        const ma = mergeList(baseline ? baseline.a : [], localA, remote.activities || []);
+        const me = mergeList(baseline ? baseline.e : [], localE, remote.events || []);
+        stats = { insA: ma.inserts, updA: ma.updates, delA: ma.deletes, insE: me.inserts, updE: me.updates, delE: me.deletes,
+          fromRemote: countFromRemote(localA, ma.list) + countFromRemote(localE, me.list) };
+        S.state.data.activities = ma.list;
+        S.state.data.events = me.list;
+      }
+      // Bin: shared bin + this computer's bin, without rows that are active again or purged.
+      const purged = new Set([...((remote && remote.purgedIds) || []), ...(S.state.data.purgedIds || [])]);
+      const localBin = S.ensureBin(S.state.data);
+      const mergedBin = {};
+      ["activities", "events"].forEach((k) => {
+        const active = new Set((S.state.data[k] || []).map((r) => r.id));
+        const m = {};
+        [...((remote && remote.bin && remote.bin[k]) || []), ...localBin[k]].forEach((r) => {
+          if (purged.has(r.id) || active.has(r.id)) return;
+          const c = m[r.id];
+          if (!c || String(r.deletedAt || "") >= String(c.deletedAt || "")) m[r.id] = r;
+        });
+        mergedBin[k] = Object.values(m);
+      });
+      S.state.data.bin = mergedBin;
+      S.state.data.purgedIds = [...purged];
+      const res = await writeSharedBE(dir, S.state.data.activities, S.state.data.events, remote, mergedBin, [...purged]);
+      const seenStamp = [res.newest, (remote && remote.meta && remote.meta.exportedAt) || ""].sort().pop();
+      if (seenStamp) localStorage.setItem(SEEN_KEY, seenStamp);
+      markPublishBaseline(); updateSharedHeader();
+      S.scheduleSave(); S.notify();
+      const mine = stats.insA + stats.insE, changed = stats.updA + stats.updE, removed = stats.delA + stats.delE;
+      const yrs = res.written.length ? ` Updated file(s): ${res.written.join(", ")}.` : " No shared file needed changes.";
+      S.toast(`Published & merged. New: ${mine}, changed: ${changed}, removed: ${removed}. Pulled in from teammates: ${stats.fromRemote}.${yrs}`, "success");
+      bridgeAfterPublish();
+      return true;
+    } catch (e) { S.toast("Could not publish budget & events: " + e.message, "error"); return false; }
+  }
+
+  function canPushSetup() {
+    return !!(window.MB_AUTH && window.MB_AUTH.canSeeSettings && window.MB_AUTH.canSeeSettings());
+  }
+
+  function shareCardHtml() {
+    if (!SH || !SH.supported()) {
+      return `
+        <div class="card">
+          <h2>Shared folder (Teams / OneDrive)</h2>
+          <p class="muted small">This browser cannot write directly to a shared folder. Use Chrome or Edge for that. In the meantime, the Export and Load buttons above do the same job by hand.</p>
+        </div>`;
+    }
+    return `
+      <div class="card">
+        <h2>Shared folder (Teams / OneDrive)</h2>
+        <p class="muted small">Publish and pull the master data through a folder that syncs with your team. Pick the shared folder once and the app remembers it. The setup is published by admins and pulled by everyone. Budget and events are shared: when the app opens, your copy is updated to match the shared files (it asks first if you have unpublished changes).</p>
+        <div id="share-status" class="muted small" style="margin:6px 0 10px">Checking...</div>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="secondary" id="sh-folder">Choose shared folder...</button>
+        </div>
+        ${canPushSetup() ? `<h3 style="margin:14px 0 6px">Second shared folder (bridge)</h3>
+        <p class="muted small" style="margin:0 0 6px">For admins who can reach two team folders while not everyone has access to the same one. Each time you open the app, click Refresh or publish, both folders are combined and kept in sync. Only this browser does the bridging; teammates do nothing.</p>
+        <div id="bridge-status" class="muted small" style="margin:0 0 6px">Checking...</div>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="secondary" id="sh-bridge">Choose second folder...</button>
+          <button class="primary hidden" id="sh-bridge-sync">Sync both folders now</button>
+          <button class="secondary hidden" id="sh-bridge-stop" style="color:#a00">Stop bridging</button>
+        </div>` : ""}
+        <h3 style="margin:14px 0 6px">Setup (structure)</h3>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          ${canPushSetup() ? `<button class="primary" id="sh-push-setup">Publish setup</button>` : `<span class="muted small">Only admins can publish the setup.</span>`}
+          <button class="secondary" id="sh-pull-setup">Pull setup</button>
+        </div>
+        <h3 style="margin:14px 0 6px">Budget &amp; events</h3>
+        <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
+          <button class="primary" id="sh-push-data">Publish budget &amp; events</button>
+          <button class="secondary" id="sh-pull-data">Pull budget &amp; events</button>
+          <button class="secondary" id="sh-review-data">Review &amp; merge...</button>
+        </div>
+        <p class="muted small" style="margin-top:6px">Pull makes your copy identical to the shared data (the app also does this when it opens). If you have unpublished changes, it asks first. Review &amp; merge lets you pick row by row instead.</p>
+      </div>`;
+  }
+
+  function shareUserName() {
+    const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
+    return u ? u.name : "";
+  }
+
+  async function refreshShareStatus(root) {
+    updateShareIndicator();
+    const el = root.querySelector("#share-status");
+    if (!el || !SH) return;
+    const folderBtn = root.querySelector("#sh-folder");
+    const dir = await SH.savedFolder();
+    if (!dir) {
+      el.innerHTML = `<span class="muted">No shared folder selected yet.</span>`;
+      if (folderBtn) folderBtn.textContent = "Choose shared folder...";
+      return;
+    }
+    const seen = localStorage.getItem(SEEN_KEY) || "";
+    el.innerHTML = `Current shared folder: <strong>${S.escapeHtml(dir.name)}</strong>` +
+      (seen ? ` <span class="muted">&middot; last synced budget &amp; events ${S.escapeHtml(new Date(seen).toLocaleString("en-GB"))}</span>` : "") +
+      (localStorage.getItem(SETUP_SEEN_KEY) ? ` <span class="muted">&middot; setup ${S.escapeHtml(new Date(localStorage.getItem(SETUP_SEEN_KEY)).toLocaleString("en-GB"))}</span>` : "");
+    if (folderBtn) folderBtn.textContent = "Change shared folder...";
+    // The browser never reveals the full folder path, so list the shared files found in it
+    // (with last-saved date and publisher) to show you are on the right folder.
+    const box = document.createElement("div");
+    box.style.marginTop = "6px";
+    el.appendChild(box);
+    if (!(await SH.hasPerm(dir, "readwrite"))) {
+      box.innerHTML = `<span class="muted">Files in this folder are shown once the browser has access (click any Publish or Pull button, or Refresh).</span>`;
+      return;
+    }
+    const fmt = (ms) => new Date(ms).toLocaleString("en-GB");
+    const rows = [];
+    let yearFiles = [];
+    try { yearFiles = (await SH.listFiles(dir)).filter((n) => BE_RE.test(n)).sort(); } catch (e) {}
+    const list = [[SETUP_FILE, "Setup"]]
+      .concat(yearFiles.map((n) => [n, "Budget & events " + n.match(BE_RE)[1]]))
+      .concat([[DATA_FILE, "Old single file"], [PW_FILE, "Passwords"]]);
+    for (const [file, label] of list) {
+      let line;
+      if (file === DATA_FILE) {
+        // The old single file: only worth showing when it exists.
+        let legacy = null;
+        try { legacy = await SH.readJson(dir, DATA_FILE); } catch (e) {}
+        if (!legacy) continue;
+        if (legacy.meta && legacy.meta.splitInto) { rows.push(`<div class="muted">${label}: <code>${S.escapeHtml(file)}</code> &middot; empty, replaced by the per-year files</div>`); continue; }
+        if (!yearFiles.length) { rows.push(`<div>Budget &amp; events: <code>${S.escapeHtml(file)}</code> &middot; single file, split into one file per year at the next publish</div>`); continue; }
+      }
+      try {
+        const info = SH.fileInfo ? await SH.fileInfo(dir, file) : null;
+        if (!info) line = `<span style="color:#b45309">not found</span>`;
+        else {
+          // Show when it was published from the app (stored in the file). The file system date
+          // is when the file landed on this computer (OneDrive sync, a copy to a new folder), which
+          // can be much later, so it is only shown as a hint when it differs.
+          let by = "", pub = "";
+          try { const j = await SH.readJson(dir, file); by = (j && j.meta && j.meta.exportedBy) || ""; pub = (j && j.meta && j.meta.exportedAt) || ""; } catch (e) {}
+          const pubMs = pub ? Date.parse(pub) : NaN;
+          const main = !isNaN(pubMs) ? `published ${S.escapeHtml(fmt(pubMs))}${by ? ` by ${S.escapeHtml(by)}` : ""}` : `saved ${S.escapeHtml(fmt(info.lastModified))}`;
+          const hint = !isNaN(pubMs) && Math.abs(info.lastModified - pubMs) > 5 * 60 * 1000
+            ? ` <span class="muted" title="The date the file was copied or synced onto this computer. The publish date is what counts.">(file date on this computer ${S.escapeHtml(fmt(info.lastModified))})</span>` : "";
+          line = `${main} &middot; ${Math.round(info.size / 1024)} KB${hint}`;
+        }
+      } catch (e) { line = `<span style="color:#b91c1c">could not read</span>`; }
+      rows.push(`<div>${label}: <code>${S.escapeHtml(file)}</code> &middot; ${line}</div>`);
+    }
+    box.innerHTML = rows.join("");
+  }
+
+  // Get the folder handle with write permission, or explain why not.
+  async function shareDir() {
+    const dir = await SH.savedFolder();
+    if (!dir) { S.toast("Choose the shared folder first.", "error"); return null; }
+    const ok = await SH.ensurePerm(dir, "readwrite");
+    updateShareIndicator();
+    if (!ok) { S.toast("Access to the shared folder was not granted.", "error"); return null; }
+    return dir;
+  }
+
+  async function refreshBridgeStatus(root) {
+    const el = root.querySelector("#bridge-status");
+    if (!el || !SH.savedBridge) return;
+    const b = await SH.savedBridge();
+    const chooseBtn = root.querySelector("#sh-bridge"), syncBtn = root.querySelector("#sh-bridge-sync"), stopBtn = root.querySelector("#sh-bridge-stop");
+    if (!b) {
+      el.innerHTML = "No second folder. The app uses only the shared folder above.";
+      if (chooseBtn) chooseBtn.textContent = "Choose second folder...";
+      [syncBtn, stopBtn].forEach((x) => x && x.classList.add("hidden"));
+      return;
+    }
+    let last = null; try { last = JSON.parse(localStorage.getItem(BRIDGE_LAST_KEY) || "null"); } catch (e) {}
+    const access = await SH.hasPerm(b, "readwrite");
+    el.innerHTML = `Bridging with: <strong>${S.escapeHtml(b.name)}</strong>` +
+      (access ? "" : ` <span style="color:#c2410c">&middot; no access yet (click Sync both folders now)</span>`) +
+      (last ? ` <span class="muted">&middot; last bridge sync ${S.escapeHtml(new Date(last.at).toLocaleString("en-GB"))}: ${S.escapeHtml(last.summary)}</span>` : "");
+    if (chooseBtn) chooseBtn.textContent = "Change second folder...";
+    [syncBtn, stopBtn].forEach((x) => x && x.classList.remove("hidden"));
+  }
+
+  function wireShare(root) {
+    if (!SH || !SH.supported()) return;
+    refreshShareStatus(root);
+    refreshBridgeStatus(root);
+    const bChoose = root.querySelector("#sh-bridge");
+    if (bChoose) bChoose.onclick = async () => {
+      try {
+        const h = await SH.chooseBridge();
+        const main = await SH.savedFolder();
+        if (main && (await main.isSameEntry(h))) { await SH.forgetBridge(); return S.toast("That is the same folder as the main shared folder. Pick the other one.", "error"); }
+        S.toast(`Second folder set: ${h.name}. Syncing both...`, "success");
+        await bridgeSync({ auto: false });
+        await refreshFromShared({ auto: false });
+      } catch (e) { if (e && e.name !== "AbortError") S.toast("Could not set the folder: " + e.message, "error"); }
+      refreshBridgeStatus(root); updateShareIndicator();
+    };
+    const bSync = root.querySelector("#sh-bridge-sync");
+    if (bSync) bSync.onclick = async () => { await bridgeSync({ auto: false }); await refreshFromShared({ auto: false }); refreshBridgeStatus(root); updateShareIndicator(); };
+    const bStop = root.querySelector("#sh-bridge-stop");
+    if (bStop) bStop.onclick = async () => {
+      if (!(await S.confirmDialog("Stop keeping the second folder in sync? Nothing is deleted; the two folders simply stop being combined."))) return;
+      await SH.forgetBridge(); try { localStorage.removeItem(BRIDGE_LAST_KEY); } catch (e) {}
+      refreshBridgeStatus(root); updateShareIndicator();
+    };
+
+    const folderBtn = root.querySelector("#sh-folder");
+    if (folderBtn) folderBtn.onclick = async () => {
+      try {
+        const h = await SH.chooseFolder();
+        await refreshShareStatus(root);
+        S.toast(`Shared folder set: ${h.name}`, "success");
+      } catch (e) {
+        if (e && e.name !== "AbortError") S.toast("Could not set the folder: " + e.message, "error");
+      }
+    };
+
+    const pushSetupBtn = root.querySelector("#sh-push-setup");
+    if (pushSetupBtn) pushSetupBtn.onclick = () => publishSetupFlow();
+
+    const pullSetupBtn = root.querySelector("#sh-pull-setup");
+    if (pullSetupBtn) pullSetupBtn.onclick = async () => {
+      const dir = await shareDir();
+      if (!dir) return;
+      try {
+        const incoming = await SH.readJson(dir, SETUP_FILE);
+        if (!incoming) return S.toast("No setup file in the shared folder yet.", "error");
+        if (await loadSetupFile(incoming, SETUP_FILE)) markSetupSynced(incoming);
+      } catch (e) { S.toast("Could not pull setup: " + e.message, "error"); }
+    };
+
+    const pushDataBtn = root.querySelector("#sh-push-data");
+    if (pushDataBtn) pushDataBtn.onclick = async () => {
+      await publishBudgetEvents();
+      await refreshShareStatus(root);
+    };
+
+    const pullDataBtn = root.querySelector("#sh-pull-data");
+    if (pullDataBtn) pullDataBtn.onclick = async () => {
+      await refreshFromShared({ auto: false });
+      await refreshShareStatus(root);
+    };
+
+    const reviewDataBtn = root.querySelector("#sh-review-data");
+    if (reviewDataBtn) reviewDataBtn.onclick = async () => {
+      const dir = await shareDir();
+      if (!dir) return;
+      try {
+        const incoming = await readSharedBE(dir);
+        if (!incoming) return S.toast("No budget & events file in the shared folder yet.", "error");
+        if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
+        await refreshShareStatus(root);
+        mergeBudgetEventsFile(incoming, "the shared budget & events files");
+      } catch (e) { S.toast("Could not review budget & events: " + e.message, "error"); }
+    };
+  }
+
+  function fullFileChoice(name) {
+    return new Promise((resolve) => {
+      const m = S.openModal(`
+        <h2>Full backup file</h2>
+        <p>"${S.escapeHtml(name)}" contains both the setup and the budget &amp; events. What do you want to do?</p>
+        <div class="actions" style="flex-direction:column; align-items:stretch; gap:8px;">
+          <button class="danger" id="ff-replace">Replace EVERYTHING (restore this backup)</button>
+          <button class="secondary" id="ff-setup">Replace only the setup / structure</button>
+          <button class="primary" id="ff-merge">Merge only budget &amp; events (review first)</button>
+          <button class="secondary" id="ff-cancel">Cancel</button>
+        </div>
+      `, { closeOnBackdrop: false });
+      const pick = (v) => { S.closeModal(); resolve(v); };
+      m.querySelector("#ff-replace").onclick = () => pick("replace");
+      m.querySelector("#ff-setup").onclick = () => pick("setup");
+      m.querySelector("#ff-merge").onclick = () => pick("merge");
+      m.querySelector("#ff-cancel").onclick = () => pick(null);
+    });
+  }
+
+  async function loadSetupFile(incoming, name) {
+    const ok = await S.confirmDialog(`Replace your setup (entities, clusters, M1, types, SVPs, statuses, users, yearly budgets, codes) with the one in "${name}"? Your budget lines and events stay. Export a backup first if unsure.`);
+    if (!ok) return false;
+    S.state.data = API.replaceSetup(S.state.data, incoming);
+    S.scheduleSave(); S.notify();
+    S.toast("Setup replaced from file", "success");
+    return true;
+  }
+
+  // Self-healing country tags: incoming events carry the sender's country ids, which may differ
+  // from ours. Using the sender's id->name map (countriesRef), re-point each incoming event's
+  // country tags to our own country ids by matching names, creating any country we do not have.
+  function reconcileIncomingCountries(incoming) {
+    if (!incoming || !Array.isArray(incoming.events)) return incoming;
+    const ref = incoming.countriesRef;
+    if (!Array.isArray(ref) || !ref.length) return incoming; // older file, nothing to map with
+    const senderName = {}; ref.forEach((c) => { if (c && c.id) senderName[c.id] = c.name || ""; });
+    const local = S.state.data.settings.countries = S.state.data.settings.countries || [];
+    const byName = {}; local.forEach((c) => { byName[(c.name || "").trim().toLowerCase()] = c.id; });
+    const mapId = (id) => {
+      if (!(id in senderName)) return id;           // sender did not describe this id; keep as-is
+      const nm = senderName[id]; const key = (nm || "").trim().toLowerCase();
+      if (!key) return id;
+      if (byName[key]) return byName[key];          // we already have this country
+      const nc = { id: API.uid(), name: nm };       // create it locally so the tag resolves
+      local.push(nc); byName[key] = nc.id;
+      return nc.id;
+    };
+    incoming.events.forEach((ev) => { if (Array.isArray(ev.countryIds)) ev.countryIds = ev.countryIds.map(mapId); });
+    return incoming;
+  }
+
+  function mergeBudgetEventsFile(incoming, name) {
+    reconcileIncomingCountries(incoming);
+    const diff = API.diffBudgetEvents(S.state.data, incoming);
+    const ev = diff.events, ac = diff.activities;
+    const section = (title, items, chkClass) => {
+      if (!items.length) return "";
+      return `<h3 style="margin:12px 0 4px; font-size:14px">${title} (${items.length})</h3>` +
+        `<div style="max-height:150px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:6px 8px;">` +
+        items.map((it) => chkClass
+          ? `<label style="display:flex; align-items:center; gap:8px; font-size:13px; padding:2px 0;"><input type="checkbox" class="${chkClass}" value="${it.id}" /> ${S.escapeHtml(it.name)}</label>`
+          : `<div style="font-size:13px; padding:2px 0; color:#374151;">${S.escapeHtml(it.name)}</div>`
+        ).join("") + `</div>`;
+    };
+    const warnHtml = diff.warnings.length
+      ? `<div class="error" style="margin:10px 0; padding:8px; border-radius:6px;">${diff.warnings.length} incoming item(s) reference an entity or owner you do not have. If so, load the latest setup file first. <details><summary>show</summary>${diff.warnings.slice(0, 40).map((w) => `<div class="small">${S.escapeHtml(w)}</div>`).join("")}</details></div>`
+      : "";
+    const m = S.openModal(`
+      <h2>Merge budget &amp; events</h2>
+      <p class="muted small">From "${S.escapeHtml(name)}". New items are added and changed items are updated. Missing items are kept unless you tick them to delete.</p>
+      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="label">Events</div><div class="value" style="font-size:14px">${ev.adds.length} new · ${ev.updates.length} updated · ${ev.missing.length} missing</div></div>
+        <div class="kpi"><div class="label">Budget lines</div><div class="value" style="font-size:14px">${ac.adds.length} new · ${ac.updates.length} updated · ${ac.missing.length} missing</div></div>
+      </div>
+      ${warnHtml}
+      ${section("New events", ev.adds, "")}
+      ${section("Updated events", ev.updates, "")}
+      ${section("Events missing here — tick to delete, otherwise kept", ev.missing, "del-ev")}
+      ${section("New budget lines", ac.adds, "")}
+      ${section("Updated budget lines", ac.updates, "")}
+      ${section("Budget lines missing here — tick to delete, otherwise kept", ac.missing, "del-ac")}
+      ${(ev.updates.length + ac.updates.length) ? `<label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px;"><input type="checkbox" id="mg-updates" checked /> Apply the updates above (take the incoming version). Uncheck if this file looks like it predates a structure change.</label>` : ""}
+      <div class="actions" style="margin-top:14px">
+        <button class="secondary" id="mg-cancel">Cancel</button>
+        <button class="primary" id="mg-apply">Apply merge</button>
+      </div>
+    `, { closeOnBackdrop: false });
+    m.querySelector("#mg-cancel").onclick = S.closeModal;
+    m.querySelector("#mg-apply").onclick = () => {
+      const delEv = new Set([...m.querySelectorAll(".del-ev:checked")].map((c) => c.value));
+      const delAc = new Set([...m.querySelectorAll(".del-ac:checked")].map((c) => c.value));
+      const toBin = [...(S.state.data.events || []).filter((x) => delEv.has(x.id)).map((r) => ["events", r]),
+                     ...(S.state.data.activities || []).filter((x) => delAc.has(x.id)).map((r) => ["activities", r])];
+      const upToggle = m.querySelector("#mg-updates");
+      const skipUpdates = upToggle ? !upToggle.checked : false;
+      S.state.data = API.applyBudgetEventsMerge(S.state.data, incoming, { delEventIds: delEv, delActIds: delAc, skipUpdates });
+      toBin.forEach(([k, r]) => S.moveToBin(k, r));
+      S.scheduleSave(); S.notify(); S.closeModal();
+      const added = ev.adds.length + ac.adds.length;
+      const upd = skipUpdates ? 0 : (ev.updates.length + ac.updates.length);
+      const del = delEv.size + delAc.size;
+      S.toast(`Merged: ${added} added, ${upd} updated, ${del} deleted`, "success");
+    };
+  }
+
+  // Pull the shared budget & events and apply adds + updates automatically (no confirm screen),
+  // then show a summary of what changed. Local-only items are kept, never auto-deleted.
+  // What changed on this computer since the last publish or pull (compared with that baseline).
+  // When there is no baseline yet, rows that exist only here count as local changes.
+  function localChanges(incoming) {
+    let base = null;
+    try { base = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { base = null; }
+    const out = [];
+    const deleted = new Set(incoming.deletedIds || []);
+    const cmp = (key, label, baseArr, refArr) => {
+      const B = Object.fromEntries((baseArr || []).map((x) => [x.id, x]));
+      const R = Object.fromEntries((refArr || []).map((x) => [x.id, x]));
+      const local = S.state.data[key] || [];
+      const L = new Set(local.map((x) => x.id));
+      local.forEach((x) => {
+        if (!B[x.id]) { if (base || !R[x.id]) out.push({ kind: "new", label, name: x.name }); }
+        else if (base && rowSig(x) !== rowSig(B[x.id])) out.push({ kind: "changed", label, name: x.name });
+        else if (!R[x.id] && !deleted.has(x.id)) out.push({ kind: "only here", label, name: x.name });
+      });
+      if (base) Object.keys(B).forEach((id) => { if (!L.has(id)) out.push({ kind: "deleted", label, name: B[id].name }); });
+    };
+    cmp("activities", "Budget line", base ? base.a : null, incoming.activities);
+    cmp("events", "Event", base ? base.e : null, incoming.events);
+    return out;
+  }
+
+  // Pull budget & events: this computer is made identical to the shared files (they are the
+  // master). If there are changes here that were never published, the app asks first:
+  // publish them, discard them, or decide later. Nothing local is thrown away silently.
+  async function refreshFromShared(opts) {
+    opts = opts || {};
+    if (!SH || !SH.supported()) return;
+    const dir = await SH.savedFolder();
+    if (!dir) { if (!opts.auto) S.toast("Choose the shared folder first (Settings > Data & sharing).", "error"); return; }
+    const permOk = opts.auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
+    if (!permOk) { if (!opts.auto) S.toast("Access to the shared folder was not granted.", "error"); return; }
+    let incoming;
+    try { incoming = await readSharedBE(dir); }
+    catch (e) { if (!opts.auto) S.toast("Could not read the shared file: " + e.message, "error"); return; }
+    if (!incoming) { if (!opts.auto) S.toast("No budget & events file in the shared folder yet.", "error"); return; }
+    reconcileIncomingCountries(incoming);
+
+    const mine = localChanges(incoming);
+    if (mine.length) {
+      const choice = await askUnpublished(mine);
+      if (choice === "publish") { await publishBudgetEvents({ skipConfirm: true }); return; }
+      if (choice !== "discard") return; // decide later: keep working on this copy
+    }
+    mirrorShared(incoming, opts);
+  }
+
+  // Replace the local budget & events with the shared ones and show what changed.
+  function mirrorShared(incoming, opts) {
+    const diff = API.diffBudgetEvents(S.state.data, incoming);
+    const changed = diff.events.adds.length + diff.activities.adds.length + diff.events.updates.length +
+      diff.activities.updates.length + diff.events.missing.length + diff.activities.missing.length;
+    S.state.data.activities = JSON.parse(JSON.stringify(incoming.activities || []));
+    S.state.data.events = JSON.parse(JSON.stringify(incoming.events || []));
+    S.state.data.bin = JSON.parse(JSON.stringify(incoming.bin || { activities: [], events: [] }));
+    S.state.data.purgedIds = (incoming.purgedIds || []).slice();
+    if (incoming.meta && incoming.meta.exportedAt) localStorage.setItem(SEEN_KEY, incoming.meta.exportedAt);
+    markPublishBaseline(); updateSharedHeader();
+    if (!changed) {
+      if (!opts.auto) S.toast("You are up to date with the shared data.", "success");
+      return;
+    }
+    S.scheduleSave(); S.notify();
+    showRefreshSummary(diff, incoming);
+  }
+
+  function askUnpublished(mine) {
+    return new Promise((resolve) => {
+      const count = (k) => mine.filter((x) => x.kind === k).length;
+      const parts = [["new", "new"], ["changed", "changed"], ["deleted", "deleted"], ["only here", "only on this computer"]].map(([k, l]) => count(k) ? `${count(k)} ${l}` : "").filter(Boolean).join(", ");
+      const list = mine.slice(0, 60).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.label)} ${x.kind}: ${S.escapeHtml(x.name || "(no name)")}</div>`).join("");
+      const m = S.openModal(`
+        <h2>You have unpublished changes</h2>
+        <p>This computer has changes that are not in the shared folder yet (${parts}). The app normally loads the shared data when it opens, which would replace them.</p>
+        <details style="margin:6px 0 10px"><summary style="cursor:pointer">Show the changes</summary><div style="max-height:180px; overflow:auto; margin-top:4px">${list}</div></details>
+        <div class="actions" style="flex-wrap:wrap; gap:8px">
+          <button class="secondary" id="up-later">Decide later</button>
+          <button class="secondary" id="up-discard" style="color:#a00">Discard mine, load shared</button>
+          <button class="primary" id="up-publish">Publish my changes</button>
+        </div>`, { closeOnBackdrop: false });
+      const done = (v) => { S.closeModal(); resolve(v); };
+      m.querySelector("#up-later").onclick = () => done("later");
+      m.querySelector("#up-publish").onclick = () => done("publish");
+      m.querySelector("#up-discard").onclick = async () => {
+        S.closeModal();
+        const ok = await S.confirmDialog("Discard your unpublished changes and load the shared data? This cannot be undone.");
+        resolve(ok ? "discard" : "later");
+      };
+    });
+  }
+
+  function showRefreshSummary(diff, incoming) {
+    const by = (incoming.meta && incoming.meta.exportedBy) || "a teammate";
+    const when = incoming.meta && incoming.meta.exportedAt ? new Date(incoming.meta.exportedAt).toLocaleString("en-GB") : "";
+    const evA = diff.events.adds.length, evU = diff.events.updates.length;
+    const acA = diff.activities.adds.length, acU = diff.activities.updates.length;
+    const missN = diff.events.missing.length + diff.activities.missing.length;
+    const names = (arr) => arr.slice(0, 50).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.name)}</div>`).join("");
+    const block = (title, arr) => arr.length ? `<details style="margin:4px 0"><summary style="cursor:pointer">${title} (${arr.length})</summary>${names(arr)}</details>` : "";
+    const missNote = "";
+    const m = S.openModal(`
+      <h2>Shared data updated</h2>
+      <p class="muted small">Your copy now matches the shared data (last published by ${S.escapeHtml(by)}${when ? " on " + S.escapeHtml(when) : ""}).</p>
+      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi"><div class="label">Events</div><div class="value" style="font-size:14px">${evA} new &middot; ${evU} updated &middot; ${diff.events.missing.length} removed</div></div>
+        <div class="kpi"><div class="label">Budget lines</div><div class="value" style="font-size:14px">${acA} new &middot; ${acU} updated &middot; ${diff.activities.missing.length} removed</div></div>
+      </div>
+      ${block("New events", diff.events.adds)}
+      ${block("Updated events", diff.events.updates)}
+      ${block("New budget lines", diff.activities.adds)}
+      ${block("Updated budget lines", diff.activities.updates)}
+      ${block("Removed events", diff.events.missing)}
+      ${block("Removed budget lines", diff.activities.missing)}
+      ${missNote}
+      <div class="actions"><button class="primary" id="rs-ok">Got it</button></div>
+    `);
+    m.querySelector("#rs-ok").onclick = S.closeModal;
+  }
+
+  // Show/hide the header Refresh button and, if the browser already has access, auto-check on open.
+
+  // ---- Bridge: keep a second shared folder in sync (admins, this browser only) ----
+  // Reads both folders, combines them, and writes the combined result back to both (only files
+  // that changed). Budget & events: per row the most recent edit wins; bins and permanent
+  // deletions are combined. Setup: the most recently published one wins. Passwords: newest per user.
+  const BRIDGE_LAST_KEY = "mb_bridge_last";
+  let bridgeBusy = false;
+  function combineBE(a, b) {
+    if (!a) return b; if (!b) return a;
+    const rowStamp = (r) => String(r.updatedAt || r.createdAt || "");
+    const out = { activities: {}, events: {}, bin: { activities: {}, events: {} } };
+    const purged = new Set([...(a.purgedIds || []), ...(b.purgedIds || [])]);
+    [a, b].forEach((src) => ["activities", "events"].forEach((k) => {
+      (src[k] || []).forEach((r) => { const c = out[k][r.id]; if (!c || rowStamp(r) > rowStamp(c)) out[k][r.id] = r; });
+      (((src.bin || {})[k]) || []).forEach((r) => { const c = out.bin[k][r.id]; if (!c || String(r.deletedAt || "") > String(c.deletedAt || "")) out.bin[k][r.id] = r; });
+    }));
+    ["activities", "events"].forEach((k) => {
+      Object.keys(out.bin[k]).forEach((id) => {
+        if (purged.has(id)) { delete out.bin[k][id]; delete out[k][id]; return; }
+        const act = out[k][id];
+        if (!act) return;
+        if (rowStamp(act) > String(out.bin[k][id].deletedAt || "")) delete out.bin[k][id]; else delete out[k][id];
+      });
+      purged.forEach((id) => delete out[k][id]);
+    });
+    return {
+      activities: Object.values(out.activities), events: Object.values(out.events),
+      bin: { activities: Object.values(out.bin.activities), events: Object.values(out.bin.events) },
+      purgedIds: [...purged],
+    };
+  }
+  async function bridgeDirs(auto) {
+    if (!SH || !SH.supported() || !SH.savedBridge || !canPushSetup()) return null;
+    const a = await SH.savedFolder(), b = await SH.savedBridge();
+    if (!a || !b) return null;
+    const okA = auto ? await SH.hasPerm(a, "readwrite") : await SH.ensurePerm(a, "readwrite");
+    const okB = auto ? await SH.hasPerm(b, "readwrite") : await SH.ensurePerm(b, "readwrite");
+    if (!okA || !okB) return null;
+    return { a, b };
+  }
+  async function bridgeSync(opts) {
+    opts = opts || {};
+    if (bridgeBusy) return null;
+    const dirs = await bridgeDirs(opts.auto);
+    if (!dirs) return null;
+    bridgeBusy = true;
+    const report = { setup: "", be: [], pw: 0 };
+    try {
+      // Budget & events
+      const rA = await readSharedBE(dirs.a), rB = await readSharedBE(dirs.b);
+      if (rA) reconcileIncomingCountries(rA);
+      if (rB) reconcileIncomingCountries(rB);
+      const c = combineBE(rA, rB);
+      if (c) {
+        const wa = await writeSharedBE(dirs.a, c.activities, c.events, rA, c.bin, c.purgedIds);
+        const wb = await writeSharedBE(dirs.b, c.activities, c.events, rB, c.bin, c.purgedIds);
+        if (wa.written.length) report.be.push(`${dirs.a.name}: ${wa.written.join(", ")}`);
+        if (wb.written.length) report.be.push(`${dirs.b.name}: ${wb.written.join(", ")}`);
+      }
+      // Setup: newest published wins
+      const sA = await SH.readJson(dirs.a, SETUP_FILE), sB = await SH.readJson(dirs.b, SETUP_FILE);
+      const st = (x) => (x && x.meta && x.meta.exportedAt) || "";
+      if (sA && (!sB || (st(sA) > st(sB) && setupSig(sA.settings) !== setupSig(sB.settings)))) { await SH.writeJson(dirs.b, SETUP_FILE, sA); report.setup = `${dirs.a.name} → ${dirs.b.name}`; }
+      else if (sB && (!sA || (st(sB) > st(sA) && setupSig(sA.settings) !== setupSig(sB.settings)))) { await SH.writeJson(dirs.a, SETUP_FILE, sB); report.setup = `${dirs.b.name} → ${dirs.a.name}`; }
+      // Passwords: newest per user
+      const pA = (await SH.readJson(dirs.a, PW_FILE)) || { version: 1, users: {} };
+      const pB = (await SH.readJson(dirs.b, PW_FILE)) || { version: 1, users: {} };
+      const users = { ...(pA.users || {}) };
+      Object.entries(pB.users || {}).forEach(([id, e]) => { const cur = users[id]; if (!cur || String(e.pwChangedAt || "") > String(cur.pwChangedAt || "")) users[id] = e; });
+      const merged = { version: 1, users, meta: { exportedAt: new Date().toISOString(), exportedBy: shareUserName() } };
+      const same = (x) => JSON.stringify(x.users || {}) === JSON.stringify(users);
+      if (Object.keys(users).length) {
+        if (!same(pA)) { await SH.writeJson(dirs.a, PW_FILE, merged); report.pw++; }
+        if (!same(pB)) { await SH.writeJson(dirs.b, PW_FILE, merged); report.pw++; }
+      }
+      // Email inbox: combine both folders' proposals (a decided item wins over a pending one).
+      if (window.MB_INBOX && window.MB_INBOX.mergeFiles) {
+        const iA = await SH.readJson(dirs.a, "marketing-hub-inbox.json"), iB = await SH.readJson(dirs.b, "marketing-hub-inbox.json");
+        if (iA || iB) {
+          const m = window.MB_INBOX.mergeFiles(iA, iB);
+          const sig = (x) => JSON.stringify(((x && x.items) || []).slice().sort((p, q) => String(p.id).localeCompare(String(q.id))));
+          if (sig(iA) !== sig(m)) { await SH.writeJson(dirs.a, "marketing-hub-inbox.json", m); report.inbox = true; }
+          if (sig(iB) !== sig(m)) { await SH.writeJson(dirs.b, "marketing-hub-inbox.json", m); report.inbox = true; }
+        }
+      }
+      const changed = report.be.length || report.setup || report.pw || report.inbox;
+      const summary = changed
+        ? [report.be.length ? "budget & events" : "", report.setup ? "setup" : "", report.pw ? "passwords" : "", report.inbox ? "email inbox" : ""].filter(Boolean).join(", ") + " copied across"
+        : "both folders already matched";
+      try { localStorage.setItem(BRIDGE_LAST_KEY, JSON.stringify({ at: new Date().toISOString(), summary })); } catch (e) {}
+      if (!opts.quiet && (changed || !opts.auto)) S.toast(`Bridge sync: ${summary}.`, "success");
+      return report;
+    } catch (e) {
+      S.toast("Bridge sync failed: " + e.message, "error");
+      return null;
+    } finally { bridgeBusy = false; }
+  }
+  // After publishing to the main folder, carry it over to the bridge folder as well.
+  function bridgeAfterPublish() { setTimeout(() => bridgeSync({ auto: true, quiet: true }), 0); }
+
+  // ---- Shared folder connection status (header dot + warning bar) ----
+  // ok: access granted and the folder can be read; noaccess: a folder is set but the browser
+  // needs permission (common after a browser restart); error: access but the folder cannot be
+  // read (moved, renamed, OneDrive not synced); none: no shared folder set; unsupported: browser.
+  async function shareState() {
+    if (!SH || !SH.supported()) return { state: "unsupported" };
+    const dir = await SH.savedFolder();
+    if (!dir) return { state: "none" };
+    if (!(await SH.hasPerm(dir, "readwrite"))) return { state: "noaccess", dir };
+    try { await SH.listFiles(dir); } catch (e) { return { state: "error", dir, msg: e.message }; }
+    const bridge = (SH.savedBridge && canPushSetup()) ? await SH.savedBridge() : null;
+    if (bridge) {
+      if (!(await SH.hasPerm(bridge, "readwrite"))) return { state: "noaccess", dir: bridge, bridge };
+      try { await SH.listFiles(bridge); } catch (e) { return { state: "error", dir: bridge, bridge, msg: e.message }; }
+    }
+    return { state: "ok", dir, bridge };
+  }
+  let bannerDismissed = false;
+  async function updateShareIndicator() {
+    const pill = document.getElementById("share-pill");
+    const banner = document.getElementById("share-banner");
+    if (!pill) return;
+    const st = await shareState();
+    if (window.MB_INBOX) window.MB_INBOX.refresh(st.state === "ok");
+    const name = st.dir ? st.dir.name : "";
+    const seen = localStorage.getItem(SEEN_KEY);
+    const seenTxt = seen ? new Date(seen).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+    const P = {
+      ok: { cls: "ok", text: st.bridge ? "Shared · 2 folders" : "Shared", title: st.bridge ? `Connected to "${name}", and keeping "${st.bridge.name}" in sync (bridge). Click to sync now.` : `Connected to the shared folder "${name}". Click to check for updates now.` },
+      noaccess: { cls: "warn", text: "No access", title: `The browser has no access to the shared folder "${name}" yet, so the data may be old. Click to connect.` },
+      error: { cls: "err", text: "Folder not found", title: `The shared folder "${name}" cannot be read (${st.msg || "unknown error"}). It may have moved, or OneDrive is not synced. Click to fix it in Data & sharing.` },
+      none: { cls: "off", text: "Local only", title: "Not connected to a shared folder: your data is only on this computer. Click to set it up." },
+      unsupported: { cls: "off", text: "Local only", title: "This browser cannot use a shared folder. Use Chrome or Edge to share data with your team." },
+    }[st.state];
+    pill.className = "share-pill " + P.cls;
+    pill.innerHTML = `<span class="sp-dot"></span>${P.text}`;
+    pill.title = P.title;
+    pill.onclick = () => shareAction(st.state);
+    // Warning bar: only when a shared folder is set but cannot be used.
+    if (banner) {
+      if ((st.state === "noaccess" || st.state === "error") && !bannerDismissed) {
+        const msg = st.state === "noaccess"
+          ? `<strong>No access to the shared folder "${S.escapeHtml(name)}".</strong> You may be looking at old data${seenTxt ? ` (last synced ${S.escapeHtml(seenTxt)})` : ""}. Connect to get the latest setup, budget and events.`
+          : `<strong>The shared folder "${S.escapeHtml(name)}" cannot be read.</strong> It may have moved or OneDrive may not be synced. You may be looking at old data.`;
+        banner.innerHTML = `<span>${msg}</span><button type="button" class="primary" id="sb-connect">${st.state === "noaccess" ? "Connect now" : "Fix in Data &amp; sharing"}</button><button type="button" class="link" id="sb-close" title="Hide until next time">&times;</button>`;
+        banner.classList.remove("hidden");
+        banner.querySelector("#sb-connect").onclick = () => shareAction(st.state);
+        banner.querySelector("#sb-close").onclick = () => { bannerDismissed = true; banner.classList.add("hidden"); };
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+  }
+  async function shareAction(state) {
+    if (state === "unsupported") return S.toast("This browser cannot use a shared folder. Use Chrome or Edge.", "error");
+    if (state === "none" || state === "error") { if (window.MB_APP) window.MB_APP.switchTab("data"); return; }
+    const dir = await SH.savedFolder();
+    if (!dir) return;
+    const ok = await SH.ensurePerm(dir, "readwrite");
+    const bridge = (SH.savedBridge && canPushSetup()) ? await SH.savedBridge() : null;
+    if (ok && bridge) await SH.ensurePerm(bridge, "readwrite");
+    await updateShareIndicator();
+    if (!ok) return S.toast("Access to the shared folder was not granted.", "error");
+    await bridgeSync({ auto: false });
+    await syncPasswords({ auto: false });
+    await checkSetup({ auto: false });
+    await refreshFromShared({ auto: false });
+    await updateShareIndicator();
+  }
+
+  async function initSharedRefresh() {
+    await initSharedRefreshInner();
+    await updateShareIndicator();
+  }
+  async function initSharedRefreshInner() {
+    updateSharedHeader();
+    const btn = document.getElementById("refresh-btn");
+    if (!btn) return;
+    if (!SH || !SH.supported()) { btn.classList.add("hidden"); return; }
+    const dir = await SH.savedFolder();
+    if (!dir) { btn.classList.add("hidden"); return; }
+    btn.classList.remove("hidden");
+    btn.onclick = async () => { await bridgeSync({ auto: false }); await syncPasswords({ auto: false }); await checkSetup({ auto: false }); await refreshFromShared({ auto: false }); await updateShareIndicator(); };
+    // On open: check the setup first (new entities or years may be needed by the data), then
+    // pull budget & events.
+    if (await SH.hasPerm(dir, "readwrite")) {
+      await bridgeSync({ auto: true });
+      await syncPasswords({ auto: true });
+      await checkSetup({ auto: true });
+      await refreshFromShared({ auto: true });
+    }
+  }
+
+  // ---- Setup (structure) sync check: v5.1 ----
+  // The setup file (entities, yearly budgets, codes, users...) is published separately from the
+  // budget & events file. We remember, per browser, a signature of the shared setup as of the
+  // last pull or publish (the baseline). Comparing local, shared and baseline tells us whether the
+  // shared setup is newer, whether you have unpublished setup changes, or both.
+  // Canonical signature of a settings object: sorted keys, empty values dropped, countries skipped
+  // (countries are auto-created when pulling budget & events, so they are not a real edit).
+  const PW_FIELDS = { pwSalt: 1, pwHash: 1, mustChangePassword: 1, pwChangedAt: 1 };
+  function setupSig(settings) {
+    const norm = (v) => {
+      if (Array.isArray(v)) { const a = v.map(norm).filter((x) => x !== undefined); return a.length ? a : undefined; }
+      if (v && typeof v === "object") {
+        const o = {};
+        Object.keys(v).sort().forEach((k) => {
+          if (PW_FIELDS[k]) return; // passwords sync through their own file
+          const n = norm(v[k]); if (n !== undefined) o[k] = n;
+        });
+        return Object.keys(o).length ? o : undefined;
+      }
+      if (v === null || v === undefined || v === "") return undefined;
+      return v;
+    };
+    const s = {};
+    Object.keys(settings || {}).forEach((k) => { if (k !== "countries") s[k] = settings[k]; });
+    return JSON.stringify(norm(s) || {});
+  }
+  function markSetupSynced(fileObj) {
+    try {
+      localStorage.setItem(SETUP_BASE_KEY, setupSig(fileObj.settings));
+      if (fileObj.meta && fileObj.meta.exportedAt) localStorage.setItem(SETUP_SEEN_KEY, fileObj.meta.exportedAt);
+    } catch (e) {}
+    updateSharedHeader();
+    if (window.MB_APP && window.MB_APP.refreshSetupStatus) setTimeout(() => window.MB_APP.refreshSetupStatus(), 0);
+  }
+  // Compare the local setup with the shared one. Returns one of:
+  // "same", "remote-newer", "local-changes", "both-changed", "unknown" (differs, no sync history).
+  function setupStatus(remote) {
+    const localSig = setupSig(S.state.data.settings);
+    const remoteSig = setupSig(remote.settings);
+    if (localSig === remoteSig) return "same";
+    const base = localStorage.getItem(SETUP_BASE_KEY);
+    if (base === null) return "unknown";
+    const remoteChanged = remoteSig !== base;
+    const localChanged = localSig !== base;
+    if (remoteChanged && localChanged) return "both-changed";
+    if (remoteChanged) return "remote-newer";
+    if (localChanged) return "local-changes";
+    return "same";
+  }
+  // Short, human summary of a setup: entity count and years with a yearly budget.
+  function setupSummary(settings) {
+    const s = settings || {};
+    const ents = (s.entities || []).length;
+    const years = Object.keys(s.yearlyBudgets || {}).filter((y) => Object.keys(s.yearlyBudgets[y] || {}).length).sort();
+    return `${ents} entities, budget years ${years.length ? years.join(", ") : "none"}`;
+  }
+  // Plain-language list of what differs between two setups ("from" = the one being replaced),
+  // so the pop-up shows the actual change instead of two identical summaries.
+  function setupDiff(fromS, toS) {
+    fromS = fromS || {}; toS = toS || {};
+    const out = [];
+    const nm = (x) => (x && (x.name || x.code || x.id)) || "?";
+    const sig = (x) => { const c = {}; Object.keys(x || {}).sort().forEach((k) => { if (!PW_FIELDS[k] && k !== "updatedAt") c[k] = x[k]; }); return JSON.stringify(c); };
+    const lists = [["users", "user"], ["entities", "entity"], ["svps", "SVP / vertical"], ["activityTypes", "event type"],
+      ["budgetCodes", "budget code"], ["partners", "partner"], ["statuses", "status"], ["apCategories", "category"], ["countryGroups", "country group"]];
+    const names = (arr) => arr.length > 4 ? arr.slice(0, 4).join(", ") + " and " + (arr.length - 4) + " more" : arr.join(", ");
+    lists.forEach(([k, label]) => {
+      if (!Array.isArray(fromS[k] || []) || !Array.isArray(toS[k] || [])) return;
+      const a = Object.fromEntries((fromS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
+      const b = Object.fromEntries((toS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
+      const added = Object.keys(b).filter((id) => !a[id]).map((id) => nm(b[id]));
+      const removed = Object.keys(a).filter((id) => !b[id]).map((id) => nm(a[id]));
+      const changed = Object.keys(b).filter((id) => a[id] && sig(a[id]) !== sig(b[id])).map((id) => nm(b[id]));
+      const plural = (n) => n === 1 ? label : (label === "entity" ? "entities" : label === "status" ? "statuses" : label === "category" ? "categories" : label + "s");
+      if (added.length) out.push("New " + plural(added.length) + ": " + names(added));
+      if (removed.length) out.push("Removed " + plural(removed.length) + ": " + names(removed));
+      if (changed.length) out.push("Changed " + plural(changed.length) + ": " + names(changed));
+    });
+    const ya = fromS.yearlyBudgets || {}, yb = toS.yearlyBudgets || {};
+    const yrs = [...new Set([...Object.keys(ya), ...Object.keys(yb)])].filter((y) => JSON.stringify(ya[y] || {}) !== JSON.stringify(yb[y] || {})).sort();
+    if (yrs.length) out.push("Yearly budgets changed for " + yrs.join(", "));
+    if (!out.length) out.push("Small changes to other settings");
+    return out;
+  }
+  async function publishSetupTo(dir) {
+    const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
+    await SH.writeJson(dir, SETUP_FILE, obj);
+    markSetupSynced(obj);
+    bridgeAfterPublish();
+    return obj;
+  }
+  function pullSetupFrom(remote) {
+    S.state.data = API.replaceSetup(S.state.data, remote);
+    markSetupSynced(remote);
+    S.scheduleSave(); S.notify();
+    syncPasswords({ auto: true, quiet: true });
+  }
+
+  // ---- Budget & events: one shared file per year ----
+  // Rows are filed by year: budget lines by their date, events by their start date. Rows without a
+  // date go to the "undated" file. Publishing rewrites only the year files whose rows changed, so
+  // people working on different years do not write the same file. The old single file
+  // (marketing-hub-budget-events.json) is still read if an older app version wrote to it, and is
+  // replaced by an empty marker once the per-year files are in use.
+  const BE_PREFIX = "marketing-hub-budget-events-";
+  const BE_RE = /^marketing-hub-budget-events-(\d{4}|undated)\.json$/;
+  function rowYear(r) {
+    const y = String((r && (r.start || r.date)) || "").slice(0, 4);
+    return /^\d{4}$/.test(y) ? y : "undated";
+  }
+  function yearFileName(y) { return BE_PREFIX + y + ".json"; }
+  // Sort rows by id and stringify, to tell whether a year file's content really changed.
+  function rowsSig(acts, evs) {
+    const byId = (a, b) => String(a.id).localeCompare(String(b.id));
+    return JSON.stringify({ a: [...(acts || [])].sort(byId), e: [...(evs || [])].sort(byId) });
+  }
+  function isLegacyActive(obj) {
+    return !!(obj && !(obj.meta && obj.meta.splitInto) &&
+      ((obj.activities || []).length || (obj.events || []).length));
+  }
+  // Read every budget & events file in the folder and combine them into one dataset, shaped like
+  // a single file ({ events, activities, countriesRef, meta }) so the existing merge logic works
+  // unchanged. Returns null when there is no budget & events data at all.
+  async function readSharedBE(dir) {
+    const names = (await SH.listFiles(dir)).filter((n) => BE_RE.test(n));
+    const files = {};
+    for (const name of names) {
+      const obj = await SH.readJson(dir, name);
+      if (obj) files[name.match(BE_RE)[1]] = { name, obj };
+    }
+    const legacy = await SH.readJson(dir, DATA_FILE);
+    const legacyActive = isLegacyActive(legacy);
+    if (!Object.keys(files).length && !legacyActive) return null;
+
+    const rows = { activities: {}, events: {} };   // id -> { row, stamp }
+    const bin = { activities: {}, events: {} };    // id -> row (newest deletion wins)
+    const purged = new Set();
+    Object.values(files).forEach((f) => {
+      (f.obj.purgedIds || []).forEach((id) => purged.add(id));
+      ["activities", "events"].forEach((k) => ((f.obj.bin || {})[k] || []).forEach((r) => {
+        const c = bin[k][r.id];
+        if (!c || String(r.deletedAt || "") > String(c.deletedAt || "")) bin[k][r.id] = r;
+      }));
+    });
+    const deleted = new Set();
+    Object.values(files).forEach((f) => (f.obj.deletedIds || []).forEach((id) => deleted.add(id)));
+    const countries = {};
+    let stamp = "", by = "";
+    // Per row, the most recently edited version wins (its own updatedAt, else createdAt). A file
+    // written by an older app version holds that person's whole copy, including stale rows, so a
+    // file's publish date alone must not decide.
+    const rowStamp = (r) => String(r.updatedAt || r.createdAt || "");
+    const take = (obj) => {
+      const st = (obj.meta && obj.meta.exportedAt) || "";
+      if (st > stamp) { stamp = st; by = (obj.meta && obj.meta.exportedBy) || ""; }
+      ["activities", "events"].forEach((k) => (obj[k] || []).forEach((r) => {
+        const cur = rows[k][r.id];
+        if (!cur || rowStamp(r) > rowStamp(cur.row)) rows[k][r.id] = { row: r };
+      }));
+      (obj.countriesRef || []).forEach((c) => { if (c && c.id) countries[c.id] = c; });
+    };
+    Object.values(files).forEach((f) => take(f.obj));
+    // Rows an older app version published to the old single file: added when missing, and they
+    // replace a year file's row only when that row was edited more recently.
+    if (legacyActive) take(legacy);
+    // A row both active and in the bin: the latest action wins (an edit or restore after the
+    // deletion keeps it active). Permanently deleted rows leave the bin.
+    ["activities", "events"].forEach((k) => {
+      Object.keys(bin[k]).forEach((id) => {
+        if (purged.has(id)) { delete bin[k][id]; return; }
+        const act = rows[k][id];
+        if (!act) return;
+        if (rowStamp(act.row) > String(bin[k][id].deletedAt || "")) delete bin[k][id];
+        else delete rows[k][id];
+      });
+      Object.keys(bin[k]).forEach((id) => deleted.add(id));
+    });
+    purged.forEach((id) => deleted.add(id));
+    return {
+      version: 1,
+      meta: { exportedAt: stamp, exportedBy: by, exportKind: "budget-events" },
+      activities: Object.values(rows.activities).map((x) => x.row),
+      events: Object.values(rows.events).map((x) => x.row),
+      countriesRef: Object.values(countries),
+      deletedIds: [...deleted],
+      bin: { activities: Object.values(bin.activities), events: Object.values(bin.events) },
+      purgedIds: [...purged],
+      _files: files, _legacy: legacy, _legacyActive: legacyActive,
+    };
+  }
+  // Write the given budget lines and events as per-year files. Only years whose rows differ from
+  // what is in the shared folder are written. Returns the newest exportedAt written (or "").
+  async function writeSharedBE(dir, acts, evs, remote, bin, purged) {
+    const groups = {};
+    const g = (y) => (groups[y] = groups[y] || { activities: [], events: [], bin: { activities: [], events: [] } });
+    (acts || []).forEach((r) => g(rowYear(r)).activities.push(r));
+    (evs || []).forEach((r) => g(rowYear(r)).events.push(r));
+    bin = bin || (S.ensureBin(S.state.data));
+    ["activities", "events"].forEach((k) => (bin[k] || []).forEach((r) => g(rowYear(r)).bin[k].push(r)));
+    const purgedList = (purged || S.state.data.purgedIds || []).slice().sort();
+    const extraSig = (o) => JSON.stringify({ b: rowsSig((o.bin || {}).activities, (o.bin || {}).events), p: (o.purgedIds || []).slice().sort() });
+    const existing = (remote && remote._files) || {};
+    const years = new Set([...Object.keys(groups), ...Object.keys(existing)]);
+    // Deleted rows are remembered (deletedIds), so other computers know to remove them too
+    // instead of mistaking them for unpublished rows of their own.
+    const allIds = new Set([...(acts || []), ...(evs || [])].map((r) => r.id));
+    const removedNow = new Set();
+    Object.values(existing).forEach((ex) => [...(ex.obj.activities || []), ...(ex.obj.events || [])].forEach((r) => { if (!allIds.has(r.id)) removedNow.add(r.id); }));
+    const tombsFor = (ex) => {
+      const t = new Set((ex && ex.obj.deletedIds) || []);
+      if (ex) [...(ex.obj.activities || []), ...(ex.obj.events || [])].forEach((r) => { if (removedNow.has(r.id)) t.add(r.id); });
+      allIds.forEach((id) => t.delete(id)); // a row that is back is no longer deleted
+      return [...t];
+    };
+    let newest = "";
+    const written = [];
+    for (const y of [...years].sort()) {
+      const grp = groups[y] || { activities: [], events: [], bin: { activities: [], events: [] } };
+      const ex = existing[y];
+      const tombs = tombsFor(ex);
+      const hasBin = grp.bin.activities.length || grp.bin.events.length;
+      const want = { bin: hasBin ? grp.bin : undefined, purgedIds: purgedList.length ? purgedList : undefined };
+      if (ex && rowsSig(ex.obj.activities, ex.obj.events) === rowsSig(grp.activities, grp.events) &&
+          JSON.stringify(tombs) === JSON.stringify(ex.obj.deletedIds || []) && extraSig(ex.obj) === extraSig(want)) continue;
+      if (!ex && !grp.activities.length && !grp.events.length && !hasBin) continue;
+      const obj = API.stampExport(API.pickBudgetEvents({ version: S.state.data.version, meta: S.state.data.meta,
+        settings: S.state.data.settings, activities: grp.activities, events: grp.events }), shareUserName(), "budget-events");
+      obj.meta.year = y;
+      if (tombs.length) obj.deletedIds = tombs;
+      if (hasBin) obj.bin = grp.bin;
+      if (purgedList.length) obj.purgedIds = purgedList;
+      await SH.writeJson(dir, yearFileName(y), obj);
+      written.push(y);
+      if (obj.meta.exportedAt > newest) newest = obj.meta.exportedAt;
+    }
+    // Retire the old single file: an empty marker, so older versions pull nothing from it.
+    if (!remote || !remote._legacy || !(remote._legacy.meta && remote._legacy.meta.splitInto) || remote._legacyActive) {
+      const legacyExists = remote ? !!remote._legacy : !!(await SH.readJson(dir, DATA_FILE));
+      if (legacyExists) {
+        await SH.writeJson(dir, DATA_FILE, { version: 1, events: [], activities: [], meta: {
+          exportKind: "budget-events", splitInto: "per-year", exportedAt: new Date().toISOString(), exportedBy: shareUserName(),
+          note: "Budget & events now live in one file per year (marketing-hub-budget-events-YYYY.json). This file is kept empty on purpose." } });
+      }
+    }
+    return { newest, written };
+  }
+
+  // ---- First connection from the login screen ----
+  // Pick the shared folder and load everything from it: the setup (users, entities, budgets...),
+  // the budget & events (merged: nothing local is removed) and the passwords. Returns null when
+  // cancelled, { error } on a problem, or a summary. The caller saves and reloads the login screen.
+  async function connectShared() {
+    if (!SH || !SH.supported()) return { error: "This browser cannot use a shared folder. Use Chrome or Edge." };
+    let dir;
+    try { dir = await SH.chooseFolder(); }
+    catch (e) { return (e && e.name === "AbortError") ? null : { error: "Could not open the folder: " + e.message }; }
+    let setup, data;
+    try {
+      setup = await SH.readJson(dir, SETUP_FILE);
+      data = await readSharedBE(dir);
+    } catch (e) { return { error: "Could not read the shared files: " + e.message }; }
+    if (!setup && !data) {
+      await SH.forgetFolder();
+      return { error: `"${dir.name}" has no Marketing Hub files (${SETUP_FILE}, ${BE_PREFIX}YYYY.json). Pick the team's shared folder.` };
+    }
+    const cur = S.state.data;
+    const hasLocal = ((cur.settings.users || []).length) || (cur.activities || []).length || (cur.events || []).length;
+    if (hasLocal) {
+      const ok = await S.confirmDialog(`This computer already has data. Load the team's setup from "${dir.name}" and merge in the shared budget & events? Your own budget lines and events are kept. Export a backup first if unsure.`);
+      if (!ok) return null;
+    }
+    if (setup) {
+      S.state.data = API.replaceSetup(S.state.data, setup);
+      markSetupSynced(setup);
+    }
+    if (data) {
+      reconcileIncomingCountries(data);
+      S.state.data = API.applyBudgetEventsMerge(S.state.data, data, {});
+      if (data.bin) S.state.data.bin = JSON.parse(JSON.stringify(data.bin));
+      if (data.purgedIds) S.state.data.purgedIds = data.purgedIds.slice();
+      if (data.meta && data.meta.exportedAt) localStorage.setItem(SEEN_KEY, data.meta.exportedAt);
+      markPublishBaseline();
+    }
+    await syncPasswords({ auto: true });
+    updateSharedHeader();
+    return { folder: dir.name, setup: !!setup, data: !!data };
+  }
+
+  // ---- Setup publish status (shown in the Settings sub-menu) ----
+  // Is the setup on this computer different from what was last published or pulled?
+  // Returns { show, noFolder, dirty } where dirty is true, false or null (unknown: no access yet).
+  async function setupPublishState() {
+    if (!SH || !SH.supported() || !canPushSetup()) return { show: false };
+    const dir = await SH.savedFolder();
+    if (!dir) return { show: true, noFolder: true };
+    const localSig = setupSig(S.state.data.settings);
+    const base = localStorage.getItem(SETUP_BASE_KEY);
+    if (base !== null) return { show: true, dirty: localSig !== base };
+    // Never synced on this computer: compare with the shared file if we already have access.
+    if (await SH.hasPerm(dir, "readwrite")) {
+      let remote = null;
+      try { remote = await SH.readJson(dir, SETUP_FILE); } catch (e) {}
+      if (!remote) return { show: true, dirty: true };
+      if (setupSig(remote.settings) === localSig) { markSetupSynced(remote); return { show: true, dirty: false }; }
+      return { show: true, dirty: true };
+    }
+    return { show: true, dirty: null };
+  }
+  // Publish the setup, with a clear warning if someone else published since your last sync.
+  async function publishSetupFlow() {
+    if (!canPushSetup()) { S.toast("Only admins can publish the setup.", "error"); return false; }
+    // Include any Settings edits that are not saved yet.
+    if (window.MB_SETTINGS && window.MB_SETTINGS.isDirty && window.MB_SETTINGS.isDirty()) window.MB_SETTINGS.saveAll();
+    const dir = await shareDir();
+    if (!dir) return false;
+    let remote = null;
+    try { remote = await SH.readJson(dir, SETUP_FILE); } catch (e) {}
+    const st = remote ? setupStatus(remote) : "local-changes";
+    if (st === "same") {
+      markSetupSynced(remote);
+      S.toast("The shared setup is already up to date.", "success");
+      if (window.MB_APP && window.MB_APP.refreshSetupStatus) window.MB_APP.refreshSetupStatus();
+      return true;
+    }
+    const who = (remote && remote.meta && remote.meta.exportedBy) || "a teammate";
+    const when = remote && remote.meta && remote.meta.exportedAt ? new Date(remote.meta.exportedAt).toLocaleString("en-GB") : "";
+    const msg = (st === "both-changed" || st === "remote-newer" || st === "unknown")
+      ? `Careful: the shared setup was published by ${who}${when ? " on " + when : ""}, and it differs from what this computer last synced. Publishing replaces it with your version for everyone. Continue?`
+      : "Publish your setup to the shared folder? Everyone gets it the next time they open the app. Budget lines and events are not touched.";
+    if (!(await S.confirmDialog(msg))) return false;
+    try {
+      await publishSetupTo(dir);
+      S.toast("Setup published to the shared folder.", "success");
+    } catch (e) { S.toast("Could not publish setup: " + e.message, "error"); return false; }
+    if (window.MB_APP && window.MB_APP.refreshSetupStatus) window.MB_APP.refreshSetupStatus();
+    return true;
+  }
+
+  // ---- Shared passwords file ----
+  // { version, meta, users: { <userId>: { name, pwSalt, pwHash, mustChangePassword, pwChangedAt,
+  // pwChangedBy } } }. Only hashes are stored, never a password. Per user, the newest change wins.
+  function pwEntry(u) {
+    return { name: u.name || "", pwSalt: u.pwSalt, pwHash: u.pwHash, mustChangePassword: !!u.mustChangePassword,
+             pwChangedAt: u.pwChangedAt, pwChangedBy: shareUserName() || u.name || "" };
+  }
+  async function pwDir(auto) {
+    if (!SH || !SH.supported()) return null;
+    const dir = await SH.savedFolder();
+    if (!dir) return null;
+    const ok = auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
+    return ok ? dir : null;
+  }
+  // Two-way sync: take newer passwords from the file, and write back any that are newer here.
+  // Returns the number of local passwords that were updated from the file.
+  async function syncPasswords(opts) {
+    opts = opts || {};
+    const dir = await pwDir(opts.auto);
+    if (!dir) return 0;
+    let file;
+    try { file = (await SH.readJson(dir, PW_FILE)) || { version: 1, users: {} }; }
+    catch (e) { if (!opts.auto && !opts.quiet) S.toast("Could not read the shared passwords: " + e.message, "error"); return 0; }
+    file.users = file.users || {};
+    const byName = {};
+    Object.entries(file.users).forEach(([id, e]) => { if (e && e.name) byName[e.name.trim().toLowerCase()] = id; });
+    let pulled = 0, pushed = 0;
+    (S.state.data.settings.users || []).forEach((u) => {
+      const id = file.users[u.id] ? u.id : byName[(u.name || "").trim().toLowerCase()];
+      const e = id ? file.users[id] : null;
+      const mine = u.pwChangedAt || "";
+      if (e && e.pwHash && (e.pwChangedAt || "") > mine) {
+        u.pwSalt = e.pwSalt; u.pwHash = e.pwHash; u.mustChangePassword = !!e.mustChangePassword;
+        u.pwChangedAt = e.pwChangedAt; pulled++;
+      } else if (u.pwHash && mine && (!e || mine > (e.pwChangedAt || ""))) {
+        if (id && id !== u.id) delete file.users[id];
+        file.users[u.id] = pwEntry(u); pushed++;
+      }
+    });
+    if (pulled) { S.scheduleSave(); S.notify(); }
+    if (pushed) {
+      file.meta = { exportedAt: new Date().toISOString(), exportedBy: shareUserName() };
+      try { await SH.writeJson(dir, PW_FILE, file); } catch (e) { console.warn("Could not write passwords", e); }
+    }
+    return pulled;
+  }
+  // Called right after a password is set or reset on this computer.
+  async function pushPassword(user) {
+    if (!SH || !SH.supported() || !(await SH.savedFolder())) return false; // no shared folder: local only
+    const dir = await pwDir(false);
+    if (!dir) { S.toast("Password saved on this computer only (no access to the shared folder).", "error"); return false; }
+    try {
+      const file = (await SH.readJson(dir, PW_FILE)) || { version: 1, users: {} };
+      file.users = file.users || {};
+      const cur = file.users[user.id];
+      if (cur && (cur.pwChangedAt || "") > (user.pwChangedAt || "")) return false; // a newer one exists
+      file.users[user.id] = pwEntry(user);
+      file.meta = { exportedAt: new Date().toISOString(), exportedBy: shareUserName() || user.name || "" };
+      await SH.writeJson(dir, PW_FILE, file);
+      bridgeAfterPublish();
+      return true;
+    } catch (e) {
+      S.toast("Password saved on this computer only: " + e.message, "error");
+      return false;
+    }
+  }
+  // Check the shared setup and, if something needs attention, ask what to do. Resolves once the
+  // user has answered (or right away when nothing is needed), so callers can chain the budget &
+  // events check after it. opts.auto: on app open (quiet when all is well).
+  async function checkSetup(opts) {
+    opts = opts || {};
+    if (!SH || !SH.supported()) return;
+    const dir = await SH.savedFolder();
+    if (!dir) return;
+    const permOk = opts.auto ? await SH.hasPerm(dir, "readwrite") : await SH.ensurePerm(dir, "readwrite");
+    if (!permOk) return;
+    let remote;
+    try { remote = await SH.readJson(dir, SETUP_FILE); }
+    catch (e) { if (!opts.auto) S.toast("Could not read the shared setup file: " + e.message, "error"); return; }
+    const admin = canPushSetup();
+    if (!remote) {
+      if (admin && !opts.auto) S.toast("No setup file in the shared folder yet. Publish it from Settings > Data & sharing.", "error");
+      return;
+    }
+    const status = setupStatus(remote);
+    if (status === "same") { markSetupSynced(remote); return; }
+    if (status === "local-changes" && !admin) return; // only admins can publish the setup
+
+    const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-GB") : "unknown date";
+    const who = (remote.meta && remote.meta.exportedBy) || "a teammate";
+    const when = fmt(remote.meta && remote.meta.exportedAt);
+    const compare = `
+      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr); margin:10px 0">
+        <div class="kpi"><div class="label">Shared setup (${S.escapeHtml(who)}, ${S.escapeHtml(when)})</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(remote.settings))}</div></div>
+        <div class="kpi"><div class="label">Your setup on this computer</div><div class="value" style="font-size:14px">${S.escapeHtml(setupSummary(S.state.data.settings))}</div></div>
+      </div>`;
+    const diff = status === "local-changes" ? setupDiff(remote.settings, S.state.data.settings) : setupDiff(S.state.data.settings, remote.settings);
+    const diffHead = status === "local-changes" ? "What you changed" : status === "remote-newer" ? "What changed" : "What is different in the shared setup";
+    const diffBox = `<div style="margin:6px 0 4px"><strong>${diffHead}:</strong><ul style="margin:4px 0 0 18px; padding:0">${diff.map((d) => `<li>${S.escapeHtml(d)}</li>`).join("")}</ul></div>`;
+    const keepNote = diffBox + `<p class="muted small">Your budget lines and events are never touched by this choice.</p>`;
+    let html;
+    if (status === "remote-newer") {
+      html = `<h2>A newer setup is available</h2>
+        <p>${S.escapeHtml(who)} published a new setup (entities, yearly budgets, codes, users) on ${S.escapeHtml(when)}.</p>
+        ${compare}${keepNote}
+        <div class="actions"><button class="secondary" id="su-later">Not now</button><button class="primary" id="su-pull">Pull the new setup</button></div>`;
+    } else if (status === "local-changes") {
+      html = `<h2>Your setup changes are not published</h2>
+        <p>You changed the setup on this computer (for example entities, yearly budgets or codes), but the shared folder still has the older version. Teammates will not see your changes until you publish.</p>
+        ${compare}${keepNote}
+        <div class="actions"><button class="secondary" id="su-later">Later</button><button class="primary" id="su-publish">Publish setup</button></div>`;
+    } else {
+      html = `<h2>Your setup is different from the shared setup</h2>
+        <p>${status === "both-changed"
+          ? "Both your copy and the shared setup have changed since you last synced. Choose which one to keep."
+          : "This computer has not synced the setup before, and the two versions differ. Choose which one is right."}</p>
+        ${compare}${diffBox}
+        <p class="muted small">Using the shared setup replaces yours. ${admin ? "Publishing yours replaces the shared one for everyone." : ""} Your budget lines and events are never touched.</p>
+        <div class="actions" style="flex-wrap:wrap; gap:8px">
+          <button class="secondary" id="su-later">Decide later</button>
+          <button class="${admin ? "secondary" : "primary"}" id="su-pull">Use the shared setup</button>
+          ${admin ? `<button class="primary" id="su-publish">Keep mine and publish it</button>` : ""}
+        </div>`;
+    }
+    return new Promise((resolve) => {
+      const m = S.openModal(html, { closeOnBackdrop: false });
+      const done = () => { S.closeModal(); resolve(); };
+      const later = m.querySelector("#su-later"), pull = m.querySelector("#su-pull"), pub = m.querySelector("#su-publish");
+      if (later) later.onclick = done;
+      if (pull) pull.onclick = () => {
+        try { pullSetupFrom(remote); S.toast("Setup updated from the shared folder.", "success"); }
+        catch (e) { S.toast("Could not pull the setup: " + e.message, "error"); }
+        done();
+      };
+      if (pub) pub.onclick = async () => {
+        try { await publishSetupTo(dir); S.toast("Setup published to the shared folder.", "success"); }
+        catch (e) { S.toast("Could not publish setup: " + e.message, "error"); }
+        done();
+      };
+    });
+  }
+
+
+  window.MB_DATA = { bridgeSync, combineBE, shareFolderConfigured, render, initSharedRefresh, updateShareIndicator, refreshFromShared, checkSetup, setupPublishState, publishSetupFlow, syncPasswords, pushPassword, connectShared, wirePublishButton, wireCheckButton, checkForShared, budgetEventsDirty, publishBudgetEvents };
+})();

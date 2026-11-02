@@ -1,0 +1,1216 @@
+# Changelog
+
+## [v5.1.18] - 2026-11-02 - Dev and production copies
+
+### Added
+- Dev and production copies. All changes are now made and tested in a separate dev copy
+  (apps/marketing-hub-dev) on its own test folder (MarketingHub-TEST), and reach the team in one
+  release. The dev copy shows an orange DEV banner and a "-dev" version, keeps its own data in the
+  browser, and refuses to write to any folder whose name does not contain "TEST".
+- No more hard refresh after a release: the app's files carry the version number, so browsers load
+  the new version by themselves.
+
+### Changed
+- "What's new" in the help shows released versions only (the dev copy also shows unreleased work).
+
+## [v5.1.17] - 2026-11-02 - SVP / vertical with N.A., year-based clusters, CustomerLink, partner funded option
+
+### Changed
+- "SVP" is now "SVP / vertical" everywhere (forms, tables, filters, agenda lanes, Outcomes,
+  Reporting, exports), so vertical industries can be added to the list for reporting. Settings >
+  SVPs & verticals explains this.
+- "All" and "None" are merged into one value, "N.A." (not applicable). Existing budget lines and
+  events that had All or None now show N.A.; their stored values are not rewritten (the old values
+  point to N.A. through the setup). The app no longer recreates All and None. After this release an
+  admin publishes the setup once.
+- Settings > SVPs & verticals now counts campaigns / events as well as budget lines when you delete
+  a value, so a value used only on events is no longer shown as unused.
+- Clusters follow the year, like entities already did. The campaign / event form (by start date),
+  the budget line form (by date) and the M1 zone / cluster / entity filters on Budget and Campaigns &
+  events (by the selected year) only offer clusters that have an entity in use that year. Example:
+  Pan European is no longer offered for 2027. A choice that is already set is always kept.
+
+### Added
+- Budget line form: new field "CustomerLink Campaign", the link to the campaign in CLinks. On save,
+  the link is also added under Content & assets of every linked campaign or event (labelled
+  "CustomerLink Campaign"; a changed link replaces the old one there, and an event that already has
+  it is left alone). A new CustomerLink column in the Budget table opens the link.
+
+### Changed
+- Event form, Budget tab: "Fully partner funded (no impact on our budget)" is now a choice in the
+  budget line drop-down instead of a checkbox. It creates no budget line (like agenda only), marks
+  the item as partner funded, and its card says so. The checkbox stays on the budget line form, for
+  a line a partner pays in full.
+
+## [v5.1.16] - 2026-10-30 - Multi-slide agenda, fully partner funded
+
+### Added
+- Download agenda: when the items do not fit on one slide, the export makes as many slides as
+  needed. Lanes stay together on a slide; a lane too big for one slide continues on the next,
+  marked "(cont.)". Slides are numbered at the bottom, and the pop-up says how many you will get.
+- "Fully partner funded" checkbox on the event form's Budget tab (for a new budget line) and on the
+  budget line form. When ticked, the partner amounts follow gross and are locked, so net is 0.
+
+## [v5.1.15] - 2026-10-30 - Online help
+
+### Added
+- Online help. A "?" button in the top bar (or the ? key) opens a help window: topics on the left, a
+  search box, and the text on the right. It opens on the topic for the tab you are on. Topics cover
+  getting started, roles and passwords, Budget, Campaigns & events, the agenda download, Reporting,
+  Outcomes, publishing and updates, the email inbox, Settings and common problems. "What's new" shows
+  the latest release notes from this changelog.
+
+## [v5.1.14] - 2026-10-30 - Setup pop-up shows what changed
+
+### Changed
+- The "newer setup" pop-up now lists what actually changed (for example "New users: William
+  Herberich, Dariya Abramova, Arthur Mariani", or "Yearly budgets changed for 2027"). Before, it only
+  showed entity count and budget years, which looked identical when only users had changed.
+
+## [v5.1.13] - 2026-10-29 - SVP lanes in the agenda export
+
+### Added
+- Download agenda: the lanes can now be one per SVP. Items without an SVP go in a "No SVP" lane.
+
+## [v5.1.12] - 2026-10-29 - Customizable agenda export
+
+### Added
+- Download agenda now opens a pop-up first, so you can shape the slide: the title, the year,
+  campaigns and/or events, what the lanes are (cluster, campaign, entity, type, owner or one lane),
+  the order of the lanes (A to Z, most items first, earliest first), the order of items in a lane
+  (by date, by name, campaigns first) and up to three details under each name (dates, event type,
+  owner, organising entity, cluster, countries, campaign, partners), in the order you tick them.
+  The legend and quarter labels can be switched off. The pop-up shows how many items will be on
+  the slide and remembers your choices for next time ("Reset to defaults" clears them). Amounts and
+  notes are still never put on the slide.
+
+### Changed
+- Agenda slide: long country and partner lists show the first three plus "+N more", and the text in
+  the boxes shrinks evenly when a box would otherwise overflow.
+
+## [v5.1.11] - 2026-10-29 - Inbox spots proposals already on the agenda
+
+### Added
+- Email inbox: a proposal that is already on the agenda (an event with the same start date and the
+  same name, or one name containing the other) shows "Already in Marketing Hub" with the existing
+  event, instead of "Review & add", so nothing gets added twice. "Mark as handled" clears it. Such
+  proposals do not count in the "Inbox N" number and are listed last.
+
+## [v5.1.10] - 2026-10-26 - Email inbox
+
+### Added
+- Email inbox. Events proposed from emails (Claude reads the email and adds a proposal to
+  marketing-hub-inbox.json in the shared folder) show up as an orange "Inbox N" button in the header
+  for everyone who can edit campaigns. The inbox lists each proposal with the email subject, sender
+  and the proposed type, dates, entity, owner, countries, partners and notes, and warns about names
+  it could not match (an unknown entity, owner or country). "Review & add" opens the normal event
+  form already filled in (agenda only by default; add a budget line there if needed); saving adds
+  the event and publishes it. "Reject" drops the proposal. Handled proposals stay visible under
+  "Show handled". The inbox file is kept in sync through the bridge too. Format: see README.
+
+## [v5.1.9] - 2026-10-06 - Second shared folder (bridge), publish dates in Data & sharing
+
+### Added
+- Second shared folder (bridge), for admins, in Settings > Data & sharing. When not everyone can
+  reach the same team folder, an admin who can reach both picks the second folder once. Each time
+  that admin opens the app, clicks Refresh or publishes, the app combines both folders and writes
+  the result back to both: budget & events per row (the most recent edit wins; bins and permanent
+  deletions are combined), the setup (the most recently published one wins) and passwords (newest
+  per user). Only files that changed are written. Teammates on either folder do nothing. The header
+  shows "Shared · 2 folders", warns when the browser has no access to the second folder, and Data &
+  sharing shows the last bridge sync. "Stop bridging" ends it without deleting anything.
+
+### Fixed
+- Settings > Data & sharing now shows when each shared file was published from the app (the date
+  stored in the file, the same one the header uses), instead of the date the file landed on this
+  computer. Those can differ a lot after OneDrive syncs or after copying the files to a new folder.
+  The local file date is still shown as a hint when it differs.
+
+## [v5.1.8] - 2026-10-05 - Shared data is the truth on opening, deleted items bin
+
+### Added
+- Deleted items are kept, not removed. Deleting a budget line or an event (from the Budget menu,
+  the campaign / event form, the "No budget line" option or Review & merge) moves it to a bin with
+  who deleted it and when. Binned items do not show or count anywhere in the app. The bin is part
+  of the shared files, so every computer agrees on what was deleted.
+- Settings > Deleted items (admins only) lists everything in the bin, with type, name, date,
+  entity, amount, deleted by and deleted on. Admins can restore items (an event also gets its
+  budget line links back) or delete them permanently, one by one or in bulk. Both are published to
+  the shared folder straight away.
+
+### Changed
+- On opening (and on Refresh or Pull), your budget & events now become an exact copy of the shared
+  files: new and changed rows come in, and rows a teammate deleted are removed. Before, rows that
+  differed were updated but deleted rows stayed on your copy.
+- Unpublished work is never thrown away silently. If this computer has changes that are not in the
+  shared folder yet (new, changed or deleted rows, or rows that only exist here), the app asks
+  first: "Publish my changes" (recommended), "Discard mine, load shared" (asks to confirm) or
+  "Decide later".
+- When someone publishes a deletion, the shared file now remembers the deleted row, so other
+  computers remove it without asking. Deletions published by older versions are not remembered,
+  so the app may ask once about those rows.
+
+### Fixed
+- Opening the app could mark unpublished changes as published when the shared data had not
+  changed, so they were never sent. They are now kept and offered for publishing.
+
+## [v5.1.7] - 2026-10-05 - Shared folder connection status
+
+### Added
+- A status dot in the header shows the shared folder connection at a glance: green "Shared"
+  (connected), orange "No access" (a folder is set but the browser needs permission, common after
+  a browser restart), red "Folder not found" (the folder cannot be read, for example moved or not
+  synced by OneDrive) and grey "Local only" (no shared folder, or a browser that cannot use one).
+  Hover for details; click to connect, check for updates or go to Data & sharing.
+- When the app opens without access to the shared folder, an orange bar warns that you may be
+  looking at old data, with the date of the last sync and a "Connect now" button. One click grants
+  access and pulls the latest setup, passwords, budget and events. Before, this was silent.
+
+## [v5.1.6] - 2026-10-05 - Quarter column, "is one of" column filter
+
+### Changed
+- Budget tab: quarters are now a "Quarter" column (Q1 to Q4) next to Date, instead of checkboxes in
+  the filter bar. Sort or filter it from the column header like any other column. A saved column
+  order keeps working; the new column is placed after Date.
+
+### Added
+- Column filters have a new "is one of" option with a checkbox per value, so you can pick several
+  values at once (for example Q1 and Q2, or two statuses). It works on every Budget column.
+
+## [v5.1.5] - 2026-10-02 - Budget overview for any selection, per budget code
+
+### Added
+- Budget tab: the budget summary now also shows when no single entity is picked, for everything
+  in the selected M1 zone, cluster or all entities: yearly budget, planned, spent and what is left,
+  with the number of budget codes over budget. A fold-out "Per budget code" table lists every code
+  with its entities, budget, planned, spent, what is left and % planned; codes over budget are red.
+  Click an entity in the table to jump to its own summary. The fold-out is remembered.
+
+## [v5.1.4] - 2026-10-02 - Budget left per entity and budget code, codes in Budget structure
+
+### Added
+- Budget tab: when you pick an entity, a summary shows its budget code and, for the selected year,
+  the yearly budget, planned spend (forecast net), spent (actual net), and what is left after
+  planned and after actual, with a progress bar. It turns red when the plan goes over budget.
+  Amounts are net (gross minus partner funds), like Reporting, and cover the whole year whatever
+  the other filters. When several entities share the same budget code, an extra line shows the
+  totals and what is left for the code as a whole.
+- Settings > Budget structure shows each entity's budget code for the selected year next to its
+  name.
+
+## [v5.1.3] - 2026-09-30 - Setup publish status, compact header dates
+
+### Added
+- The Settings sub-menu now shows, for admins, whether the setup is published. When you change
+  something in the setup (a user, a role, a home cluster, an entity, a budget, a list) it shows
+  "Setup not published" in orange with a "Publish setup" button, on every Settings page. After
+  publishing it shows "Setup is published" in green. Unsaved Settings edits are saved first. If
+  another admin published a different setup since you last synced, you get a clear warning before
+  yours replaces it. The Publish setup button in Data & sharing uses the same check.
+
+### Changed
+- The "last updated" dates in the header are now tucked behind a small clock icon. Hover over it
+  (or click it) to see when your data changed and when the shared budget & events and the shared
+  setup were last synced. This frees up space in the header.
+
+## [v5.1.2] - 2026-09-30 - Simpler top menu, Settings sub-menu
+
+### Changed
+- Simpler top menu: Budget, Campaigns & events, Reporting, Outcomes and Settings. Budget
+  structure, Data (now "Data & sharing") and Users (now "Users & access") moved under Settings.
+- Settings now has a sub-menu on the left, grouped as Structure (Entities & clusters, Budget
+  structure), Lists (SVPs, Countries, Activity types & A&P, Statuses) and Team & data (Users &
+  access, Data & sharing, Bulk import). Only the chosen section shows, so the page is no longer
+  one long scroll. Settings reopens on the last section you used.
+- Access is unchanged: budget owners still reach Budget structure and Data & sharing without the
+  admin pin, marketing users still see Budget structure, and admin-only sections show a lock and
+  ask for the pin. Campaigns viewers only see Campaigns & events, as before.
+
+## [v5.1.1] - 2026-09-30 - Per-year shared files, login connect, column order, home cluster, roomier forms
+
+### Changed
+- Budget & events are now shared as one file per year: marketing-hub-budget-events-2026.json,
+  -2027.json and so on. Budget lines are filed by their date and events by their start date; rows
+  without a date go to marketing-hub-budget-events-undated.json. Publishing only rewrites the year
+  files that actually changed, so people working on different years no longer write the same file,
+  and a closed year stays untouched. Pulling, refreshing, Check for updates and Review & merge read
+  all year files together, so nothing changes in how you work.
+- Moving to per-year files happens by itself at the first publish with this version. The old
+  single file (marketing-hub-budget-events.json) is then kept as an empty marker. If someone on an
+  older version still publishes to it, its new rows are picked up, an edited row replaces the shared one only
+  when it was edited more recently, and everything moves into the year files at the next publish.
+- The Data tab's file list shows each year's file.
+- Budget lines now also get an "Updated by / on" stamp when an event action changes their links:
+  deleting an event, linking or unlinking existing lines in the event form, or switching an event
+  to "No budget line". Events themselves already got this stamp on every real edit.
+
+### Changed
+- The "New / Edit budget line" and "New / Edit campaign / event" pop-ups are redesigned to fit a
+  normal laptop screen without scrolling. Both are wider and more compact. The budget line form
+  has the details on the left, and the linked campaigns, an amounts grid (forecast and actual, with
+  the net shown live) and notes on the right. The campaign / event form is split into tabs:
+  Details (with countries), Partners & content, Budget and Outcomes; small counters on the tabs
+  show what is filled in. Save and Cancel always stay visible at the bottom. If something is
+  missing on Save, the form jumps to the tab with that field.
+
+### Added
+- Budget tab: the column order is now yours to set. Open "Columns" and drag a column up or down,
+  or use the arrows; "Reset column order" goes back to the default. The rows and the totals line
+  follow the order. Like column widths and hidden columns, the order is remembered in this browser.
+- Each user can have a "Home cluster", set by an admin in the Users tab. After logging in, the
+  Budget tab opens filtered on that cluster, so people see their own view straight away. They can
+  still switch to another cluster or "All clusters". Users without a home cluster see all clusters,
+  as before. The home cluster is part of the setup, so publish the setup after setting it.
+- The login screen now has a "Connect to shared folder..." button. On a new computer, pick the
+  team's shared folder and the app loads the users, setup, budget & events and passwords from it
+  in one step. Then pick your name and log in with your existing account. If the computer already
+  has data, the app asks first, loads the team's setup and merges in the shared budget & events
+  (nothing of your own is removed). The login screen also shows which shared folder is in use, and
+  suggests Chrome or Edge in browsers that cannot use a shared folder.
+
+## [v5.1] - 2026-09-29 - The setup is checked for updates too
+
+### Added
+- When the app opens (with access to the shared folder), it now checks the shared setup file
+  (entities, yearly budgets, budget codes, users and lookups) as well as the budget & events file.
+  The Refresh button in the header and the "Check for updates" buttons do the same.
+- If the shared setup is newer than yours, the app offers to pull it in.
+- If you are an admin and changed the setup on this computer without publishing it, the app
+  reminds you and offers a "Publish setup" button.
+- If both sides changed (or this computer never synced the setup), the app shows both versions
+  side by side (number of entities and budget years) and lets you choose: use the shared setup,
+  keep yours and publish it (admins), or decide later.
+- The header and the Data tab now also show when the setup was last synced.
+- The Data tab's shared folder section now lists the two shared files it uses, with the date
+  each was last saved, who published it and its size. The browser does not reveal a folder's full
+  path, so this is the way to confirm you are pointing at the right folder.
+
+- Passwords now follow each user to every computer. A new shared file,
+  marketing-hub-passwords.json, holds each user's password hash (never the password itself).
+  Changing your password, or an admin using "Reset password", writes to it right away. The app
+  picks up newer passwords when it opens, on Refresh, and when a login fails (so a password changed
+  elsewhere works at once). Per user, the newest change wins.
+- Pulling a setup no longer rolls back a password that is newer on this computer, and password
+  changes no longer count as setup changes (so they do not trigger the setup pop-up).
+
+### Why
+- Setup changes such as a new year's budget were only shared through the separate "Publish
+  setup" button, so they were easy to miss. A setup saved under another file name (for example a
+  manual export) is not picked up; only marketing-hub-setup.json in the shared folder is used.
+
+## [v5.0] - 2026-09-21 - Year-aware entities
+
+### Added
+- Each entity now has an optional "Active from" and "Until" year, set in Settings > Entity
+  structure. An entity only shows in the years it is in use. Leave both blank to keep an entity
+  always active (the default, so nothing changes until you set a year).
+
+### Changed
+- The Budget Structure tab now lists only the entities active in the selected year, and its
+  totals follow suit. Rows outside the selected year are dimmed in the settings table so you can
+  see at a glance what belongs to that year.
+- The entity dropdown when creating or editing a budget line, and when creating or editing a
+  campaign or event, now offers only the entities active in that record's year (based on its
+  date). The Budget tab's entity filter does the same for the selected year. An entity already
+  chosen on an existing record is always kept, so nothing loses its link.
+
+### Why
+- Lets the structure differ per year (fewer or regrouped entities for a new year) without
+  touching or deleting the previous year. Old years keep their own entities and history.
+
+## [v4.9] - 2026-09-11 - Budget code column and auto Committed status
+
+### Added
+- The Budget overview now has a "Budget code" column. It shows the code assigned to each line's
+  entity for that line's year (from the Budget Structure tab). The column can be sorted, filtered
+  and hidden like any other.
+
+### Changed
+- A budget line can no longer stay "Planned" once it has an actual value. As soon as an actual
+  gross or partner amount is entered, a Planned (or blank) status switches to "Committed"
+  automatically. This happens live in the edit form and is enforced again on save, in both the
+  Budget tab and the campaign/event budget section. Other statuses (Committed, Paid, and so on)
+  are left untouched.
+
+## [v4.8] - 2026-08-08 - More outcome chart types
+
+### Added
+- The Outcomes chart switch now also offers Revenue ROI, Cost per MQL, Cost per SQL and Cost per
+  attendee as bar charts by the chosen grouping, alongside the revenue, attendee, registration,
+  MQL, SQL and engagement views.
+
+## [v4.7] - 2026-08-08 - Outcomes: fair cost-per and a chart switcher
+
+### Fixed
+- Cost per MQL, cost per SQL and cost per attendee now count only the spend of records that
+  actually have that number filled in. Records with no MQL / SQL / attendee no longer inflate the
+  cost. (Both the table and the Excel export.)
+
+### Added
+- A "Chart" switch on the Outcomes tab. The graph can now show Revenue vs spend (as before), or
+  Attendees, Registrations, MQL, SQL or Engagement (actual vs target), by the chosen grouping.
+
+## [v4.6] - 2026-08-08 - Roadmap slide carries no budget wording
+
+### Changed
+- The Download agenda roadmap slide now shows only structured, non-financial fields in each box
+  (activity type and owner). It no longer uses the free-text Notes, so no budget figure written
+  into a note can appear. The slide already had no amounts, forecast or actual figures.
+
+## [v4.5] - 2026-08-08 - Download agenda as a roadmap slide
+
+### Added
+- A "Download agenda" button on the Campaigns & events tab. It turns your current filtered and
+  grouped view into an Orange-branded PowerPoint roadmap slide (swimlanes by your grouping, a
+  month/quarter axis, campaigns in orange and events in grey, positioned by their dates). The
+  title reflects the active scope and year. Good for sharing the plan with sales teams. The slide
+  shows one year; pick a year (or it uses the earliest year in view) and filter first to the view
+  you want.
+
+## [v4.4] - 2026-07-10 - Check for updates before refreshing
+
+### Added
+- A "Check for updates" button on the Budget tab and the Campaigns & events tab. It reads the
+  shared file and tells you whether a newer version exists (who published it and when) without
+  changing your copy. If there is one, it offers a "Refresh now" button; if not, it confirms you
+  already have the latest. The button appears once a shared folder is set.
+
+## [v4.3] - 2026-07-10 - Self-healing country tags and an app icon
+
+### Fixed
+- Country tags now sync between people even when their setups used different internal ids. The
+  shared budget & events file now carries the country names, and on pull the app re-points each
+  incoming event's country tags to your own countries by matching names, creating any country you
+  do not have. No more empty country boxes on a colleague's event. (Everyone needs 4.3, and the
+  colleague republishes once so the file carries the names.)
+
+### Added
+- An app icon (favicon): an orange tile with white bars, so the Marketing Hub tab is easy to spot.
+
+## [v4.2] - 2026-07-10 - Fix: switching an item to "No budget line"
+
+### Fixed
+- Setting an existing campaign or event to "No budget line" now actually detaches its budget. It
+  unlinks the item from all budget lines, deletes the campaign's own dedicated line if it is left
+  orphaned (shared lines are only unlinked), and clears the primary-line pointer. The budget icon
+  on the timeline disappears, and reopening the item correctly shows "No budget line".
+
+## [v4.1] - 2026-07-10 - Events and campaigns without a budget
+
+### Added
+- The campaign / event form now has a "No budget line (agenda only)" option. An event or
+  campaign can exist purely on the agenda, with no budget line created or linked. Budget is no
+  longer required. When an item has no budget, the type and entity fields are not forced either.
+
+## [v4.0] - 2026-07-03 - Campaigns are real, global campaigns are gone
+
+### Changed
+- The "global campaign" concept is removed. There is no Global campaigns list in Settings, and
+  no global-campaign field, column or filter anywhere.
+- A campaign is now simply a timeline item of type Campaign. You create and edit campaigns in the
+  Campaigns & events area, like events.
+- An event can optionally link to a campaign, using the new "Part of campaign" field in the event
+  form. Events and campaigns can each exist on their own; the link is optional.
+- The timeline can group and color by Campaign, so events linked to a campaign appear grouped
+  under it. The hover tooltip shows an event's campaign.
+- Exports and the Data grid show a Campaign column (the linked campaign) for events instead of a
+  global campaign. Budget lines no longer carry a global campaign.
+
+### Migration
+- One-time, on first open of 4.0: the old global campaigns and all their references are dropped,
+  per the clean-slate choice. Every event gets an empty campaign link you can set in the form.
+  Your budget lines, events and settings are otherwise untouched.
+
+## [v3.31] - 2026-07-03 - Budget line fields inside the campaign form
+
+### Changed
+- The budget part of the campaign / event form now behaves like a real budget line. When you
+  link an existing budget line, the activity type is not asked again, because it already lives on
+  that line and the event inherits it. When you create a new line, the fields to fill are the
+  budget line's own fields (activity type, A&P category, status, vendor, PO number, forecast and
+  actual amounts). Everything already on the event (name, dates, organising entity, owner, SVP,
+  global campaign) is filled in automatically, so it is not typed twice. A&P category defaults
+  from the chosen activity type.
+
+### Added
+- Data tab: Export to Excel, with separate buttons for budget lines and for campaigns / events.
+  Pick a year and tick the quarters to include (no quarter ticked means the whole year).
+
+### Changed
+- The Quarter filter on the Budget tab and the Campaigns & events tab is now a multi-select
+  (Q1-Q4 checkboxes), so you can view, for example, Q1 and Q2 together. No quarter ticked shows
+  all quarters. On the timeline, the visible window spans the selected quarters and only events
+  in those quarters show.
+
+## [v3.29] - 2026-07-03 - Campaign form tidy-up and timeline labels
+
+### Changed
+- Campaign / event form: Activity type moved out of the event section into the Budget part,
+  where it belongs. The event top now holds only event fields (name, kind, dates, owner,
+  organising entity/cluster, SVP, global campaign, campaign code, countries, notes, partners,
+  content).
+- Partner co-funding now fills the budget line automatically: enter co-funding on a partner line
+  and it adds up into the budget line's Forecast partner, so you do not type it twice. Still
+  editable.
+- Timeline: the event name no longer shows twice. The bar shows the event name, and the left
+  label now shows the next level down from the grouping (grouping by Cluster shows the Entity
+  there, by Entity shows the Owner, and so on).
+
+## [v3.28] - 2026-07-03 - Fix: deleted rows reappearing after publish
+
+### Fixed
+- Deleting a budget line or event and publishing now actually removes it from the shared file,
+  instead of the merge pulling it back. The merge compares against your last-synced snapshot to
+  tell a real deletion from a row you simply never had. If a teammate changed that same row in
+  the meantime, their version is kept rather than deleted, so no one's edit is lost. The publish
+  message now also reports how many rows were removed.
+
+## [v3.27] - 2026-07-03 - Privacy cleanup: remove real data and internal docs from the repo
+
+### Removed
+- `js/seed-events.js` (97 real events with colleague names) and its script tag and seeding code.
+  New installs now start empty; existing data in the browser and the shared file is untouched.
+- `js/import-2026-h2.js` (dead code with real budget lines, not referenced anywhere).
+- `Campaigns-events-structure-review.xlsx` (real dataset).
+- Internal docs and scripts that exposed tenant and SharePoint names: DATA-SCHEMA-sharepoint-lists.md,
+  IT-REQUEST-entra-app.md, IT-SPEC-multi-tenant-SharePoint.md, HANDOFF.md, DATA-MODEL-cleanup.md,
+  check-sharepoint.ps1, migrate-data-to-sharepoint.ps1, provision-sharepoint.ps1.
+
+### Note
+- The master code comment was intentionally left for a later, separate change.
+- These files still exist in earlier git history. Make the repo private and/or purge history.
+
+## [v3.26] - 2026-07-03 - Header shows the shared file date
+
+### Added
+- Next to "Data updated" in the header, a "Shared file" date showing the timestamp of the shared
+  budget & events file as of this browser's last sync (pull, publish, or the auto-check on open).
+  It stays blank until a shared folder is set and the first sync happens.
+
+## [v3.25] - 2026-07-03 - Publish now merges instead of overwriting
+
+### Changed
+- Publishing budget & events now reads the shared file first and does a real merge. It writes
+  only the rows you inserted or changed since your last sync, keeps teammates' changes to rows
+  you did not touch, and pulls those into your copy at the same time. Nothing is deleted (use
+  Review & merge for that). Because it merges, it no longer blocks you when a colleague published
+  since your last pull. The confirmation shows how many rows went out and how many came in.
+
+## [v3.24] - 2026-07-03 - Fix: reopening a column header menu
+
+### Fixed
+- On the Budget tab, once a column filter was set you could not click the header again to change
+  or clear it. The menu's outside-click listener was left behind and closed the next menu the
+  instant it opened. The listener is now cleaned up properly, so headers reopen every time.
+
+## [v3.23] - 2026-07-03 - Excel-style Budget headers and a Data table with bulk edit
+
+### Added
+- Excel-style column headers on the Budget tab. Click any header for a menu with Sort A to Z,
+  Sort Z to A, and a filter. Filter options: equals, does not equal, is blank, contains data,
+  contains, does not contain. Equals and does not equal give a dropdown of the values found in
+  that column; contains and does not contain give a text box. Filters stack, filtered columns
+  show a small flag, and a "Clear filters" button appears when any are active.
+- A Global campaign column on the Budget table (so it can be sorted and filtered like the rest).
+- A "Budget & events table" on the Data tab: a grid you switch between budget lines and events,
+  with sortable headers, row checkboxes, and multi-row editing. Tick rows, pick a field (status,
+  owner, SVP, type, global campaign, entity, date, kind...) and a value, and apply to all ticked
+  at once, after a confirm.
+
+### Changed
+- The Budget tab top bar now keeps only Year, Quarter, Month, the M1/cluster/entity scope, and
+  Search. SVP, global campaign, type, status and owner moved into the column header menus.
+  Reporting drill-downs now land as column filters, so they show on the headers and can be cleared.
+
+## [v3.22] - 2026-07-02 - Checkbox picker for linking budget lines
+
+### Changed
+- In the event form, linking existing budget lines now uses a checkbox list instead of the old
+  multi-select. Each line has a clear checkbox, the selected lines show as chips on top with an
+  x to remove one quickly, and the filter box still narrows the list. No more Ctrl or Cmd clicking.
+
+## [v3.21] - 2026-07-02 - Clearer shared folder and a Publish reminder
+
+### Added
+- A "Publish changes" button on the Budget and Campaigns & events tabs. It only appears when a
+  shared folder is set, and it lights up green as soon as you make a change, so you don't forget
+  to publish. It greys out to "No changes to publish" once you are in sync. It uses the same
+  guard as the Data tab, so it warns you if a colleague published since you last pulled.
+
+### Changed
+- The Data tab shared folder section now clearly shows the selected folder ("Current shared
+  folder: NAME") and the button reads "Change shared folder..." once one is set.
+
+## [v3.20] - 2026-07-02 - Country tagging for the agenda
+
+### Added
+- Countries on campaigns and events, so people can see what is happening in their country.
+  Purely for the agenda, not linked to budget.
+- Settings: a Countries master list (mark one "global", like Pan-European, to show everywhere)
+  and Country groups (like BeNeLux = Belgium + Netherlands + Luxembourg) used as tagging shortcuts.
+- In the event form, a Countries picker: one-click group chips, a searchable checklist,
+  "Copy from last", and Clear, so tagging is fast.
+- A Country filter on the Campaigns and events agenda. Picking a country shows its events plus
+  any tagged "global"; untagged events show only under "All countries" (an "(untagged)" option
+  helps you find and fix them).
+- A "Home country" per user (Users tab). If set, the agenda opens filtered to that country; if
+  not set, it shows all. Countries also appear in the event tooltip and detail view.
+- A starter list of countries and the BeNeLux, DACH and Nordics groups is seeded once so it
+  works out of the box. Admins can edit the lists freely.
+
+## [v3.19] - 2026-07-02 - Remove Email export
+
+### Removed
+- The "Email export..." button on the Data tab. With the shared folder handling exchange
+  between people, the email path is no longer needed. Export and Load stay for manual files.
+
+## [v3.18] - 2026-07-02 - Honest "updated by/on" tracking
+
+### Fixed
+- "Updated by/on" now stamps a row only when its content actually changes. Opening a budget
+  line or campaign and clicking Save without editing anything no longer marks it as updated,
+  and creating a new line no longer stamps it as updated (it only gets "created by/on").
+
+### Changed
+- One-time reset of the old "updated by/on" stamps left over from the June data cleanup, which
+  had marked almost every row. The audit trail now starts clean and rebuilds from real edits.
+  "Created by/on" and all budget content are untouched. After updating, publish to the shared
+  folder so the team gets the cleaned trail.
+
+## [v3.17] - 2026-07-02 - Auto-refresh from the shared folder
+
+### Added
+- A "Refresh" button in the header (shown once a shared folder is set). It checks the shared
+  budget & events file, applies new and changed items automatically, and shows a short summary
+  of what changed. No more confirm screen for the shared file.
+- Auto-check on opening the app: if the browser already has access to the shared folder, the
+  app pulls and applies updates on its own and shows the summary. If the browser needs to ask
+  for access again (a new session), it stays quiet and you click Refresh once.
+
+### Changed
+- On the Data tab, "Pull budget & events" now applies changes automatically with a summary,
+  instead of the review screen. A separate "Review & merge..." button keeps the old
+  step-by-step screen for when you need to handle deletions by hand.
+- Deletions are never applied automatically. Items only on your copy are kept, and the summary
+  tells you how many, so nothing disappears without you choosing it.
+
+## [v3.16] - 2026-07-02 - Shared folder sync (Teams / OneDrive)
+
+### Added
+- A "Shared folder" section on the Data tab. Point it once at a Teams or OneDrive synced
+  folder and the app remembers it. Then:
+  - Publish setup (admins only) writes the setup to a master file everyone pulls.
+  - Pull setup loads that master and replaces your local setup. Budget and events are untouched.
+  - Publish budget & events writes your budget and events to the shared file. It warns and
+    stops if a colleague published since you last pulled, so nobody overwrites the other.
+  - Pull budget & events loads the shared file through the normal review-and-merge screen.
+- Works in Chrome and Edge when the app is served over https (for example GitHub Pages).
+  Other browsers keep the manual Export and Load buttons.
+
+## [v3.15] - 2026-07-01 - Timeline markers show the other dimension
+
+### Changed
+- On the Campaigns & events timeline, the marker label (next to the bar or diamond) now shows
+  the "other" grouping dimension after the event name. Grouping by Cluster adds the entity
+  (e.g. "Roadshow - Retail Bank"); grouping by Organising entity adds the cluster. Other
+  groupings are unchanged. The left row label stays as the plain event name.
+
+## [v3.14] - 2026-06-29 - Data tab and inactive users
+
+### Changed
+- Import, export and merge moved out of Settings into a new "Data" tab, so Budget owners (not
+  just admins) can export, exchange and merge budget & events files and load a setup, without
+  the Settings pin.
+
+### Added
+- Inactive users. On the Users tab you can Deactivate or Reactivate a user. An inactive user
+  cannot log in and is not offered when assigning an owner, but their name is kept on their
+  past budget lines and events, and the current owner still shows when editing an old record.
+
+## [v3.13] - 2026-06-29 - Alphabetical lists, kind-driven type, richer linked lines
+
+### Added
+- Every dropdown now lists its options alphabetically (SVP, type, status, owner, global
+  campaign, A&P category, entity, and so on).
+- Settings: the Activity types table headers (Type, A&P category) are clickable to sort A to Z
+  or Z to A, and the A&P categories heading toggles its sort the same way.
+- New campaign / event form: choosing the Kind fills the activity type automatically. Event
+  sets type "Event"; Campaign sets "Digital campaign" (or Lead generation if that is missing).
+  Still editable.
+- The timeline popup's linked budget lines now show the Cluster and Entity of each line.
+
+## [v3.12] - 2026-06-29 - Created/updated tracking shown
+
+### Added
+- Budget lines and campaigns already record who created and last updated them and when. These
+  are now visible: four columns (Created by, Created on, Updated by, Updated on) on the Budget
+  table, hidden by default but available in the "Columns" menu; and a read-only line at the
+  bottom of the campaign / event form showing the same. They are filled in automatically and
+  cannot be edited. Existing items may show blanks until they are next edited.
+
+### Removed
+- The "Import / Re-import 2026 events" button on the Campaigns and events tab.
+
+## [v3.11] - 2026-06-29 - Row actions menu on the Budget table
+
+### Fixed
+- The fixed-width actions column had clipped the Edit and Delete buttons (only Copy showed).
+  Each budget line now has a single menu button that opens Edit, Copy, and Delete in a small
+  popup, which fits the narrow column and is never clipped.
+
+## [v3.10] - 2026-06-29 - Full-width Budget table, show/hide and resize columns
+
+### Changed
+- The app now uses the full browser width (removed the 1400px cap), so the wide Budget table
+  and the reports have room to breathe.
+
+### Added
+- Budget tab: a "Columns" button to show or hide any column.
+- Budget tab: drag the right edge of a column header to resize it, Excel-style.
+- Both the chosen columns and their widths are remembered per browser.
+
+## [v3.9] - 2026-06-29 - Editable user names
+
+### Added
+- On the Users tab, each user now has an "Edit name" button. Click it to change the name
+  inline (Enter to save, Escape to cancel). Since an owner is just a reference to a user,
+  renaming a user updates the owner shown on every budget line and event automatically.
+
+## [v3.8] - 2026-06-29 - Drop dead fields
+
+### Changed
+- One-time cleanup on load: removes legacy and unused fields now that the data is normalized.
+  On events: scope, weblink, the old free-text entity, owner and type. On budget lines: the old
+  single eventId (eventIds is used now). Any real campaignLink is first moved into Content and
+  assets so no link is lost, then the field is removed. Runs once, guarded by a flag.
+
+## [v3.7] - 2026-06-29 - Split exports and a safe merge
+
+### Added
+- Split exports: "Export everything (backup)", "Export setup only" (entities, clusters, M1,
+  types, SVPs, statuses, users, yearly budgets, codes), and "Export budget & events". The idea:
+  the admin owns and shares the setup file; budget and events are exchanged and merged between
+  people, which keeps IDs aligned and avoids structure clashes.
+- Export metadata now records who exported it and the file kind (meta.exportedBy, exportKind)
+  on top of the timestamp.
+- One "Load a file" button that detects whether the file is a setup, a budget & events, or a
+  full backup, and offers the right action.
+- A proper budget & events merge with a review step: it lists new, updated, and missing items;
+  adds new and updates changed (incoming wins) automatically; never deletes on its own, every
+  missing item has a keep-or-delete tick; updates can be turned off in one click if the file is
+  from an older structure; and it warns about items that reference an entity or owner you do
+  not have.
+
+### Changed
+- Replaced the old insert-only Merge and Replace buttons with the above.
+
+## [v3.6] - 2026-06-29 - Export timestamp
+
+### Added
+- Every JSON export now records the exact date and time it was created (meta.exportedAt), so
+  when comparing or merging files it is clear which one is the most recent.
+
+### Planned (not in this release)
+- A proper merge with upsert (update existing items, not just add new ones) and a review step
+  that lists adds, updates, and possible deletions with a keep-or-delete choice.
+
+## [v3.5] - 2026-06-29 - Load a data file from the login screen
+
+### Added
+- The login screen now has a "Load a data file" link, so you can replace the data (for
+  example to restore a backup or recover from a bad import) without having to log in first.
+  It asks for confirmation, then reloads the login with the new users.
+
+### Note
+- If you are ever locked out, the master code 0610 also works as the password for any user.
+
+## [v3.4] - 2026-06-24 - Cluster fix in Outcomes and fewer "Unspecified"
+
+### Fixed
+- The Outcomes tab now resolves cluster the same way as the timeline: the organising entity's
+  cluster, falling back to the event's stored cluster. Its grouping and cluster filter now
+  agree with each other and with the timeline.
+- Events whose entity has no cluster were landing in "Unspecified" after v3.2. They now fall
+  back to the event's own stored cluster, so most "Unspecified" items move to their real
+  cluster. Anything still "Unspecified" has no cluster on either the entity or the event.
+
+## [v3.3] - 2026-06-24 - Align stored event cluster to entity
+
+### Changed
+- One-time cleanup: each event's stored cluster is set to its organising entity's cluster, so
+  exports and the stored data match what the app shows. Events deliberately placed in "Cloud",
+  events without an entity, and events whose entity has no cluster are left as they are. Runs
+  once, guarded by a flag.
+
+## [v3.2] - 2026-06-24 - Fix cluster mismatch on the timeline
+
+### Fixed
+- On the Campaigns and events timeline, the cluster grouping in the overview used each event's
+  stored cluster, while the cluster filter matched on the event's organising entity's cluster.
+  When those had drifted apart, a cluster could show many events in the overview but few when
+  filtered. Both now use the entity's cluster, so the overview and the filter always agree.
+
+## [v3.1] - 2026-06-24 - Edit lock on Budget Structure
+
+### Changed
+- The Budget Structure tab is now read-only by default. Click "Edit budgets" to turn the
+  amounts into editable fields (and reveal "Copy from previous year"), and "Done editing" to
+  lock them again. This prevents accidental changes to the numbers.
+
+## [v3.0] - 2026-06-24 - Budget editing moves to Budget Structure
+
+### Changed
+- The yearly budget amounts are now set in the Budget Structure tab, not in Settings. The
+  org chart shows an editable amount per entity (for users who can edit budgets), and cluster,
+  zone and grand totals update live as you type.
+- "Copy from previous year" now lives in the Budget Structure tab, so you can roll a year's
+  budget forward to set up the next one, then adjust the numbers in place.
+
+### Removed
+- The "Yearly budget per entity" section in Settings (replaced by the editable Budget
+  Structure tab). Budget codes are still set in Settings > Entity structure.
+
+## [v2.23] - 2026-06-24 - Cluster drill-down in Reporting
+
+### Added
+- The Reporting drill-down now works at the cluster level too. Pick a cluster (without an
+  entity) to see its combined KPIs, monthly chart, and a per-entity breakdown table. Click any
+  entity in that table to drill into its budget lines, with a "back to cluster" link to return.
+
+## [v2.22] - 2026-06-24 - Default owner in the campaign form
+
+### Changed
+- In the new campaign / event form, choosing the organising entity now fills the Owner with
+  that entity's default owner, the same as on a budget line. Still editable.
+
+## [v2.21] - 2026-06-24 - Default owner per entity and smarter end date
+
+### Added
+- Entity structure now has a Default owner column (sortable, and on the Add entity form). When
+  you pick an entity on a budget line, the Owner fills in with that entity's default owner,
+  still editable.
+
+### Changed
+- In the new campaign / event form, choosing a start date now fills the end date with the same
+  day if it was empty or earlier, and the end date can no longer be set before the start. Still
+  editable for multi-day events and campaigns.
+
+## [v2.20] - 2026-06-24 - Consistent budget badge on the timeline
+
+### Fixed
+- Single-day events (diamonds) used a faint trailing euro while multi-day bars used the new
+  badge, so the timeline showed two different "has budget" markers. Both now use the same
+  green euro badge.
+- On short bars the badge was cramped. When a bar is too narrow to hold the name and badge,
+  they now sit just to the right of the bar instead, so the badge stays clear.
+
+## [v2.19] - 2026-06-24 - Clearer budget marker on the timeline
+
+### Changed
+- Campaigns and events that have an allocated budget now show a bold green euro badge at the
+  start of their timeline bar, instead of the faint trailing euro sign. The legend matches.
+
+## [v2.18] - 2026-06-24 - PO number in the campaign budget line
+
+### Added
+- The budget section of the campaign / event form now has a PO number field, matching the
+  Budget line form. It is saved on the campaign's budget line.
+
+## [v2.17] - 2026-06-24 - Budget Structure tab and separate Users tab
+
+### Added
+- New "Budget Structure" tab: a top-down org chart of the entity structure (M1 zone >
+  cluster > entity) with each entity's yearly budget and rolled-up totals per cluster and
+  zone, plus a year picker. Visible to roles that can view Budget or Reporting.
+
+### Changed
+- User management (users, roles, password resets, admin pin) moved out of Settings into a new
+  "Users" tab, so Settings stays focused on budget and campaign structure. The Users tab is
+  protected by the admin pin, like Settings.
+
+## [v2.16] - 2026-06-24 - Sortable Entity structure and cluster autocomplete
+
+### Added
+- The Entity structure headings (M1, Cluster, Entity, Budget code) are now clickable to sort
+  the table, clicking again reverses the direction. Sorting is for display only and does not
+  change the stored order.
+- The Cluster field, both when adding an entity and when editing one in the table,
+  autocompletes from the clusters already in use.
+
+## [v2.15] - 2026-06-24 - Budget code in the budget entity filter
+
+### Changed
+- The Entity filter at the top of the Budget tab now shows each entity's budget code in
+  brackets, for the selected filter year. Only the Budget tab shows this; the shared filter on
+  other tabs is unchanged. Changing the year filter refreshes the codes.
+
+## [v2.14] - 2026-06-24 - Version on the login screen
+
+### Added
+- The version number now also shows on the login screen, next to the title, matching the
+  app header.
+
+## [v2.13] - 2026-06-24 - Filter boxes and no accidental close
+
+### Added
+- A type-to-filter box above the multi-selects: filter the linked campaigns in the budget
+  line form, and filter the existing budget lines in the campaign form. Selected items stay
+  selected even while filtered.
+
+### Changed
+- The budget line form and the campaign form no longer close when you click outside them.
+  They stay open until you click Create/Save or Cancel, so a stray click no longer loses your
+  work.
+
+## [v2.12] - 2026-06-24 - Budget code in the entity dropdown
+
+### Changed
+- In the Budget line form, the Entity dropdown now shows the entity's budget code in brackets
+  after the name, for example "France (OBI-D&D-BE-26)". The code shown is for the line's year.
+
+## [v2.11] - 2026-06-24 - Budget code as last column
+
+### Changed
+- In the Entity structure table, swapped the last two columns so the order is now M1, Cluster,
+  Entity, Budget code (budget code last).
+
+## [v2.10] - 2026-06-24 - Entity structure with budget code
+
+### Changed
+- Renamed the Settings "Entities" section to "Entity structure".
+- Reordered the entity table to M1 first and Entity (renamed from Name) last, with Cluster
+  and Budget code in between.
+
+### Added
+- A per-year Budget code column in the Entity structure table, with a year picker. It edits
+  the same budget code as the "Yearly budget per entity" section, so the two stay in sync,
+  and the year picker is shared between them. The cluster shown is the same cluster field used
+  for grouping in the yearly budget section.
+
+## [v2.9] - 2026-06-24 - Per-user login passwords
+
+### Added
+- Login now asks for a password as well as a name. Each user has their own password, stored
+  as a one-way salted hash (never in clear text), the same method used for the admin pin.
+- New users start with the default password 1234 and are required to set their own at first
+  login. Self-signup at the login screen sets a password right away.
+- Settings > Users has a "Reset password" action that puts a user back to the 1234 default,
+  so they set a new one next time they log in.
+- The "Viewer" role is renamed "Campaigns viewer" to make its scope clear: it can only see
+  the Campaigns and events tab (view only), nothing else. Assign it to anyone who should be
+  limited to campaigns and events.
+
+### Notes
+- This is a soft, browser-side lock, like the admin pin: useful to keep people in their lane,
+  but not real security. Real enforcement comes with the SharePoint and Entra (AD) move.
+- The master code still works as a recovery login for any account.
+
+## [v2.8] - 2026-06-24 - Cluster selector in the campaign budget section
+
+### Added
+- The budget section of the campaign / event form now has a Cluster selector next to the
+  budget Entity. Picking a cluster filters the entity list, the same cascade used at the top
+  of the form. Both default to the campaign's organising cluster and entity, and follow it
+  when you change the organising entity, while staying editable so a budget line can sit in a
+  different cluster or entity.
+
+## [v2.7] - 2026-06-24 - Consistent naming and field inheritance
+
+### Changed
+- Renamed the "activity" concept to "budget line" everywhere in the interface (Budget,
+  Import, Reporting, Settings). Code, data fields and the separate "activity type" are
+  unchanged.
+- Budget lines added from a campaign now inherit the campaign's entity, SVP and global
+  campaign by default (still editable), so a line matches its campaign unless you change it.
+- An event's cluster now comes from its organising entity (the same source budget lines
+  use), so the two can no longer drift. Events without an entity keep a manually chosen
+  cluster.
+- README: removed the hard-coded version from the title (the version now lives only in
+  `js/config.js` and the app header) and replaced the obsolete OneDrive publish steps with
+  the current edit / commit / push workflow.
+
+## [v2.6] - 2026-06-24 - Budget tab: copy line, clearer form, mandatory cluster
+
+### Added
+- Copy a budget line: a copy button on each budget row opens the New budget line form
+  pre-filled with that row's data.
+
+### Changed
+- Renamed the budget line name field to "Expenditure or Activity".
+- The "Linked campaigns / events" field now spans the full width of the form.
+- Cluster is now required when saving a budget line.
+
+## [v2.5] - 2026-06-22 - Hover details, Christina to Cloud, GitHub Pages prep
+
+### Added
+- Richer hover tooltip on the Campaigns and events timeline: name, kind, start/end dates,
+  activity type, cluster, entity, owner and SVP (on bars, diamonds and labels).
+- GitHub readiness: `.gitignore` that excludes data (`*.json`, `_backups/`), and a README
+  section with steps to publish to https://github.com/gerritdenayer/my-apps via GitHub Pages.
+
+### Changed
+- One-time cleanup: events owned by Christina are moved into the "Cloud" cluster (guarded
+  so it runs once).
+
+## [v2.4] - 2026-06-22 - Cluster cleanup for imported events
+
+### Changed
+- One-time remap of the imported event cluster names onto the real clusters:
+  BeNeLux -> Digital & Data; Europe, NWE and SSEE -> OB Europe. Global is unchanged.
+  Applied to both events and any entity using those cluster names. Guarded by a flag so
+  it runs once and won't overwrite a cluster you later name yourself.
+
+## [v2.3] - 2026-06-22 - Unified location filter across all tabs
+
+### Changed
+- Budget, Campaigns and events, Reporting and Outcomes now use the exact same location
+  filter: M1 zone > Cluster > Entity, with the same cascade and drill-down everywhere.
+  Picking an M1 narrows the Cluster list; picking a Cluster narrows the Entity list;
+  picking an Entity reflects its Cluster and M1. Built once as a shared helper in
+  `js/state.js` (clusterList, entityListFor, entityMatchesScope, scopeFilterHtml,
+  wireScopeFilter) so the four tabs cannot drift apart again.
+- This replaces the old per-tab filters (Budget's lone Cluster, Reporting's lone M1,
+  Outcomes' separate M1/Cluster/Entity, Timeline's lone Cluster), which read the value
+  through slightly different paths and could disagree.
+- Reporting's entity drill-down now uses the shared Entity filter (one entity control
+  instead of two).
+- Renamed the "Campaigns & Timeline" tab to "Campaigns and events".
+
+## [v2.2] - 2026-06-22 - Remove JSONBin, local files only
+
+### Changed
+- Removed the JSONBin cloud sync (code and Settings section) by choice, to avoid the
+  risk of data in a third-party store. The app stays on local browser storage plus the
+  Export / Merge / Replace JSON files. Recommended team workflow: keep the JSON export in
+  the OneDrive "Marketing Hub" folder and use Merge to combine teammates' files.
+
+## [v2.1] - 2026-06-22 - Cloud sync via JSONBin (stopgap)
+
+### Added
+- A "Cloud sync (JSONBin)" section in Settings > Data management. Set a Bin ID and key,
+  then Save to cloud / Load from cloud / Create new bin. Lets the team share one dataset
+  online while SharePoint is being set up. The app keeps running on local browser storage
+  and JSON export/import as before; cloud sync is optional and manual.
+- The Bin ID and key are stored only in this browser (not inside the dataset, so they are
+  never exported). Note: this is a convenience stopgap, not enterprise security.
+
+## [v2.0] - 2026-06-22 - Data model normalization
+
+Major change. A full backup of v1.9 is in `_backups/` (tar.gz) for rollback.
+
+### Changed
+- Campaigns now reference their organising entity and owner by ID (entityId, ownerId)
+  instead of by name, matching how budget lines already work. This removes the main source
+  of broken roll-ups when an entity or person is renamed.
+- The legacy free-text "type" on campaigns is dropped; the activity type (by ID) is the
+  single source, and its name is derived for display.
+- On load, existing campaigns are migrated automatically: names are matched to entity and
+  user IDs, the legacy type is matched to an activity type, and the old text fields are
+  removed once matched. Unmatched values are kept as a fallback so nothing is lost.
+- The campaign form's organising-entity and owner dropdowns now use IDs; reporting,
+  outcomes, timeline grouping, detail view and search all resolve names from IDs.
+- SharePoint migration script uses the event IDs (with name fallback).
+
+### Notes
+- The two-list shape (Campaigns = OB Marketing events, plus BudgetLines and reference
+  lists) is unchanged. This release normalizes references, it does not redesign the model.
+- Entity de-duplication helpers are retained as a safety net; entity names are still
+  enforced unique on add.
+
+## [v1.9] - 2026-06-18 - Budget row actions + timeline period view
+
+### Changed
+- Budget tab: the edit and delete icons are now the first column of each row.
+- Campaigns & Timeline, when a Year/Quarter/Month filter is set:
+  - shows every campaign or event ACTIVE in that period, even if it starts before or ends
+    after it (overlap, not just start date);
+  - zooms the timeline to the selected window (e.g. a quarter shows just its three months);
+  - marks a bar's edge with a dashed border when it spans beyond the visible window;
+  - lets a multi-day bar's title continue outside the bar when it does not fit inside.
+
+## [v1.8] - 2026-06-18 - Unified entity hierarchy (Cluster)
+
+### Changed
+- "Group" is renamed to "Cluster" everywhere (Settings, Budget filter and form, Reporting,
+  Outcomes), so the entities hierarchy reads M1 > Cluster > Entity and matches the term
+  used on the campaign side.
+- Campaign form now uses the entities hierarchy directly: Cluster comes first and filters
+  the Organising entity dropdown; picking an entity sets its Cluster. The campaign keeps
+  both an organising entity and a budget entity, and the budget entity defaults to the
+  organising entity (still changeable).
+- SharePoint schema/scripts: the Entities "Group" column is now "Cluster" (MHCluster).
+
+## [v1.7] - 2026-06-18 - Editable activity type names
+
+### Changed
+- Activity type names can be edited inline in Settings (alongside the A&P category).
+
+## [v1.6] - 2026-06-18 - Settings: batch "Save all"
+
+### Changed
+- Settings no longer auto-saves on each change. Edits are held in the form and committed
+  together with a sticky "Save all changes" button. An "Unsaved changes" indicator shows
+  the state, and the browser warns if you try to leave with unsaved edits. Per-row entity
+  Save buttons are removed (edit inline, then Save all). The admin pin and the Data
+  management actions (export/import/merge) still apply immediately.
+
+## [v1.5] - 2026-06-18 - Remove duplicate website field
+
+### Changed
+- Removed the standalone "Website link" field from the campaign/event form. Links live in
+  Content & assets only. Existing website links are migrated into Content (labeled
+  "Website") on load, so nothing is lost. The detail view shows them under Content.
+
+## [v1.4] - 2026-06-18 - Filters: SVP/Global split and date periods
+
+### Changed
+- Budget tab: the "SVP / Campaign" filter is now "SVP", with a separate "Global campaign"
+  filter, matching the split in Settings. The SVP column header is renamed too.
+
+### Added
+- Year, Quarter, and Month filters on the Budget, Reporting, Outcomes, and Timeline tabs
+  (Budget and Reporting/Outcomes already had Year; Quarter and Month are new everywhere,
+  and Timeline gains all three). Shared `S.inPeriod` helper drives the date logic.
+
+## [v1.3] - 2026-06-18 - Campaign form refinements
+
+### Fixed
+- The header version is now read from `js/config.js` (`appVersion`) instead of being
+  hardcoded in the page, so it no longer goes stale. Bump it in one place.
+
+### Changed
+- The Campaigns & Timeline "+ New campaign" button is now just "New".
+- In the campaign/event form, Organising entity, Cluster, and Owner are dropdowns
+  (entities and users from settings; clusters from existing values). Free-typed legacy
+  values stay available as options.
+- Partners and Content & assets now sit above the Budget section in the form.
+- The Budget section offers two modes: link existing budget line(s) via a multi-select,
+  or create a new line from this campaign (which inserts a line carrying the campaign's
+  Type, SVP, Global campaign, entity, status, and amounts into the Budget dataset).
+
+## [v1.2] - 2026-06-18 - Data model upgrade (Phases 2 and 3)
+
+### Added
+- M1 zone on entities (hierarchy M1 > Group > Entity). Configurable M1 levels seeded with
+  International Zone, Zone France, Business Line, SCM, Comms. M1 is a filter (with All) in
+  both Reporting and Outcomes, and an extra group-by option in Outcomes.
+- A&P categories (9 seeded), with each activity type mapped to one category. Budget lines
+  inherit the category from their type and can override it per line. Settings has a bulk
+  tool to set the A&P category on existing lines from their type.
+- Campaign "Type" and budget "Activity type" are now one field. The campaign editor picks
+  an activity type, and the linked budget line uses it.
+- SVP and Global campaign are now two separate, configurable lists, each including None and
+  All. Both appear on campaigns and budget lines.
+- Every campaign must be linked to a budget line: the campaign editor now requires a Type
+  and a budget entity, and creates/keeps the linked line.
+
+### Changed
+- Budget lines are now many-to-many with campaigns (`eventIds` instead of a single
+  `eventId`). One line can cover several campaigns, or none (general spend). The Budget
+  form's "Linked campaigns" field is multi-select. Shared lines use an even split when
+  rolled up per campaign (campaign detail and Outcomes); entity/group/A&P totals use the
+  full amount.
+
+### Migration
+- Existing data is upgraded on load: eventId becomes a one-item eventIds list; free-text
+  campaign types are matched to activity types by name; M1/A&P/global fields are added;
+  None and All are ensured in both SVP and Global campaign lists. Nothing is deleted.
+
+## [v1.2] - 2026-06-18 - Roles and access (Phase 1)
+
+### Added
+- User roles: Admin, Budget owner, Marketing user, Viewer. Each user carries a role,
+  set by an Admin in Settings. The header shows the current role.
+- Tab access by role: Admin sees all; Budget owner all except Settings; Marketing user
+  sees Budget (read-only), Campaigns, Reporting, Outcomes; Viewer sees Campaigns only,
+  read-only. Budget add/edit/delete and campaign add/edit are hidden when not allowed.
+- Settings is locked behind an admin pin. The pin is stored as a salted one-way hash in
+  `js/config.js` (default 2468, changeable in Settings). The god code 0610 always opens
+  Settings for any user, via the lock button in the header. (`js/auth.js`, `js/config.js`)
+- Migration: existing users without a role become Admin so no one is locked out. New
+  self-added users at login start as Viewer (the very first user becomes Admin).
+
+### Note
+- Roles and the pin are browser-side soft gating, not real security. Real enforcement
+  comes with the SharePoint move. See `DATA-SCHEMA-sharepoint-lists.md`.
+
+## [v1.1] - 2026-06-16 - Outcomes reporting + versioned header
+
+### Added
+- App version "v1.1" now shows in the header, plus a "Data updated: ..." timestamp that
+  tracks the last change to the dataset (`data.meta.lastUpdated`, set on every save).
+  (`index.html`, `js/state.js`, `js/app.js`)
+- Campaign editor (Campaigns & Timeline) now captures outcomes: engagement, attendees,
+  registrations, MQL, SQL (each with a target and an actual) and revenue (potential and
+  actual). Added an SVP / Global campaign field to the campaign, which also flows to the
+  linked budget line. Outcomes also show as a summary block in the campaign detail view.
+  (`js/timeline.js`, shared metric list in `js/state.js`)
+- New **Outcomes** tab (`js/outcomes.js`): a report combining results and budget. Group by
+  Group, Entity, SVP, Month, or Quarter; filter by group, entity, SVP, kind, and year.
+  Shows outcome totals (actual vs target), potential/actual revenue, forecast net and
+  actual spend, plus efficiency: cost per MQL, cost per SQL, cost per attendee, and revenue
+  ROI. Includes KPI cards, a revenue-vs-spend chart, and Excel export.
+
+## [Unreleased] - 2026-06-16 - Campaign budget link from the timeline
+
+### Added
+- The campaign add/edit form (Campaigns & Timeline) now has a Budget section. Pick an
+  organising entity, type, status, and forecast/actual amounts, and saving the campaign
+  creates one linked budget line so the campaign appears in the Budget overview and in
+  Reporting. Editing the campaign updates that same line (name and date stay in sync); it
+  never creates duplicates. Each campaign tracks its line via `event.primaryActivityId`.
+  Clearing the entity asks before removing the line. Additional lines can still be added
+  from the campaign detail view. (`js/timeline.js`)
+
+## [Unreleased] - 2026-06-16 - Group > Entity hierarchy
+
+### Added
+- Reporting matrix groups (e.g. Digital & Data, Cloud) are now collapsible. Each group
+  header shows the group's monthly subtotals, budget, and variance, and folds open to the
+  entity rows. Added an "Expand all / Collapse all" bar. Groups default to collapsed for a
+  clean overview. (`js/reporting.js`)
+- Settings yearly-budget editor is now grouped by entity group. Each group header shows the
+  group's total budget (read-only, updates live as you type) and folds open to the per-entity
+  budget code and amount inputs. Added "Expand all / Collapse all" and a grand-total row.
+  Groups default to collapsed. (`js/settings.js`)
+- Supporting styles for collapsible group headers, carets, and totals (`css/styles.css`).
+
+## [Unreleased] - 2026-06-16 - Reporting yearly budget fix
+
+### Fixed
+- Reporting tab under-counted the yearly budget total. Budgets are stored per entity ID,
+  but Reporting de-duplicates entities by name and only summed each canonical entity's
+  budget. Any budget entered against a duplicate entity was dropped, so the Reporting
+  total was lower than the sum shown in Settings. Added `budgetByCanonical()` in
+  `js/reporting.js` to roll every entity's budget up onto its canonical entity. The KPI
+  cards, matrix rows, entity drill-down, monthly budget line, and Excel export now all
+  use the rolled-up figures, so Reporting matches Settings.
+
+## [Unreleased] - 2026-06-16 - Campaigns & Timeline
+
+Added a Campaigns & Timeline tab and linked campaigns to the budget. All changes are
+additive. No existing data, features, or files were removed. A full backup of the app
+as it was before these edits is in
+`Marketing Dashboard/_backups/budget-app-backup-20260616-0647.zip`.
+
+### Added
+- New tab **Campaigns & Timeline** (`js/timeline.js`): a visual 2026 Gantt of campaigns
+  and events. Multi-day items as bars, single-day as diamonds, "today" marker, group by
+  cluster / entity / type / kind / owner, color picker, filters, and search.
+- Click a campaign to see a detail view: details, partners (multiple, with co-funding),
+  content and asset links, and a roll-up of all linked budget lines (forecast net,
+  actual net, partner co-funding). Add or edit campaigns from here.
+- One-time import of the 97 marketing events from the OB export (`js/seed-events.js`,
+  loaded via the "Import 2026 events" button).
+- Shared data model extended: `data.events` (campaigns) and `data.settings.partners`
+  (partner master list). Back-filled on load for older data.
+
+### Changed
+- Budget activity form now has an optional **Linked campaign / event** field, so each
+  cost ties to a campaign. The campaign detail rolls these up. (`js/budget.js`)
+- Export / Import / Merge now also carry events and partners. (`js/api.js`)
+
+### Notes
+- Storage is unchanged (local storage today). Target is SharePoint Lists, see
+  `Marketing Dashboard/SharePoint Lists Data Model.md`. The data layer is the only thing
+  that swaps when the SharePoint backend is ready.

@@ -102,6 +102,10 @@
 
   // Write an object to the folder as pretty JSON, creating the file if needed.
   async function writeJson(dir, filename, obj) {
+    // The dev copy may only write to a test folder, so a test can never touch the team's data.
+    if (window.MB_CONFIG && window.MB_CONFIG.env === "dev" && !/test/i.test((dir && dir.name) || "")) {
+      throw new Error(`this is the DEV version, which only writes to a test folder (name containing "TEST"). "${dir && dir.name}" looks like the real shared folder. Connect to MarketingHub-TEST instead.`);
+    }
     const fh = await dir.getFileHandle(filename, { create: true });
     const w = await fh.createWritable();
     await w.write(JSON.stringify(obj, null, 2));

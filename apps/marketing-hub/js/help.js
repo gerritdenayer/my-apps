@@ -146,7 +146,9 @@
       const res = await fetch("CHANGELOG.md", { cache: "no-store" });
       if (!res.ok) throw new Error(res.status);
       const md = await res.text();
-      const blocks = md.split(/\n(?=## \[)/).filter((b) => b.startsWith("## [")).slice(0, 4);
+      // Production shows released versions only; the dev copy also shows what is not released yet.
+      const dev = window.MB_CONFIG && window.MB_CONFIG.env === "dev";
+      const blocks = md.split(/\n(?=## \[)/).filter((b) => b.startsWith("## [") && (dev || !b.startsWith("## [Unreleased]"))).slice(0, 4);
       host.className = "";
       host.innerHTML = blocks.map((b) => {
         const lines = b.split("\n");

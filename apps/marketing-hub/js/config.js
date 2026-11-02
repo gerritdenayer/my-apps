@@ -12,5 +12,34 @@ window.MB_CONFIG = {
   // SHA-256 of (pinSalt + PIN). Default PIN is 2468.
   adminPinHash: "94c4d698ea9ed65b0e8a4f73b107d6bb7ea3169836657e5d983c36e1421dfc10",
   // Single source of truth for the version shown in the header. Bump this on each change set.
-  appVersion: "5.1.17",
+  appVersion: "5.1.18",
 };
+
+// ---- Dev copy safeguards (apps/marketing-hub-dev, see js/env.js) ----
+// Production and dev live on the same website, and browsers keep storage per website, not per
+// folder. So the dev copy gives every stored key and database its own "mbdev:" prefix: it never
+// sees or changes production's local data or its remembered shared folder. It also shows a DEV
+// banner and a "-dev" version. Writing to a shared folder is blocked unless the folder name
+// contains "TEST" (see share.js).
+(function () {
+  const env = (window.MB_ENV && window.MB_ENV.name) || "prod";
+  window.MB_CONFIG.env = env;
+  if (env !== "dev") return;
+  window.MB_CONFIG.appVersion += "-dev";
+  const P = "mbdev:";
+  const sp = Storage.prototype, get = sp.getItem, set = sp.setItem, del = sp.removeItem;
+  sp.getItem = function (k) { return get.call(this, P + k); };
+  sp.setItem = function (k, v) { return set.call(this, P + k, v); };
+  sp.removeItem = function (k) { return del.call(this, P + k); };
+  if (window.indexedDB) {
+    const open = window.indexedDB.open.bind(window.indexedDB);
+    window.indexedDB.open = (name, version) => open(P + name, version);
+  }
+  document.title = "DEV - " + document.title;
+  document.addEventListener("DOMContentLoaded", () => {
+    const b = document.createElement("div");
+    b.className = "env-banner";
+    b.textContent = "DEV version: for testing only. It works on the MarketingHub-TEST folder, never on the team's data.";
+    document.body.insertBefore(b, document.body.firstChild);
+  });
+})();

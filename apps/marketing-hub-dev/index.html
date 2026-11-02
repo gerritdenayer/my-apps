@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketing Hub</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/styles.css?v=5.1.18" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+</head>
+<body>
+  <!-- Login overlay -->
+  <div id="login-overlay" class="overlay">
+    <div class="login-card">
+      <h1>Marketing Hub <span class="appver" id="login-version"></span></h1>
+      <p class="muted">Pick your name to start. All data is stored on this computer.</p>
+      <div id="login-error" class="error hidden"></div>
+      <label for="login-user">User</label>
+      <select id="login-user"><option value="">Loading...</option></select>
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" autocomplete="off" placeholder="Default is 1234 for a new account" />
+      <button id="login-btn" class="primary">Continue</button>
+      <div id="login-shared" class="hidden" style="margin-top:14px; border-top:1px solid #e5e7eb; padding-top:10px;">
+        <p class="muted small" id="login-shared-text" style="margin:0 0 8px"></p>
+        <button id="login-connect" class="secondary">Connect to shared folder...</button>
+      </div>
+      <p class="muted small">Working alone? Pick "Add new user..." to create your profile. New accounts start with password 1234 and ask you to set your own.</p>
+      <p class="muted small" style="margin-top:14px; border-top:1px solid #e5e7eb; padding-top:10px;">
+        Locked out or restoring a backup? <a href="#" id="login-import">Load a data file...</a>
+      </p>
+      <input type="file" id="login-file" accept=".json,application/json" style="display:none" />
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <header id="app-header" class="hidden">
+    <div class="brand">Marketing Hub <span class="appver" id="app-version"></span></div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="budget">Budget</button>
+      <button class="tab" data-tab="timeline">Campaigns &amp; events</button>
+      <button class="tab" data-tab="reporting">Reporting</button>
+      <button class="tab" data-tab="outcomes">Outcomes</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+    <div class="user-area">
+      <button id="inbox-pill" class="inbox-pill hidden" type="button" title="Events proposed from email, waiting for your review"></button>
+      <button id="share-pill" class="share-pill hidden" type="button"></button>
+      <button id="help-btn" class="link info-btn help-btn" type="button" title="Help (press ?)" aria-label="Help">?</button>
+      <span class="info-wrap">
+        <button id="info-btn" class="link info-btn" type="button" aria-label="Last updated">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </button>
+        <div id="info-pop" class="info-pop" role="tooltip">
+          <div class="info-title">Last updated</div>
+          <div id="last-updated"></div>
+          <div id="shared-updated"></div>
+        </div>
+      </span>
+      <span id="current-user" class="muted"></span>
+      <span id="role-badge" class="role-badge"></span>
+      <span id="sync-status" class="sync">Idle</span>
+      <button id="refresh-btn" class="link hidden" title="Check the shared folder for a new setup and new budget & events">&#8635; Refresh</button>
+      <button id="lock-btn" class="link" title="Admin access">&#128274;</button>
+      <button id="logout-btn" class="link">Switch user</button>
+    </div>
+  </header>
+  <div id="share-banner" class="share-banner hidden"></div>
+
+  <main id="app-main" class="hidden">
+    <aside id="settings-nav" class="hidden"></aside>
+    <section id="tab-budget" class="tab-panel active"></section>
+    <section id="tab-timeline" class="tab-panel"></section>
+    <section id="tab-reporting" class="tab-panel"></section>
+    <section id="tab-outcomes" class="tab-panel"></section>
+    <section id="tab-budget-structure" class="tab-panel"></section>
+    <section id="tab-data" class="tab-panel"></section>
+    <section id="tab-users" class="tab-panel"></section>
+    <section id="tab-settings" class="tab-panel"></section>
+    <section id="tab-trash" class="tab-panel"></section>
+  </main>
+
+  <!-- Modal mount -->
+  <div id="modal-root"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/env.js?v=5.1.18"></script>
+  <script src="js/config.js?v=5.1.18"></script>
+  <script src="js/api.js?v=5.1.18"></script>
+  <script src="js/state.js?v=5.1.18"></script>
+  <script src="js/auth.js?v=5.1.18"></script>
+  <script src="js/budget.js?v=5.1.18"></script>
+  <script src="js/timeline.js?v=5.1.18"></script>
+  <script src="js/reporting.js?v=5.1.18"></script>
+  <script src="js/outcomes.js?v=5.1.18"></script>
+  <script src="js/structure.js?v=5.1.18"></script>
+  <script src="js/pptexport.js?v=5.1.18"></script>
+  <script src="js/share.js?v=5.1.18"></script>
+  <script src="js/data.js?v=5.1.18"></script>
+  <script src="js/users.js?v=5.1.18"></script>
+  <script src="js/settings.js?v=5.1.18"></script>
+  <script src="js/trash.js?v=5.1.18"></script>
+  <script src="js/inbox.js?v=5.1.18"></script>
+  <script src="js/help.js?v=5.1.18"></script>
+  <script src="js/import.js?v=5.1.18"></script>
+  <script src="js/app.js?v=5.1.18"></script>
+</body>
+</html>

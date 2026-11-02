@@ -349,3 +349,6 @@ label.chk-line { display: flex; align-items: center; gap: 6px; font-weight: norm
 label.chk-line input { width: auto; margin: 0; }
 input.locked { background: #f3f4f6; color: #6b7280; }
 .tl-pf-note { margin: 12px 0 0; padding: 8px 10px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; font-size: 13px; color: #065f46; }
+
+/* Dev copy banner (only shown in apps/marketing-hub-dev) */
+.env-banner { background: repeating-linear-gradient(45deg, #ff7900, #ff7900 14px, #f16e00 14px, #f16e00 28px); color: #000; font-weight: 700; text-align: center; padding: 6px 10px; font-size: 13px; letter-spacing: .2px; }
