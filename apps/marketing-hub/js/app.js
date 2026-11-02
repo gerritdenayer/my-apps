@@ -132,6 +132,8 @@
       // link to them. Drop the old lookup and the globalCampaignId references.
       migrateDropGlobalCampaigns(data);
       normalizeSortLists(data);
+      // SVP / vertical list: one "N.A." instead of "All" and "None" (setup only, rows untouched).
+      if (S.normalizeSvps(data.settings)) S.scheduleSave();
 
       if (!data.settings.yearlyBudgets) data.settings.yearlyBudgets = {};
       if (!data.settings.budgetCodes) data.settings.budgetCodes = {};
@@ -317,7 +319,7 @@
     { key: "entities", label: "Entities & clusters", tab: "settings", admin: true },
     { key: "budget-structure", label: "Budget structure", tab: "budget-structure", cap: "viewStructure" },
     { group: "Lists" },
-    { key: "svps", label: "SVPs", tab: "settings", admin: true },
+    { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
     { key: "countries", label: "Countries", tab: "settings", admin: true },
     { key: "types", label: "Activity types & A&P", tab: "settings", admin: true },
     { key: "statuses", label: "Statuses", tab: "settings", admin: true },
@@ -472,11 +474,7 @@
     }
     const catId = (name) => (s.apCategories.find((c) => (c.name || "").toLowerCase() === name.toLowerCase()) || {}).id || "";
 
-    // Ensure None + All exist in the SVP list
     s.svps = s.svps || [];
-    ["None", "All"].forEach((nm) => {
-      if (!s.svps.some((x) => (x.name || "").toLowerCase() === nm.toLowerCase())) s.svps.push({ id: API.uid(), name: nm });
-    });
 
     // Activity types -> A&P category (seed mapping where empty)
     (s.activityTypes || []).forEach((t) => {

@@ -16,7 +16,7 @@
     chart: null,
   };
 
-  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP", month: "Month", quarter: "Quarter" };
+  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", month: "Month", quarter: "Quarter" };
   const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"], ["roi", "Revenue ROI"], ["costmql", "Cost per MQL"], ["costsql", "Cost per SQL"], ["costatt", "Cost per attendee"]];
   const COST_MAP = { costmql: ["spendMql", "mql", "Cost per MQL"], costsql: ["spendSql", "sql", "Cost per SQL"], costatt: ["spendAtt", "attendees", "Cost per attendee"] };
 
@@ -85,7 +85,7 @@
     }
     if (view.dim === "svp") {
       const svp = ev.svpId ? S.svpById(ev.svpId) : null;
-      return { key: ev.svpId || "_none", label: svp ? svp.name : "Unspecified" };
+      return { key: S.canonicalSvpId(ev.svpId) || "_none", label: svp ? svp.name : "Unspecified" };
     }
     // m1, group or entity -> resolve entity
     const eid = resolvedEntityId(ev);
@@ -100,7 +100,7 @@
     if (!S.inPeriod(ev.start, view.year, view.quarter, view.month)) return false;
     if (view.kind !== "all" && (ev.kind || "Event") !== view.kind) return false;
     if (!matchesScope(ev)) return false;
-    if (view.svpFilter && ev.svpId !== view.svpFilter) return false;
+    if (view.svpFilter && S.canonicalSvpId(ev.svpId) !== view.svpFilter) return false;
     return true;
   }
 
@@ -165,7 +165,7 @@
         <div><label>Month</label><select id="o-month">${S.monthOptions(view.month)}</select></div>
         <div><label>Group by</label><select id="o-dim">${Object.entries(DIM_LABELS).map(([v, l]) => `<option ${view.dim === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         ${S.scopeFilterHtml("o", view.scope)}
-        <div><label>SVP</label><select id="o-svp"><option value="">All</option>${(data.settings.svps || []).map((s) => `<option ${view.svpFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+        <div><label>SVP / vertical</label><select id="o-svp"><option value="">All</option>${(data.settings.svps || []).map((s) => `<option ${view.svpFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
         <div><label>Kind</label><select id="o-kind">${[["all", "All"], ["Event", "Events"], ["Campaign", "Campaigns"]].map(([v, l]) => `<option ${view.kind === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         <div><label>Chart</label><select id="o-chart-metric">${CHART_METRICS.map(([v, l]) => `<option ${view.chartMetric === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         <div class="grow"></div>

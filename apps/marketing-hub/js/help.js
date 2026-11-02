@@ -46,7 +46,8 @@
       <h4>Budget left</h4>
       <p>The card above the table shows the yearly budget, planned (forecast net), spent (actual net), left after planned and left after actual. Pick one entity to see its budget code; open <b>Per budget code</b> to see every code in your selection. Red means over budget. The card always covers the whole year: quarter, month and search do not change it.</p>
       <h4>Adding a line</h4>
-      <p>Click <b>+ New budget line</b>, or click a row to edit. Name, date, cluster and entity are required. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
+      <p>Click <b>+ New budget line</b>, or click a row to edit. Name, date, cluster and entity are required. The cluster and entity lists follow the year of the date, so retired ones (such as Pan European from 2027) are not offered. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
+      <p><b>CustomerLink Campaign</b> takes the link to the campaign in CLinks. When you save, the link is also added to each linked campaign or event, under Content &amp; assets (a changed link replaces the old one there). The CustomerLink column in the table opens it.</p>
       <p>When you are done, click <b>Publish changes</b> so the team sees it.</p>` },
 
     { id: "events", title: "Campaigns & events", tabs: ["timeline"], html: `
@@ -56,16 +57,17 @@
       <p>Group rows by cluster, campaign, entity, type, kind or owner, and color the bars. Filter on kind, year, quarters, month, scope, country or search. Click a bar to open its card.</p>
       <h4>The form</h4>
       <table class="help-table">
-        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP, part of campaign, campaign code, notes, countries.</td></tr>
+        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
-        <tr><td><b>Budget</b></td><td>Type, and the budget link: create a new line, link existing lines, or "No budget line (agenda only)". For a new line, tick <b>Fully partner funded</b> when a partner pays it all (net is 0).</td></tr>
+        <tr><td><b>Budget</b></td><td>Type, and the budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
         <tr><td><b>Outcomes</b></td><td>Targets and actuals: engagement, attendees, registrations, MQL, SQL, revenue.</td></tr>
       </table>
+      <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it.</p>
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
       <p><b>Download agenda</b> makes one roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
-      <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP or one lane), the order of the lanes and of the items, and up to three details per item (dates, type, owner, entity, cluster, countries, campaign, partners), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
+      <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP / vertical or one lane), the order of the lanes and of the items, and up to three details per item (dates, type, owner, entity, cluster, countries, campaign, partners), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
       <p>When everything does not fit on one slide, you get as many slides as needed. Lanes are kept together on a slide; a lane too big for one slide continues on the next, marked "(cont.)". The pop-up tells you how many slides you will get, and each slide shows its number at the bottom.</p>
       <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
@@ -75,7 +77,7 @@
 
     { id: "outcomes", title: "Outcomes", tabs: ["outcomes"], html: `
       <p>What campaigns and events delivered against what they cost. Results come from each item's Outcomes tab; spend comes from its linked budget lines (a line linked to several events is split equally).</p>
-      <p>Group by M1 zone, cluster, entity, SVP, month or quarter. You see revenue against spend, attendees, registrations, MQL, SQL, engagement, revenue ROI and cost per MQL, SQL and attendee.</p>
+      <p>Group by M1 zone, cluster, entity, SVP / vertical, month or quarter. You see revenue against spend, attendees, registrations, MQL, SQL, engagement, revenue ROI and cost per MQL, SQL and attendee.</p>
       <p>Outcomes is only as good as what is filled in: enter actuals after each event and link the right budget lines.</p>` },
 
     { id: "sharing", title: "Publishing and updates", tabs: [], html: `
@@ -99,9 +101,10 @@
 
     { id: "settings", title: "Settings", tabs: ["settings", "budget-structure", "data", "users", "trash"], admin: true, html: `
       <table class="help-table">
-        <tr><td><b>Entities &amp; clusters</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years.</td></tr>
+        <tr><td><b>Entities &amp; clusters</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years. The active years decide which entities and clusters the forms and filters offer for a given year.</td></tr>
         <tr><td><b>Budget structure</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Set the numbers or copy last year forward.</td></tr>
-        <tr><td><b>SVPs, Countries, Activity types &amp; A&amp;P, Statuses</b></td><td>The lists used in budget lines and events.</td></tr>
+        <tr><td><b>SVPs &amp; verticals</b></td><td>The SVPs and vertical industries used for reporting on budget lines and events. "N.A." (not applicable) is always there; add verticals such as Manufacturing or Retail as needed.</td></tr>
+        <tr><td><b>Countries, Activity types &amp; A&amp;P, Statuses</b></td><td>The other lists used in budget lines and events.</td></tr>
         <tr><td><b>Users &amp; access</b></td><td>Add users, set role and home cluster, deactivate, reset a password to 1234. Also the admin pin.</td></tr>
         <tr><td><b>Data &amp; sharing</b></td><td>The shared folder, publish setup and budget &amp; events, file dates, backups and Excel exports, the second folder (bridge).</td></tr>
         <tr><td><b>Bulk import</b></td><td>Load budget lines from an Excel file: pick the sheet, map the columns, check, import.</td></tr>

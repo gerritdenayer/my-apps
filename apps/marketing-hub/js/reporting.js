@@ -449,7 +449,7 @@
               <tr>
                 <th>Date</th>
                 <th>Name</th>
-                <th>SVP / Campaign</th>
+                <th>SVP / vertical</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th>Owner</th>
@@ -553,7 +553,7 @@
       Name: a.name,
       Entity: (S.entityById(a.entityId)||{}).name || "",
       "Entity group": (S.entityById(a.entityId)||{}).group || "",
-      "SVP / Campaign": (S.svpById(a.svpId)||{}).name || "",
+      "SVP / vertical": (S.svpById(a.svpId)||{}).name || "",
       Type: (S.actTypeById(a.activityTypeId)||{}).name || "",
       Status: (S.statusById(a.statusId)||{}).name || "",
       Owner: (S.userById(a.ownerId)||{}).name || "",

@@ -119,7 +119,7 @@
       ["name", "Activity name *"],
       ["activityType", "A&P Category"],
       ["status", "Status"],
-      ["svp", "SVP"],
+      ["svp", "SVP / vertical"],
       ["vendor", "Vendor / Partner"],
       ["notes", "Notes / Description"],
       ["entity", "Entity (M3 / country)"],
@@ -172,7 +172,7 @@
       <h3>Preview <span class="muted small" id="imp-count"></span></h3>
       <div class="table-wrap" style="max-height: 240px; overflow-y: auto;">
         <table>
-          <thead><tr><th>Date</th><th>Name</th><th>Entity</th><th>Status</th><th>Type</th><th>SVP</th><th class="num">EUR</th></tr></thead>
+          <thead><tr><th>Date</th><th>Name</th><th>Entity</th><th>Status</th><th>Type</th><th>SVP / vertical</th><th class="num">EUR</th></tr></thead>
           <tbody id="imp-preview"></tbody>
         </table>
       </div>

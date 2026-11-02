@@ -113,7 +113,7 @@
     if(dim==="type"){ const t=e.activityTypeId?S.actTypeById(e.activityTypeId):null; return t?t.name:"Unspecified"; }
     if(dim==="cluster") return clusterOf(e);
     if(dim==="campaign") return campaignNameOf(e);
-    if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP"; }
+    if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP / vertical"; }
     return e[dim]||"Unspecified";
   }
   // The campaign an item belongs to: a campaign is itself; an event uses its linked campaign.
@@ -190,7 +190,7 @@
           <select id="tl-year"><option value="">All</option>${tlYears(events).map(y=>`<option ${String(view.year)===String(y)?"selected":""} value="${y}">${y}</option>`).join("")}</select></div>
         <div><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
         <div><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
-        ${S.scopeFilterHtml("tl", view.scope)}
+        ${S.scopeFilterHtml("tl", view.scope, null, view.year?+view.year:0)}
         ${(data.settings.countries||[]).length ? `<div><label>Country</label>
           <select id="tl-country">
             <option value="">All countries</option>
@@ -223,7 +223,7 @@
     root.querySelector("#tl-month").onchange=e=>{view.month=e.target.value;render();};
     const tlCountry=root.querySelector("#tl-country");
     if(tlCountry) tlCountry.onchange=e=>{view.country=e.target.value;render();};
-    S.wireScopeFilter(root,"tl",view.scope,render);
+    S.wireScopeFilter(root,"tl",view.scope,render,null,view.year?+view.year:0);
     root.querySelector("#tl-search").oninput=e=>{view.q=e.target.value;drawRows();};
     const canEdit=!window.MB_AUTH||window.MB_AUTH.can("editCampaign");
     const addBtn=root.querySelector("#tl-add");
@@ -392,7 +392,7 @@
         <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
       </div>
       <div class="row">
-        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["none","None (one lane)"]],groupBy)}</select></div>
         <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
       </div>
       <div class="row">
@@ -544,7 +544,7 @@
       `Cluster: ${clusterOf(e)}`,
       `Entity: ${S.eventEntityName(e)||"-"}`,
       `Owner: ${S.eventOwnerName(e)||"-"}`,
-      `SVP: ${svp||"-"}`,
+      `SVP / vertical: ${svp||"-"}`,
       ((e.kind||"Event")==="Event"?`Campaign: ${campaignNameOf(e)}`:null),
       `Countries: ${S.countryNamesOf(e.countryIds).join(", ")||"-"}`,
     ].filter(Boolean).join("\n");
@@ -664,6 +664,7 @@
       <h3 style="margin:12px 0 2px">Content &amp; assets (${content.length})</h3>
       ${content.length?`<ul style="margin:4px 0 0;padding-left:18px">${content.map(c=>`<li>${c.url?`<a href="${S.escapeHtml(c.url)}" target="_blank" rel="noopener">${S.escapeHtml(c.label||c.url)} &#8599;</a>`:S.escapeHtml(c.label||"")}</li>`).join("")}</ul>`:`<div class="muted">No content linked yet.</div>`}
 
+      ${e.fullyPartnerFunded?`<div class="tl-pf-note"><b>Fully partner funded.</b> A partner pays for it in full; no impact on our budget.</div>`:""}
       <h3 style="margin:14px 0 2px">Linked budget lines</h3>
       ${b.count?`<table class="tl-mini"><thead><tr><th>Date</th><th>Name</th><th>Cluster</th><th>Entity</th><th>Type</th><th>Status</th><th class="num">Forecast net</th><th class="num">Actual net</th></tr></thead><tbody>
         ${b.lines.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||"")).map(a=>{
@@ -754,9 +755,10 @@
 
     // Cluster + organising entity come from the entities hierarchy (Cluster > Entity).
     // Cluster filters the entity list; picking an entity sets the cluster.
-    const clusters=Array.from(new Set(uniqueEnts.map(x=>(x.group||"").trim()).filter(Boolean)));
-    if(initialCluster && !clusters.includes(initialCluster)) clusters.push(initialCluster);
-    clusters.sort();
+    // Only clusters in use in the event's year are offered (from the entities active that year);
+    // the current cluster is always kept so an existing item is never emptied.
+    const clustersFor=(yr,keep)=>{ const l=S.clusterList("",yr); if(keep&&!l.includes(keep)) l.push(keep); return l.sort(); };
+    const clusters=clustersFor(e.start?new Date(e.start).getFullYear():new Date().getFullYear(), initialCluster);
     const optByName=(arr,sel)=>'<option value="">Select...</option>'+arr.map(n=>`<option ${sel===n?"selected":""} value="${S.escapeHtml(n)}">${S.escapeHtml(n)}</option>`).join("");
     // Organising entity options (value = entity id), filtered by cluster and by the event's year
     // so only entities in use that year show. The current selection is always kept.
@@ -772,7 +774,7 @@
 
     // Existing budget lines (for linking) and the budget-section mode
     const linkedExisting=(data.activities||[]).filter(a=>(a.eventIds||[]).includes(e.id));
-    const bMode = presetBmode || (managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new")));
+    const bMode = presetBmode || (e.fullyPartnerFunded ? "partner" : (managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new"))));
     const existingLinesHtml=(data.activities||[]).slice()
       .sort((x,y)=>(x.name||"").localeCompare(y.name||""))
       .map(a=>{
@@ -807,8 +809,8 @@
             <div class="row-3">
               <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
               <div><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
-              <div><label>SVP</label>
-                <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${e.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+              <div><label>SVP / vertical</label>
+                <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${S.canonicalSvpId(e.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
             </div>
             <div class="row">
               <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
@@ -835,13 +837,15 @@
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
       </div>
       <div class="modal-pane hidden" data-pane="budget">
-      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP are taken from the Details tab.</p>
+      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP / vertical are taken from the Details tab.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
         <option value="existing" ${bMode==="existing"?"selected":""}>Link existing budget line(s)</option>
+        <option value="partner" ${bMode==="partner"?"selected":""}>Fully partner funded (no impact on our budget)</option>
         <option value="none" ${bMode==="none"?"selected":""}>No budget line (agenda only)</option>
       </select>
+      <p id="c-bpartner" class="muted small" style="margin:10px 0 0" ${bMode==="partner"?"":"hidden"}>A partner pays for this ${S.escapeHtml((e.kind||"event").toLowerCase())} in full, so no budget line is needed and nothing counts against our budget. Add the partner and their role on the Partners &amp; content tab.</p>
       <div id="c-bnew" ${bMode==="new"?"":"hidden"}>
         <div class="row-3">
           <div><label>Type (activity type) *</label>
@@ -854,7 +858,7 @@
         <div class="row-3">
           <div><label>Vendor / Partner</label><input id="c-bvendor" type="text" value="${S.escapeHtml(presetVendor)}" /></div>
           <div><label>PO number</label><input id="c-bpo" type="text" value="${S.escapeHtml(bPO)}" /></div>
-          <div><label>&nbsp;</label><label class="chk-line" title="The partner pays the whole cost: partner funds follow gross, so net is 0"><input type="checkbox" id="c-bfull" ${(managed&&managed.fullyPartnerFunded)?"checked":""} /> Fully partner funded</label></div>
+          <div></div>
         </div>
         <div class="row-3">
           <div><label>Forecast gross (EUR)</label><input id="c-bfg" type="number" step="0.01" value="${bFG}" /></div>
@@ -970,7 +974,8 @@
       startEl.onchange=()=>{
         syncEnd();
         // The event's year may have changed: refresh which entities are offered, keeping selections.
-        const curEnt=entitySel.value;
+        const curEnt=entitySel.value, curCl=clusterSel.value;
+        clusterSel.innerHTML=optByName(clustersFor(evYear(), curCl), curCl);
         entitySel.innerHTML=entOptions(clusterSel.value, curEnt);
         if(bEntitySel){ const curB=bEntitySel.value; bEntitySel.innerHTML=entOptions((bClusterSel&&bClusterSel.value)||"", curB); }
       };
@@ -1024,6 +1029,7 @@
       const m=ev.target.value;
       modal.querySelector("#c-bnew").hidden = (m!=="new");
       modal.querySelector("#c-bexisting").hidden = (m!=="existing");
+      modal.querySelector("#c-bpartner").hidden = (m!=="partner");
       if(m==="new") recomputePartnerBudget();
     };
     // Default the A&P category to the chosen type's category (still editable).
@@ -1074,8 +1080,6 @@
     function recomputePartnerBudget(){
       const bfp=modal.querySelector("#c-bfp");
       if(!bfp) return; // only when creating a new budget line
-      const full=modal.querySelector("#c-bfull");
-      if(full&&full.checked) return; // fully partner funded: partner follows gross instead
       let sum=0, any=false;
       partnersBox.querySelectorAll("input.pf-cof").forEach(inp=>{
         const t=(inp.value||"").trim();
@@ -1095,23 +1099,7 @@
     }
     (e.partners||[]).forEach(partnerRow);
     (e.content||[]).forEach(contentRow);
-    // Fully partner funded: partner amounts follow gross (locked), so the line's net is 0.
-    const bFull=modal.querySelector("#c-bfull");
-    const syncFull=()=>{
-      if(!bFull) return;
-      [["#c-bfg","#c-bfp"],["#c-bag","#c-bap"]].forEach(([g,p])=>{
-        const pi=modal.querySelector(p); if(!pi) return;
-        pi.readOnly=bFull.checked; pi.classList.toggle("locked",bFull.checked);
-        if(bFull.checked) pi.value=modal.querySelector(g).value||0;
-      });
-      if(!bFull.checked) recomputePartnerBudget();
-    };
-    if(bFull){
-      bFull.addEventListener("change",syncFull);
-      ["#c-bfg","#c-bag"].forEach(sel=>{ const el=modal.querySelector(sel); if(el) el.addEventListener("input",()=>{ if(bFull.checked) syncFull(); }); });
-    }
     recomputePartnerBudget();
-    syncFull();
     modal.querySelector("#c-addpartner").onclick=()=>partnerRow();
     modal.querySelector("#c-addcontent").onclick=()=>contentRow();
 
@@ -1201,8 +1189,6 @@
           vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
         });
-        if(modal.querySelector("#c-bfull").checked){ line.fullyPartnerFunded=true; line.forecastPartner=fg; line.actualPartner=ag; }
-        else delete line.fullyPartnerFunded;
         // A line with an actual value cannot stay "Planned": bump it to "Committed".
         line.statusId=S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
         // Stamp the managed line's update only if it already existed and its content changed.
@@ -1260,6 +1246,7 @@
         countryIds,
         partners, content, outcomes,
         primaryActivityId:primaryId,
+        fullyPartnerFunded: bmode==="partner" ? true : undefined,
         entity:undefined, owner:undefined, type:undefined, globalCampaignId:undefined, // drop legacy fields
       };
       // Stamp "updated by/on" only when the campaign content really changed (not a no-op save).
@@ -1270,7 +1257,7 @@
       if(isEdit){ const idx=data.events.findIndex(x=>x.id===id); data.events[idx]=updated; }
       else data.events.push(updated);
       S.scheduleSave(); S.notify(); S.closeModal();
-      S.toast((isEdit?"Campaign updated":"Campaign created")+" and linked to the budget","success");
+      S.toast((isEdit?"Campaign updated":"Campaign created")+(bmode==="new"||bmode==="existing"?" and linked to the budget":bmode==="partner"?" (fully partner funded)":""),"success");
       if(opts.onSaved) opts.onSaved(updated);
     };
   }

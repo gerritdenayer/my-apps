@@ -188,6 +188,8 @@
     }
     merge("events", opts.delEventIds);
     merge("activities", opts.delActIds);
+    // A setup published by an older version may still have "All" / "None": fold them into N.A.
+    if (window.MB_STATE && window.MB_STATE.normalizeSvps) window.MB_STATE.normalizeSvps(result.settings);
     result.meta = { ...(result.meta || {}), lastUpdated: new Date().toISOString() };
     return result;
   }

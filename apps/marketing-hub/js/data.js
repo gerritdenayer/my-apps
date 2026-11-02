@@ -139,7 +139,7 @@
         a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
     });
     writeSheet("budget-lines", "Budget lines",
-      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
       rows);
   }
   function exportEventsXlsx(year, quarters) {
@@ -153,7 +153,7 @@
         S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
     });
     writeSheet("campaigns-events", "Events",
-      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP", "Campaign", "Countries", "Campaign code", "Notes"],
+      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
       rows);
   }
 
@@ -181,7 +181,7 @@
       { key: "date", label: "Date", text: (a) => a.date || "", sort: (a) => a.date || "" },
       { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
       { key: "entity", label: "Entity", text: (a) => entN(a.entityId), sort: (a) => entN(a.entityId).toLowerCase() },
-      { key: "svp", label: "SVP", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
+      { key: "svp", label: "SVP / vertical", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
       { key: "type", label: "Type", text: (a) => typeN(a.activityTypeId), sort: (a) => typeN(a.activityTypeId).toLowerCase() },
       { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
       { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
@@ -195,7 +195,7 @@
       { key: "entity", label: "Entity", text: (e) => entN(e.entityId), sort: (e) => entN(e.entityId).toLowerCase() },
       { key: "type", label: "Type", text: (e) => typeN(e.activityTypeId), sort: (e) => typeN(e.activityTypeId).toLowerCase() },
       { key: "owner", label: "Owner", text: (e) => userN(e.ownerId), sort: (e) => userN(e.ownerId).toLowerCase() },
-      { key: "svp", label: "SVP", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
+      { key: "svp", label: "SVP / vertical", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
       { key: "campaign", label: "Campaign", text: (e) => campN(e), sort: (e) => campN(e).toLowerCase() },
       { key: "countries", label: "Countries", text: (e) => S.countryNamesOf(e.countryIds).join(", "), sort: (e) => S.countryNamesOf(e.countryIds).join(", ").toLowerCase() },
     ];
@@ -208,7 +208,7 @@
     if (ds === "activities") return [
       { field: "statusId", label: "Status", opts: () => opt(D.settings.statuses || []) },
       { field: "ownerId", label: "Owner", opts: users },
-      { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
+      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
       { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "date", label: "Date", date: true },
@@ -216,7 +216,7 @@
     return [
       { field: "ownerId", label: "Owner", opts: users },
       { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
-      { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
+      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
       { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "kind", label: "Kind", opts: () => [{ v: "Event", l: "Event" }, { v: "Campaign", l: "Campaign" }] },
@@ -1217,7 +1217,7 @@
     const out = [];
     const nm = (x) => (x && (x.name || x.code || x.id)) || "?";
     const sig = (x) => { const c = {}; Object.keys(x || {}).sort().forEach((k) => { if (!PW_FIELDS[k] && k !== "updatedAt") c[k] = x[k]; }); return JSON.stringify(c); };
-    const lists = [["users", "user"], ["entities", "entity"], ["svps", "SVP"], ["activityTypes", "event type"],
+    const lists = [["users", "user"], ["entities", "entity"], ["svps", "SVP / vertical"], ["activityTypes", "event type"],
       ["budgetCodes", "budget code"], ["partners", "partner"], ["statuses", "status"], ["apCategories", "category"], ["countryGroups", "country group"]];
     const names = (arr) => arr.length > 4 ? arr.slice(0, 4).join(", ") + " and " + (arr.length - 4) + " more" : arr.join(", ");
     lists.forEach(([k, label]) => {

@@ -61,7 +61,7 @@
     const owner = byName(set.users, p.owner);
     if (p.owner && !owner) warn.push(`Owner "${p.owner}" is not a user: pick an owner in the form.`);
     const svp = byName(set.svps, p.svp);
-    if (p.svp && !svp) warn.push(`SVP "${p.svp}" not found.`);
+    if (p.svp && !svp) warn.push(`SVP / vertical "${p.svp}" not found.`);
     const camp = byName((D.events || []).filter((x) => x.kind === "Campaign"), p.campaign);
     if (p.campaign && !camp) warn.push(`Campaign "${p.campaign}" not found.`);
     const countryIds = [], missingC = [];

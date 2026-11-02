@@ -85,11 +85,11 @@
       </div>
 
       <div class="card" data-sec="svps">
-        <h2>SVPs</h2>
-        <p class="muted small">Includes None and All as selectable values.</p>
+        <h2>SVPs &amp; verticals</h2>
+        <p class="muted small">Used for reporting: an SVP or a vertical industry per budget line and campaign / event. "N.A." (not applicable) is always in the list.</p>
         <div id="svps-list" class="chip-list"></div>
         <div class="row">
-          <div><label>New SVP</label><input id="new-svp" type="text" placeholder="e.g. AI everywhere" /></div>
+          <div><label>New SVP or vertical</label><input id="new-svp" type="text" placeholder="e.g. Manufacturing" /></div>
           <div style="display:flex; align-items:end;"><button class="primary" id="add-svp">Add</button></div>
         </div>
       </div>
@@ -402,9 +402,10 @@
 
   function renderSvps() {
     renderChipList("svps-list", S.state.data.settings.svps, (id) => {
-      const used = S.state.data.activities.filter((a) => a.svpId === id).length;
-      return used;
-    }, "SVP / Campaign");
+      const lines = (S.state.data.activities || []).filter((a) => S.canonicalSvpId(a.svpId) === id).length;
+      const evs = (S.state.data.events || []).filter((e) => S.canonicalSvpId(e.svpId) === id).length;
+      return lines + evs ? { n: lines + evs, text: `${lines} budget line${lines === 1 ? "" : "s"} and ${evs} campaign${evs === 1 ? "" : "s"} / event${evs === 1 ? "" : "s"} use it.` } : 0;
+    }, "SVP / vertical");
   }
   function renderCountries() {
     const host = document.getElementById("countries-list");
@@ -571,7 +572,8 @@
       chip.querySelector("button").onclick = async () => {
         const it = items.find((x) => x.id === id);
         const used = usageFn(id);
-        const msg = used > 0
+        const msg = (used && used.text) ? `Delete ${label} "${it.name}"? ${used.text}`
+          : used > 0
           ? `Delete ${label} "${it.name}"? ${used} budget lines use it.`
           : `Delete ${label} "${it.name}"?`;
         if (!await S.confirmDialog(msg)) return;

@@ -1,5 +1,34 @@
 # Changelog
 
+## [v5.1.17] - 2026-11-02 - SVP / vertical with N.A., year-based clusters, CustomerLink, partner funded option
+
+### Changed
+- "SVP" is now "SVP / vertical" everywhere (forms, tables, filters, agenda lanes, Outcomes,
+  Reporting, exports), so vertical industries can be added to the list for reporting. Settings >
+  SVPs & verticals explains this.
+- "All" and "None" are merged into one value, "N.A." (not applicable). Existing budget lines and
+  events that had All or None now show N.A.; their stored values are not rewritten (the old values
+  point to N.A. through the setup). The app no longer recreates All and None. After this release an
+  admin publishes the setup once.
+- Settings > SVPs & verticals now counts campaigns / events as well as budget lines when you delete
+  a value, so a value used only on events is no longer shown as unused.
+- Clusters follow the year, like entities already did. The campaign / event form (by start date),
+  the budget line form (by date) and the M1 zone / cluster / entity filters on Budget and Campaigns &
+  events (by the selected year) only offer clusters that have an entity in use that year. Example:
+  Pan European is no longer offered for 2027. A choice that is already set is always kept.
+
+### Added
+- Budget line form: new field "CustomerLink Campaign", the link to the campaign in CLinks. On save,
+  the link is also added under Content & assets of every linked campaign or event (labelled
+  "CustomerLink Campaign"; a changed link replaces the old one there, and an event that already has
+  it is left alone). A new CustomerLink column in the Budget table opens the link.
+
+### Changed
+- Event form, Budget tab: "Fully partner funded (no impact on our budget)" is now a choice in the
+  budget line drop-down instead of a checkbox. It creates no budget line (like agenda only), marks
+  the item as partner funded, and its card says so. The checkbox stays on the budget line form, for
+  a line a partner pays in full.
+
 ## [v5.1.16] - 2026-10-30 - Multi-slide agenda, fully partner funded
 
 ### Added

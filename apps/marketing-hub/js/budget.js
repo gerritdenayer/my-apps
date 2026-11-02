@@ -31,12 +31,13 @@
     { key: "name", label: "Name", def: 240 },
     { key: "entity", label: "Entity", def: 150 },
     { key: "code", label: "Budget code", def: 120 },
-    { key: "svp", label: "SVP", def: 120 },
+    { key: "svp", label: "SVP / vertical", def: 130 },
     { key: "type", label: "Type", def: 130 },
     { key: "status", label: "Status", def: 110 },
     { key: "owner", label: "Owner", def: 120 },
     { key: "vendor", label: "Vendor", def: 120 },
     { key: "po", label: "PO #", def: 100 },
+    { key: "clink", label: "CustomerLink", def: 110 },
     { key: "fG", label: "Forecast gross", def: 120, num: true },
     { key: "fP", label: "Forecast partner", def: 120, num: true },
     { key: "fN", label: "Forecast net", def: 120, num: true },
@@ -300,6 +301,7 @@
       case "owner": return ((S.userById(a.ownerId) || {}).name || "").toLowerCase();
       case "vendor": return (a.vendor || "").toLowerCase();
       case "po": return (a.poNumber || "").toLowerCase();
+      case "clink": return (a.customerLinkUrl || "").toLowerCase();
       case "fG": return a.forecastGross || 0;
       case "fP": return a.forecastPartner || 0;
       case "fN": return (a.forecastGross || 0) - (a.forecastPartner || 0);
@@ -348,6 +350,7 @@
       case "owner": return (S.userById(a.ownerId) || {}).name || "";
       case "vendor": return a.vendor || "";
       case "po": return a.poNumber || "";
+      case "clink": return a.customerLinkUrl || "";
       case "fG": return a.forecastGross ? String(a.forecastGross) : "";
       case "fP": return a.forecastPartner ? String(a.forecastPartner) : "";
       case "fN": return String((a.forecastGross || 0) - (a.forecastPartner || 0));
@@ -393,7 +396,7 @@
     return data.activities.filter((a) => {
       if (!S.inPeriodQ(a.date, view.year, view.quarters, view.monthFilter)) return false;
       if (!S.entityMatchesScope(a.entityId, view.scope)) return false;
-      if (view.svpFilter && a.svpId !== view.svpFilter) return false;
+      if (view.svpFilter && S.canonicalSvpId(a.svpId) !== view.svpFilter) return false;
       if (view.typeFilter && a.activityTypeId !== view.typeFilter) return false;
       if (view.statusFilter && a.statusId !== view.statusFilter) return false;
       if (view.ownerFilter && a.ownerId !== view.ownerFilter) return false;
@@ -610,6 +613,7 @@
           owner: `<td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>`,
           vendor: `<td class="bc-vendor">${S.escapeHtml(a.vendor || "")}</td>`,
           po: `<td class="bc-po">${S.escapeHtml(a.poNumber || "")}</td>`,
+          clink: `<td class="bc-clink">${a.customerLinkUrl ? `<a href="${S.escapeHtml(a.customerLinkUrl)}" target="_blank" rel="noopener" title="${S.escapeHtml(a.customerLinkUrl)}" onclick="event.stopPropagation()">Open &#8599;</a>` : ""}</td>`,
           fG: `<td class="num bc-fG">${S.fmtMoney(a.forecastGross)}</td>`,
           fP: `<td class="num bc-fP">${S.fmtMoney(a.forecastPartner)}</td>`,
           fN: `<td class="num bc-fN">${S.fmtMoney(fNet)}</td>`,
@@ -685,11 +689,12 @@
       if (ent0 && ent0.defaultOwnerId) a.ownerId = ent0.defaultOwnerId;
     }
 
-    const groups = Array.from(new Set(
-      (data.settings.entities || []).map(e => (e.group || "").trim()).filter(Boolean)
-    )).sort();
     const initialEnt = a.entityId ? S.entityById(a.entityId) : null;
     const initialGroup = initialEnt ? (initialEnt.group || "") : "";
+    // Clusters in use in the line's year (from the entities active that year), plus the current one.
+    const clustersFor = (yr) => { const l = S.clusterList("", yr); return initialGroup && !l.includes(initialGroup) ? l.concat([initialGroup]).sort() : l; };
+    const yearOf = (d) => d ? new Date(d).getFullYear() : new Date().getFullYear();
+    const groups = clustersFor(yearOf(a.date));
 
     const modal = S.openModal(`
       <h2>${isEdit ? "Edit budget line" : "New budget line"}</h2>
@@ -713,9 +718,9 @@
             <div><label>Entity *</label><select id="m-entity"></select></div>
           </div>
           <div class="row">
-            <div><label>SVP</label>
+            <div><label>SVP / vertical</label>
               <select id="m-svp"><option value="">Select...</option>
-                ${data.settings.svps.map(s => `<option ${a.svpId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
+                ${data.settings.svps.map(s => `<option ${S.canonicalSvpId(a.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
               </select></div>
             <div><label>Activity type</label>
               <select id="m-type"><option value="">Select...</option>
@@ -734,6 +739,9 @@
             <div><label>Vendor</label><input id="m-vendor" type="text" value="${S.escapeHtml(a.vendor || "")}" /></div>
             <div><label>PO number</label><input id="m-po" type="text" value="${S.escapeHtml(a.poNumber || "")}" /></div>
           </div>
+          <label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label>
+          <input id="m-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(a.customerLinkUrl || "")}" />
+          <p class="muted small" style="margin:3px 0 0">Also added to the linked campaigns / events, under Content &amp; assets.</p>
         </div>
         <div>
           <label>Linked campaigns / events <span class="muted small">(Ctrl or Cmd to pick several, or none)</span></label>
@@ -806,7 +814,11 @@
     populateEntityOptions(initialGroup, S.canonicalEntityId(a.entityId));
     // Changing the date can change which year's entities apply; refresh the list.
     modal.querySelector("#m-date").addEventListener("change", () => {
-      populateEntityOptions(modal.querySelector("#m-group").value, modal.querySelector("#m-entity").value);
+      const gSel = modal.querySelector("#m-group"), g = gSel.value;
+      const list = clustersFor(lineYear());
+      if (g && !list.includes(g)) list.push(g);
+      gSel.innerHTML = '<option value="">Select...</option>' + list.map((x) => `<option ${g === x ? "selected" : ""} value="${S.escapeHtml(x)}">${S.escapeHtml(x)}</option>`).join("");
+      populateEntityOptions(g, modal.querySelector("#m-entity").value);
     });
 
     // When Group changes, narrow Entity options. Keep current entity if still valid.
@@ -882,6 +894,7 @@
         ownerId: modal.querySelector("#m-owner").value,
         vendor: modal.querySelector("#m-vendor").value.trim(),
         poNumber: modal.querySelector("#m-po").value.trim(),
+        customerLinkUrl: normUrl(modal.querySelector("#m-clink").value),
         forecastGross: parseFloat(modal.querySelector("#m-fg").value) || 0,
         forecastPartner: parseFloat(modal.querySelector("#m-fp").value) || 0,
         actualGross: parseFloat(modal.querySelector("#m-ag").value) || 0,
@@ -901,17 +914,48 @@
         updated = { ...base, updatedBy: S.state.currentUserId, updatedAt: new Date().toISOString() };
       }
 
+      if (!updated.customerLinkUrl) delete updated.customerLinkUrl;
       if (isEdit) {
         const i = data.activities.findIndex((x) => x.id === id);
         data.activities[i] = updated;
       } else {
         data.activities.push(updated);
       }
+      const addedTo = syncCustomerLink(updated, a.customerLinkUrl || "");
       S.scheduleSave();
       S.notify();
       S.closeModal();
-      S.toast(isEdit ? "Budget line updated" : "Budget line created", "success");
+      S.toast((isEdit ? "Budget line updated" : "Budget line created") + (addedTo ? ` (CustomerLink added to ${addedTo} campaign${addedTo === 1 ? "" : "s"} / event${addedTo === 1 ? "" : "s"})` : ""), "success");
     };
+  }
+
+  // CustomerLink Campaign: a URL to the campaign in CLinks. Add "https://" when it was left out.
+  const CLINK_LABEL = "CustomerLink Campaign";
+  function normUrl(v) {
+    const t = String(v || "").trim();
+    if (!t) return "";
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(t) ? t : "https://" + t;
+  }
+  // Put the line's CustomerLink under Content & assets of every linked campaign / event. An entry
+  // with the old link (or the same label and an old link) is updated rather than added twice; an
+  // event that already has the link is left alone. The link is never removed from an event here.
+  // Returns how many events got a new or changed entry.
+  function syncCustomerLink(line, oldUrl) {
+    const url = line.customerLinkUrl || "";
+    if (!url) return 0;
+    let n = 0;
+    (S.state.data.events || []).forEach((ev) => {
+      if (!(line.eventIds || []).includes(ev.id)) return;
+      const content = Array.isArray(ev.content) ? ev.content.slice() : [];
+      if (content.some((c) => (c.url || "").trim() === url)) return;
+      const old = oldUrl ? content.findIndex((c) => (c.url || "").trim() === oldUrl) : -1;
+      if (old >= 0) content[old] = { ...content[old], url };
+      else content.push({ label: CLINK_LABEL, url });
+      ev.content = content;
+      ev.updatedBy = S.state.currentUserId; ev.updatedAt = new Date().toISOString();
+      n++;
+    });
+    return n;
   }
 
   function setFilters(f) {

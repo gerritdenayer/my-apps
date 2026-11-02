@@ -151,7 +151,31 @@
 
   // Lookups
   function entityById(id) { return (state.data.settings.entities || []).find((x) => x.id === id); }
-  function svpById(id) { return (state.data.settings.svps || []).find((x) => x.id === id); }
+  // SVP / vertical list. "N.A." (not applicable) replaced the old "All" and "None" values: their
+  // ids live on in settings.svpAliases, so old budget lines and events show N.A. without rewriting.
+  function canonicalSvpId(id) { const al = (state.data.settings.svpAliases || {})[id]; return al || id || ""; }
+  function svpById(id) { const c = canonicalSvpId(id); return (state.data.settings.svps || []).find((x) => x.id === c); }
+  // Make sure the list has exactly one "N.A.": rename "All" (or "None") to it and alias the others.
+  // Touches only the setup, never the rows. Returns true when something changed.
+  function normalizeSvps(settings) {
+    const s = settings || state.data.settings;
+    s.svps = s.svps || [];
+    const by = (n) => s.svps.find((x) => (x.name || "").trim().toLowerCase() === n);
+    const na = by("n.a."), all = by("all"), none = by("none");
+    const target = na || all || none;
+    if (!target) { s.svps.push({ id: window.MB_API.uid(), name: "N.A." }); return true; }
+    let changed = false;
+    if (target.name !== "N.A.") { target.name = "N.A."; changed = true; }
+    [all, none].forEach((x) => {
+      if (x && x !== target) {
+        s.svpAliases = s.svpAliases || {};
+        s.svpAliases[x.id] = target.id;
+        s.svps = s.svps.filter((y) => y !== x);
+        changed = true;
+      }
+    });
+    return changed;
+  }
   function countryById(id) { return (state.data.settings.countries || []).find((x) => x.id === id); }
   // Sorted country names for a list of ids (used to show an event's countries).
   function countryNamesOf(ids) {
@@ -224,9 +248,11 @@
   // ---- Shared location scope filter (M1 > Cluster > Entity) ----
   // Used identically by Budget, Campaigns and events, Reporting and Outcomes so the
   // three levels always mean the same thing and drill down the same way.
-  function clusterList(m1) {
+  // Clusters that have at least one entity (in the zone, and in use in the year when one is given).
+  function clusterList(m1, year) {
     let ents = uniqueEntities();
     if (m1) ents = ents.filter((e) => (e.m1 || "") === m1);
+    if (year) ents = ents.filter((e) => entityActiveInYear(e, year));
     return Array.from(new Set(ents.map((e) => (e.group || "").trim()).filter(Boolean))).sort();
   }
   // Is an entity in use for a given year? startYear/endYear are optional bounds (inclusive).
@@ -259,12 +285,14 @@
     return true;
   }
   // HTML for the three cascading selects. Ids are `${prefix}-m1/-cluster/-entity`.
+  // Keep the current choice in a list even when it does not apply to the year (no silent reset).
+  function withSel(list, sel) { return sel && !list.includes(sel) ? list.concat([sel]).sort() : list; }
   function scopeFilterHtml(prefix, scope, labelFn, year) {
     scope = scope || {};
     const lf = labelFn || ((e) => e.name);
     const m1s = (state.data.settings.m1Levels || []);
     const m1Opts = '<option value="">All zones</option>' + m1s.map((m) => `<option ${scope.m1 === m ? "selected" : ""} value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
-    const clOpts = '<option value="">All clusters</option>' + clusterList(scope.m1).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    const clOpts = '<option value="">All clusters</option>' + withSel(clusterList(scope.m1, year), scope.cluster).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     const enOpts = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster, year).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
     return `
       <div><label>M1 zone</label><select id="${prefix}-m1">${m1Opts}</select></div>
@@ -280,7 +308,7 @@
     const enSel = root.querySelector(`#${prefix}-entity`);
     if (!m1Sel || !clSel || !enSel) return;
     const rebuildCluster = () => {
-      clSel.innerHTML = '<option value="">All clusters</option>' + clusterList(scope.m1).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      clSel.innerHTML = '<option value="">All clusters</option>' + withSel(clusterList(scope.m1, year), scope.cluster).map((c) => `<option ${scope.cluster === c ? "selected" : ""} value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     };
     const rebuildEntity = () => {
       enSel.innerHTML = '<option value="">All entities</option>' + entityListFor(scope.m1, scope.cluster, year).map((e) => `<option ${scope.entityId === e.id ? "selected" : ""} value="${e.id}">${escapeHtml(lf(e))}</option>`).join("");
@@ -372,7 +400,7 @@
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
-    entityById, svpById, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
+    entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
