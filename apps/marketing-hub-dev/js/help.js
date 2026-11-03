@@ -54,7 +54,8 @@
       <p>The agenda as a timeline: a bar per campaign or event, a diamond for single-day items, a green euro badge when it has a budget line.</p>
       <p>A <b>campaign</b> is an umbrella; an <b>event</b> has a date and usually a place, and can be part of a campaign.</p>
       <h4>View</h4>
-      <p>Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view. Each row shows the item's name with its entity and dates; click the name or the bar to open its card.</p>
+      <p>Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view. Click a bar, a name or a row to open its card.</p>
+      <p><b>Names</b> (right above the timeline) chooses where the names show: <b>On the timeline</b>, next to each bar or diamond with the entity in the left column (the classic look, as in the presentations), <b>In the list</b>, in the left column with the entity and dates under each name, or <b>Both</b>. Your choice is remembered.</p>
       <h4>The form</h4>
       <table class="help-table">
         <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, event type, part of campaign, campaign code, notes, countries.</td></tr>

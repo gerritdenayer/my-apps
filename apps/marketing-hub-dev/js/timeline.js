@@ -13,7 +13,11 @@
   // years are shown; one year (or less) is stretched to fill the screen width instead.
   const LABELW = 280, PXDAY = 3.6, ROWH = 38;
 
-  const view = { groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
+  // Where item names show: "chart" next to the bars (the classic look used in presentations),
+  // "list" in the left column (name, entity and dates), or "both". Remembered per browser.
+  const NAMES_KEY = "mb_tl_names";
+  const loadNames = () => { try { const v = localStorage.getItem(NAMES_KEY); return ["chart", "list", "both"].includes(v) ? v : "chart"; } catch (e) { return "chart"; } };
+  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
 
   function ensureStyles() {
     if (document.getElementById("tl-styles")) return;
@@ -26,6 +30,14 @@
     #tab-timeline .tl-rl-name{font-size:12.5px;font-weight:500;color:#1f2937;max-width:100%;overflow:hidden;text-overflow:ellipsis}
     #tab-timeline .tl-rl-sub{font-size:11px;color:#6b7280;max-width:100%;overflow:hidden;text-overflow:ellipsis}
     #tab-timeline .tl-rowlabel:hover .tl-rl-name{color:#c2410c;text-decoration:underline}
+    #tab-timeline .tl-rowlabel:hover .tl-rl-plain{color:#1f2937;text-decoration:none}
+    #tab-timeline .tl-rl-plain{font-weight:400;font-size:12px}
+    #tab-timeline .tl-names{gap:4px;margin-left:8px}
+    #tab-timeline .tl-nm{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;color:#374151;cursor:pointer}
+    #tab-timeline .tl-nm.on{background:#1f2937;border-color:#1f2937;color:#fff}
+    #tab-timeline.tl-compact .tl-row{height:30px}
+    #tab-timeline.tl-compact .tl-bar,#tab-timeline.tl-compact .tl-barlabel,#tab-timeline.tl-compact .tl-diflabel{top:6px}
+    #tab-timeline.tl-compact .tl-diamond{top:7px}
     #tab-timeline .tl-bar,#tab-timeline .tl-barlabel{top:10px}
     #tab-timeline .tl-diamond{top:11px}
     #tab-timeline .tl-diflabel{top:10px}
@@ -333,7 +345,11 @@
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:#999"></span>single-day</span>`+
       `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#3b6d11;color:#fff;font-weight:700;font-size:10px">€</span> has budget</span>`+
-      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed #555"></span> spans beyond period</span>`:"");
+      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed #555"></span> spans beyond period</span>`:"")+
+      `<span class="k tl-names" role="group" aria-label="Show names"><span>Names:</span>${[["chart","On the timeline"],["list","In the list"],["both","Both"]].map(([v,l])=>`<button type="button" class="tl-nm${view.names===v?" on":""}" data-v="${v}" aria-pressed="${view.names===v}">${l}</button>`).join("")}</span>`;
+    leg.querySelectorAll(".tl-nm").forEach(b=>b.onclick=()=>{ view.names=b.dataset.v; try{ localStorage.setItem(NAMES_KEY,view.names); }catch(e){} drawRows(); });
+    const tab=document.getElementById("tab-timeline");
+    if(tab) tab.classList.toggle("tl-compact", view.names==="chart");
   }
 
   function tlYears(events){
@@ -602,7 +618,9 @@
     label.className="tl-rowlabel"; label.style.width=LABELW+"px"; label.title=tip;
     const dTxt=(e.end&&e.end!==e.start)?`${S.fmtDate(e.start)} - ${S.fmtDate(e.end)}`:S.fmtDate(e.start);
     const sub=[subLabelFor(e), dTxt].filter(Boolean).join(" \u00b7 ");
-    label.innerHTML=`<span class="tl-rl-name">${S.escapeHtml(e.name||"(no name)")}</span><span class="tl-rl-sub">${S.escapeHtml(sub)}</span>`;
+    if(view.names==="chart") label.innerHTML=`<span class="tl-rl-name tl-rl-plain">${S.escapeHtml(subLabelFor(e))}</span>`;
+    else label.innerHTML=`<span class="tl-rl-name">${S.escapeHtml(e.name||"(no name)")}</span><span class="tl-rl-sub">${S.escapeHtml(sub)}</span>`;
+    const onChart=view.names!=="list";
     label.onclick=()=>openCampaignDetail(e.id);
     row.appendChild(label);
 
@@ -617,7 +635,15 @@
       dm.className="tl-diamond"; dm.style.left=(xOf(s,g)-8)+"px"; dm.style.background=col; dm.title=tip;
       dm.onclick=()=>openCampaignDetail(e.id);
       track.appendChild(dm);
-      if(hasBudget){ const lbl=document.createElement("div"); lbl.className="tl-diflabel"; lbl.style.left=(xOf(s,g)+12)+"px"; lbl.appendChild(makeEur()); track.appendChild(lbl); }
+      if(hasBudget||onChart){
+        const lbl=document.createElement("div"); lbl.className="tl-diflabel"; lbl.style.left=(xOf(s,g)+12)+"px"; lbl.title=tip;
+        if(hasBudget) lbl.appendChild(makeEur());
+        if(onChart) lbl.appendChild(document.createTextNode(markerText(e)));
+        // Near the end of the period the name goes to the left of the marker, so it stays in view.
+        const estW=(onChart?markerText(e).length*6.6:0)+(hasBudget?19:0);
+        if(xOf(s,g)+12+estW>g.trackW){ lbl.style.left=Math.max(0,xOf(s,g)-12-estW)+"px"; }
+        track.appendChild(lbl);
+      }
     } else {
       const bar=document.createElement("div");
       const openLeft = s < g.yb.start;   // starts before the visible window
@@ -628,13 +654,21 @@
       bar.title=tip + (openLeft||openRight ? "\n(spans beyond the selected period)" : "");
       bar.onclick=()=>openCampaignDetail(e.id);
       track.appendChild(bar);
-      // The name is in the left column; next to the bar only the budget badge, when there is one.
-      if (hasBudget) {
+      // Names on the timeline: inside the bar when it fits, otherwise just after it.
+      const mtxt = onChart ? markerText(e) : "";
+      const fits = !!mtxt && (mtxt.length * 6.6 + 14 + (hasBudget ? 19 : 0)) <= w;
+      if (fits) {
+        if(hasBudget) bar.appendChild(makeEur());
+        bar.appendChild(document.createTextNode(mtxt));
+      } else if (hasBudget || mtxt) {
         const lbl=document.createElement("div");
         lbl.className="tl-barlabel";
         lbl.style.left=(left+w+6)+"px";
         lbl.title=tip;
-        lbl.appendChild(makeEur());
+        if(hasBudget) lbl.appendChild(makeEur());
+        if(mtxt) lbl.appendChild(document.createTextNode(mtxt));
+        const estW=(mtxt?mtxt.length*6.6:0)+(hasBudget?19:0);
+        if(left+w+6+estW>g.trackW){ lbl.style.left=Math.max(0,left-6-estW)+"px"; }
         lbl.onclick=()=>openCampaignDetail(e.id);
         track.appendChild(lbl);
       }

@@ -19,8 +19,10 @@
 - Campaigns & events: a compact toolbar on one line: year buttons, cluster, search and "More filters"
   (kind, quarters, month, M1 zone, entity, country), then Group by and Color by, Download agenda and
   "+ New". It opens on the current year, and a single year always fits the screen width (January to
-  December), so nothing runs off the right edge. Each row shows the item's name with its entity and
-  dates; the bars no longer repeat the name. The count shows how many items are in view.
+  December), so nothing runs off the right edge. A "Names" switch above the timeline chooses where
+  the names show: On the timeline (next to the bars, the classic look used in presentations), In the
+  list (left column, with entity and dates), or Both. The choice is remembered per browser. The count
+  shows how many items are in view.
 - Event form: "Event type" moved to the Details tab, so every event can have a type, also agenda-only
   and partner-funded ones. A new budget line takes the type from there.
 - Login: the text no longer says the data is stored on this computer, and the last person who logged
