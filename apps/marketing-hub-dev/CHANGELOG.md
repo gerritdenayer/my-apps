@@ -3,12 +3,28 @@
 ## [Unreleased]
 
 ### Added
+- One-time cleanup of the 2026 test year, for admins in Settings > Data & sharing ("Preview
+  cleanup", then "Apply cleanup"). It fills in goals on events (from an event type that was really
+  a goal, which then becomes "Event", or from the A&P category of the linked budget lines), moves
+  budget lines from "ABM - Pan European" to "ABM" and from "Digital or Lead generation campaign" to
+  "Advertising" (keeping their A&P category) and deletes those two types, fills a missing SVP /
+  vertical from an event's single old domain tag and removes the hidden domain tags, and points
+  old "None" SVP values at N.A. Budget lines whose type had been deleted earlier get a real one
+  (content work: "Whitepaper, Content and Sales enablement"; Google / LinkedIn ads: "Advertising").
+  Changed rows are stamped as updated. Afterwards: publish the setup
+  and the budget & events. Running it again finds nothing to do.
 - Goal of a campaign / event: Lead Generation, Awareness or Customer Intimacy, on the Details tab.
   Picking a goal fills the A&P category of the budget line on the Budget tab (Lead generation
   campaigns, Enhance market awareness and perception, Customer intimacy); it stays editable, and
   the event type no longer overrides it once a goal is set. The goal shows on the event card and in
   the hover text, and can be used to group or color the timeline, as agenda lanes or a detail in
   Download agenda, to group Outcomes, and in the Excel export of campaigns & events.
+- The event form's Event type list no longer offers the types that are really goals (Lead
+  generation campaigns, Enhance market awareness and perception, Customer intimacy). Budget lines
+  still have them. An older event that has one of these as its type gets the matching goal filled
+  in when opened, and its type is marked "(a goal: pick an event type)" until it is changed.
+  "Digital or Lead generation campaign" counts as the goal Lead Generation in the same way, and
+  "ABM - Pan European" is no longer offered for events (use ABM).
 - The dev copy shows its own build number (for example 5.2.0-dev.2), raised on every dev push, and
   loads its files with that number so the browser always runs the latest dev code.
 

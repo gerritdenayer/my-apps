@@ -64,7 +64,7 @@
         <tr><td><b>Outcomes</b></td><td>Targets and actuals: engagement, attendees, registrations, MQL, SQL, revenue.</td></tr>
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it.</p>
-      <p><b>Goal</b> is what the item is for: Lead Generation, Awareness or Customer Intimacy. Picking it fills the A&amp;P category on the Budget tab for you (Lead generation campaigns, Enhance market awareness and perception, Customer intimacy); you can still change it there. You can group and color the timeline by goal, use it for agenda lanes and details, and group Outcomes by it.</p>
+      <p><b>Goal</b> is what the item is for: Lead Generation, Awareness or Customer Intimacy. Picking it fills the A&amp;P category on the Budget tab for you (Lead generation campaigns, Enhance market awareness and perception, Customer intimacy); you can still change it there. The event type is the means (Event, Tradeshow, ABM, Advertising...), so types that are really goals are not offered there. You can group and color the timeline by goal, use it for agenda lanes and details, and group Outcomes by it.</p>
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
@@ -109,6 +109,7 @@
         <tr><td><b>Countries, Activity types &amp; A&amp;P, Statuses</b></td><td>The other lists used in budget lines and events.</td></tr>
         <tr><td><b>Users &amp; access</b></td><td>Add users, set role and home cluster, deactivate, reset a password to 1234. Also the admin pin.</td></tr>
         <tr><td><b>Data &amp; sharing</b></td><td>The shared folder, publish setup and budget &amp; events, file dates, backups and Excel exports, the second folder (bridge).</td></tr>
+        <tr><td><b>One-time cleanup</b> (in Data &amp; sharing)</td><td>Tidies the 2026 test-year data once: goals on events, old event types replaced, hidden domain tags turned into SVP / vertical where possible. Preview first, then Apply, then publish the setup and your budget &amp; events.</td></tr>
         <tr><td><b>Bulk import</b></td><td>Load budget lines from an Excel file: pick the sheet, map the columns, check, import.</td></tr>
         <tr><td><b>Deleted items</b></td><td>Restore deleted lines and events, or delete them for good.</td></tr>
       </table>

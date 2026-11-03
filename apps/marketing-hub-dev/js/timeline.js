@@ -794,6 +794,8 @@
     // Budget entity defaults to the organising entity, else the managed line's entity
     const presetEntityId=orgEntId||(managed?managed.entityId:"")||"";
     const presetTypeId=e.activityTypeId||(managed?managed.activityTypeId:"")||"";
+    // An older item whose type is really a goal gets that goal filled in (its type stays until changed).
+    const presetGoal=e.goal||S.goalOfType(presetTypeId)||"";
     const presetStatusId=managed?managed.statusId:defaultStatusId();
     const bFG=managed?(managed.forecastGross||0):0, bFP=managed?(managed.forecastPartner||0):0;
     const bAG=managed?(managed.actualGross||0):0, bAP=managed?(managed.actualPartner||0):0;
@@ -881,9 +883,9 @@
             </div>
             <div class="row-3">
               <div><label>Goal</label>
-                <select id="c-goal"><option value="">Select...</option>${S.GOALS.map(g=>`<option ${e.goal===g.key?"selected":""} value="${g.key}">${S.escapeHtml(g.label)}</option>`).join("")}</select></div>
+                <select id="c-goal"><option value="">Select...</option>${S.GOALS.map(g=>`<option ${presetGoal===g.key?"selected":""} value="${g.key}">${S.escapeHtml(g.label)}</option>`).join("")}</select></div>
               <div><label>Event type</label>
-                <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
+                <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).filter(t=>!S.hiddenEventType(t.id)||t.id===presetTypeId).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}${S.goalOfType(t.id)?" (a goal: pick an event type)":S.hiddenEventType(t.id)?" (no longer used for events)":""}</option>`).join("")}</select></div>
               <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
                 <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
             </div>
@@ -1051,14 +1053,14 @@
       };
     }
 
-    // Kind drives a default activity type: Event -> "Event"; Campaign -> "Digital campaign"
-    // (or Lead generation). Auto-filled on change, still editable.
+    // Kind drives a default event type: Event -> "Event"; Campaign -> "Digital campaign" when the
+    // list has one (otherwise the type is left for the user to pick). Still editable.
     const kindSel=modal.querySelector("#c-kind"), typeSelEl=modal.querySelector("#c-type");
     if(kindSel && typeSelEl){
       const typeIdBy=(names)=>{ for(const n of names){ const t=(data.settings.activityTypes||[]).find(x=>(x.name||"").trim().toLowerCase()===n); if(t) return t.id; } return ""; };
       kindSel.onchange=()=>{
         const id = kindSel.value==="Campaign"
-          ? typeIdBy(["digital campaign","lead generation campaigns","lead generation campaign"])
+          ? typeIdBy(["digital campaign"])
           : typeIdBy(["event"]);
         if(id) typeSelEl.value=id;
         // A campaign is not "part of" another campaign, so hide that field for campaigns.

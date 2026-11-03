@@ -37,6 +37,25 @@
     return c ? c.id : "";
   }
 
+  // An activity type that is really a goal (its name is the A&P category a goal maps to, such as
+  // "Lead generation campaigns"). The event form hides these: the goal is what you want to achieve,
+  // the event type is the means. Returns the goal key, or "".
+  // Types that are goals under another name, and types not offered for events at all.
+  const TYPE_AS_GOAL = { "digital or lead generation campaign": "lead" };
+  const TYPE_NOT_FOR_EVENTS = ["abm - pan european"];
+  function hiddenEventType(typeId) {
+    const t = typeId ? actTypeById(typeId) : null;
+    return !!t && (!!goalOfType(typeId) || TYPE_NOT_FOR_EVENTS.includes((t.name || "").trim().toLowerCase()));
+  }
+  function goalOfType(typeId) {
+    const t = typeId ? actTypeById(typeId) : null;
+    if (!t) return "";
+    const n = (t.name || "").trim().toLowerCase();
+    if (TYPE_AS_GOAL[n]) return TYPE_AS_GOAL[n];
+    const g = GOALS.find((x) => { const ap = apCategoryForGoal(x.key); const c = ap && (state.data.settings.apCategories || []).find((y) => y.id === ap); return c && (c.name || "").trim().toLowerCase() === n; });
+    return g ? g.key : "";
+  }
+
   // Outcome metrics shared by the campaign editor and the Outcomes report.
   // kind "ta" = target/actual pair; kind "pa" = potential/actual pair (revenue).
   const OUTCOME_METRICS = [
@@ -460,7 +479,7 @@
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
-    yearButtons, moreFilters, GOALS, goalLabel, apCategoryForGoal,
+    yearButtons, moreFilters, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
     entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,

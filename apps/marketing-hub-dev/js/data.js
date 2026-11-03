@@ -27,8 +27,10 @@
       ${xlsxExportHtml()}
       ${datasetGridHtml()}
       ${shareCardHtml()}
+      ${window.MB_CLEANUP ? window.MB_CLEANUP.cardHtml() : ""}
     `;
 
+    if (window.MB_CLEANUP) window.MB_CLEANUP.wire(root);
     const fileInput = root.querySelector("#dm-file-input");
     const exporterName = () => {
       const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
