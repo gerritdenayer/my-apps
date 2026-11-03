@@ -53,7 +53,12 @@ def main():
             rel = os.path.relpath(os.path.join(base, fn), PROD)
             if rel in SKIP or fn in SKIP: continue
             if not os.path.exists(os.path.join(DEV, rel)): extra.append(rel)
-    print(f"Released v{ver}: {copied} files copied from dev to production.")
+    # Start the next dev series (next patch number), so dev never shows the released number.
+    maj, mi, pa = (int(x) for x in ver.split("."))
+    nxt = f"{maj}.{mi}.{pa + 1}-dev.0"
+    envp = os.path.join(DEV, "js", "env.js")
+    edit(envp, lambda s: re.sub(r'build: "[^"]*"', f'build: "{nxt}"', s))
+    print(f"Released v{ver}: {copied} files copied from dev to production. Dev continues as {nxt}.")
     if extra:
         print("Files in production that are no longer in dev (not deleted, check them):")
         for e in extra: print("  - " + e)

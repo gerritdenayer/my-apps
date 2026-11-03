@@ -25,7 +25,7 @@ window.MB_CONFIG = {
   const env = (window.MB_ENV && window.MB_ENV.name) || "prod";
   window.MB_CONFIG.env = env;
   if (env !== "dev") return;
-  window.MB_CONFIG.appVersion += "-dev";
+  window.MB_CONFIG.appVersion = window.MB_ENV.build || (window.MB_CONFIG.appVersion + "-dev");
   const P = "mbdev:";
   const sp = Storage.prototype, get = sp.getItem, set = sp.setItem, del = sp.removeItem;
   sp.getItem = function (k) { return get.call(this, P + k); };

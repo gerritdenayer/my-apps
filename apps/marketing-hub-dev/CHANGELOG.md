@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- The dev copy shows its own build number (for example 5.2.0-dev.2), raised on every dev push, and
+  loads its files with that number so the browser always runs the latest dev code.
+
 ### Changed (new interface)
 - Top bar: one status for the shared folder on every tab, "Shared · up to date" or "Shared · 3 changes
   to publish", with a Publish button right next to it when there is something to publish. The
