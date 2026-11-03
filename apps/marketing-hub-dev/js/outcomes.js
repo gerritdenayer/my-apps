@@ -208,6 +208,7 @@
     const totals = totalsOf(rows);
     host.innerHTML = `
       <div class="kpi-row">${kpiCards(totals)}</div>
+      <div id="o-chart-note" class="o-chart-note hidden"></div>
       <div class="chart-wrap"><canvas id="o-chart"></canvas></div>
       <div class="card"><div class="table-wrap">${tableHtml(rows, totals)}</div></div>
     `;
@@ -329,6 +330,15 @@
       ];
       title = label + " (actual vs target)" + byDim;
       yTicks = plain;
+    }
+    // Say so when the results behind the chart have not been entered yet, instead of empty bars.
+    const note = document.getElementById("o-chart-note");
+    if (note) {
+      const first = datasets[0] || { data: [] };
+      const empty = !first.data.some((v) => +v);
+      const what = metric === "revenue" ? "actual revenue" : (first.label || "results").toLowerCase();
+      note.textContent = empty ? `No ${what} entered yet for this selection. Owners add results on the Outcomes tab of each campaign or event.` : "";
+      note.classList.toggle("hidden", !empty);
     }
     view.chart = new Chart(ctx, {
       type: "bar",

@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed (new interface)
+- Top bar: one status for the shared folder on every tab, "Shared · up to date" or "Shared · 3 changes
+  to publish", with a Publish button right next to it when there is something to publish. The
+  Publish and Check for updates buttons on the Budget and Campaigns & events tabs are gone; click the
+  status to load the latest. Your name, role, the admin pin and Switch user are now one user menu.
+- Budget: a compact toolbar on one line: year buttons, cluster, entity, search and "More filters"
+  (month, M1 zone; the number on it shows how many are set), with Columns and "+ New budget line" on
+  the right. The table now fits a laptop and shows the money by default: date, name (with type and
+  vendor under it), entity, status, owner, forecast net and actual net. The other columns are still
+  under Columns (everyone gets this new default once). Totals are at the top. Click a row to open it.
+- Campaigns & events: a compact toolbar on one line: year buttons, cluster, search and "More filters"
+  (kind, quarters, month, M1 zone, entity, country), then Group by and Color by, Download agenda and
+  "+ New". It opens on the current year, and a single year always fits the screen width (January to
+  December), so nothing runs off the right edge. Each row shows the item's name with its entity and
+  dates; the bars no longer repeat the name. The count shows how many items are in view.
+- Event form: "Event type" moved to the Details tab, so every event can have a type, also agenda-only
+  and partner-funded ones. A new budget line takes the type from there.
+- Login: the text no longer says the data is stored on this computer, and the last person who logged
+  in on that computer is selected.
+- Wording: "Edit" instead of "Edit campaign" on the card, and "Event created" / "Campaign created"
+  depending on the item. The form footer reads "Created 16 Jun 2026, 10:47 by ..." and leaves out
+  what is unknown.
+- Event card: the old "Domains" field is no longer shown.
+- Reporting: amounts where actual is above forecast are now dark red on the cluster rows (they were
+  pale pink and hard to read), and a short note explains the red.
+- Outcomes: when no results are entered yet for the selection, a note says so above the chart.
+
 ## [v5.1.18] - 2026-11-02 - Dev and production copies
 
 ### Added

@@ -21,11 +21,11 @@
       <h4>The top bar</h4>
       <table class="help-table">
         <tr><td><b>Inbox N</b></td><td>Events proposed from emails, waiting for your review.</td></tr>
-        <tr><td><b>Shared</b></td><td>You are connected to the shared folder. Click it to check for updates.</td></tr>
+        <tr><td><b>Shared &middot; up to date</b></td><td>You are connected to the shared folder and everything you did is published. Click it to check for updates.</td></tr>
+        <tr><td><b>Shared &middot; 3 changes to publish</b> and <b>Publish</b></td><td>You have changes your colleagues cannot see yet. Click <b>Publish</b> right next to it.</td></tr>
         <tr><td><b>No access</b>, <b>Folder not found</b>, <b>Local only</b></td><td>You are not on the shared data. Click the pill to fix it before you edit.</td></tr>
         <tr><td>Clock icon</td><td>Hover to see when your data and the shared files were last updated.</td></tr>
-        <tr><td><b>Refresh</b></td><td>Loads the latest setup, budget and events from the shared folder.</td></tr>
-        <tr><td><b>Switch user</b></td><td>Log out.</td></tr>
+        <tr><td>Your name</td><td>Opens a small menu: unlock admin settings with the pin, or <b>Switch user</b> to log out.</td></tr>
       </table>` },
 
     { id: "roles", title: "Roles and passwords", tabs: [], html: `
@@ -37,29 +37,29 @@
         <tr><td>Campaigns viewer</td><td>View Campaigns &amp; events only.</td></tr>
       </table>
       <p>Your password works on every computer: it is stored, scrambled, in the shared folder. Forgot it? An admin clicks <b>Reset password</b> in Settings &gt; Users &amp; access, and you log in with 1234 again.</p>
-      <p>The lock icon in the top bar opens the admin parts of Settings for one session with the admin pin.</p>` },
+      <p>Click your name in the top bar and choose "Unlock admin settings (pin)" to open the admin parts of Settings for one session.</p>` },
 
     { id: "budget", title: "Budget", tabs: ["budget"], html: `
       <p>The Budget tab lists every budget line: one cost on one date for one entity. It opens on the current year and on your home cluster, if an admin set one.</p>
       <h4>Filters and columns</h4>
-      <p>Pick the year, M1 zone, cluster and entity at the top, or type in Search. Click a column header to sort or filter that column, Excel-style (for example Quarter "is one of" Q1, Q2). <b>Columns</b> chooses which columns show and in what order.</p>
+      <p>Pick the year with the year buttons, then a cluster and entity, or type in Search. Month and M1 zone are under <b>More filters</b> (the number on it tells how many of those are set). Click a column header to sort or filter that column, Excel-style. <b>Columns</b> chooses which columns show and in what order: by default you see date, name (with type and vendor under it), entity, status, owner and the net amounts; quarter, budget code, SVP / vertical, gross and partner amounts and the rest can be switched on there.</p>
       <h4>Budget left</h4>
       <p>The card above the table shows the yearly budget, planned (forecast net), spent (actual net), left after planned and left after actual. Pick one entity to see its budget code; open <b>Per budget code</b> to see every code in your selection. Red means over budget. The card always covers the whole year: quarter, month and search do not change it.</p>
       <h4>Adding a line</h4>
-      <p>Click <b>+ New budget line</b>, or click a row to edit. Name, date, cluster and entity are required. The cluster and entity lists follow the year of the date, so retired ones (such as Pan European from 2027) are not offered. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
+      <p>Click <b>+ New budget line</b>, or click a row to open it (the &#9776; button on each row also has Copy and Delete). Name, date, cluster and entity are required. The cluster and entity lists follow the year of the date, so retired ones (such as Pan European from 2027) are not offered. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
       <p><b>CustomerLink Campaign</b> takes the link to the campaign in CLinks. When you save, the link is also added to each linked campaign or event, under Content &amp; assets (a changed link replaces the old one there). The CustomerLink column in the table opens it.</p>
-      <p>When you are done, click <b>Publish changes</b> so the team sees it.</p>` },
+      <p>When you are done, click <b>Publish</b> in the top bar so the team sees it.</p>` },
 
     { id: "events", title: "Campaigns & events", tabs: ["timeline"], html: `
       <p>The agenda as a timeline: a bar per campaign or event, a diamond for single-day items, a green euro badge when it has a budget line.</p>
       <p>A <b>campaign</b> is an umbrella; an <b>event</b> has a date and usually a place, and can be part of a campaign.</p>
       <h4>View</h4>
-      <p>Group rows by cluster, campaign, entity, type, kind or owner, and color the bars. Filter on kind, year, quarters, month, scope, country or search. Click a bar to open its card.</p>
+      <p>Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view. Each row shows the item's name with its entity and dates; click the name or the bar to open its card.</p>
       <h4>The form</h4>
       <table class="help-table">
-        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, part of campaign, campaign code, notes, countries.</td></tr>
+        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, event type, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
-        <tr><td><b>Budget</b></td><td>Type, and the budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
+        <tr><td><b>Budget</b></td><td>The budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
         <tr><td><b>Outcomes</b></td><td>Targets and actuals: engagement, attendees, registrations, MQL, SQL, revenue.</td></tr>
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it.</p>
@@ -83,8 +83,8 @@
     { id: "sharing", title: "Publishing and updates", tabs: [], html: `
       <p>Your changes are saved in your browser at once, but colleagues only see them after you <b>publish</b>.</p>
       <ul>
-        <li><b>Publish changes</b> (Budget or Campaigns &amp; events tab) merges your new, changed and deleted rows into the shared files and pulls in colleagues' changes. A colleague's row you did not touch is never removed.</li>
-        <li>When the app opens, and when you click <b>Refresh</b> or <b>Check for updates</b>, it loads the shared data so you see what the team sees.</li>
+        <li><b>Publish</b> (top bar, next to the status) merges your new, changed and deleted rows into the shared files and pulls in colleagues' changes. A colleague's row you did not touch is never removed.</li>
+        <li>When the app opens, and when you click the <b>Shared</b> status in the top bar, it loads the shared data so you see what the team sees.</li>
         <li>If you have unpublished changes at that moment, it asks first: <b>Publish my changes</b> (usual), <b>Decide later</b>, or <b>Discard mine, load shared</b> (cannot be undone).</li>
         <li>When an admin publishes a new setup, a pop-up lists what changed. Click <b>Pull the new setup</b>. Your budget lines and events are not touched.</li>
       </ul>
@@ -115,14 +115,14 @@
 
     { id: "faq", title: "Problems and questions", tabs: [], html: `
       <table class="help-table">
-        <tr><td>A colleague does not see my change</td><td>Click <b>Publish changes</b>, then ask them to click <b>Refresh</b>.</td></tr>
-        <tr><td>I see old data</td><td>Check the pill says <b>Shared</b>, then click <b>Refresh</b>. On <b>No access</b>, click it and allow access.</td></tr>
+        <tr><td>A colleague does not see my change</td><td>Click <b>Publish</b> in the top bar, then ask them to click the <b>Shared</b> status in theirs.</td></tr>
+        <tr><td>I see old data</td><td>Click the <b>Shared</b> status in the top bar to load the latest. On <b>No access</b>, click it and allow access.</td></tr>
         <tr><td>Folder not found</td><td>OneDrive is not syncing or the folder moved. Check OneDrive, then reconnect in Settings &gt; Data &amp; sharing.</td></tr>
         <tr><td>Chrome says "Can't open this folder"</td><td>Pick the MarketingHub folder itself, not Documents or the OneDrive root.</td></tr>
         <tr><td>"A newer setup is available"</td><td>An admin changed the setup. The pop-up lists what. Click <b>Pull the new setup</b>.</td></tr>
         <tr><td>I deleted something by mistake</td><td>An admin restores it in Settings &gt; Deleted items.</td></tr>
         <tr><td>The agenda has many slides</td><td>Use fewer details per box, or filter on one cluster or quarter.</td></tr>
-        <tr><td>I work on two computers</td><td>Publish on the first before you switch, then Refresh on the second.</td></tr>
+        <tr><td>I work on two computers</td><td>Publish on the first before you switch, then click the <b>Shared</b> status on the second.</td></tr>
       </table>` },
 
     { id: "new", title: "What's new", tabs: [], html: `<div id="help-news" class="muted">Loading...</div>` },

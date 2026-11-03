@@ -26,9 +26,9 @@
   // The Budget table columns. key matches the sort key and the cell class (bc-<key>).
   const COLUMNS = [
     { key: "actions", label: "", def: 64 },
-    { key: "date", label: "Date", def: 95 },
+    { key: "date", label: "Date", def: 80 },
     { key: "quarter", label: "Quarter", def: 80 },
-    { key: "name", label: "Name", def: 240 },
+    { key: "name", label: "Name", def: 340 },
     { key: "entity", label: "Entity", def: 150 },
     { key: "code", label: "Budget code", def: 120 },
     { key: "svp", label: "SVP / vertical", def: 130 },
@@ -52,8 +52,11 @@
   view.colOrder = loadOrder();
 
   function loadHidden() {
-    const def = ["createdBy", "createdAt", "updatedBy", "updatedAt"]; // audit columns hidden by default
-    const raw = localStorage.getItem("mb_budget_hidden");
+    // By default the table shows what fits a laptop and matters most: date, name (with type and
+    // vendor under it), entity, status, owner and the net amounts. The rest is one click away in
+    // Columns. (v2 key: everyone gets this default once, then their own choice is kept.)
+    const def = ["quarter", "code", "svp", "type", "vendor", "po", "clink", "fG", "fP", "aG", "aP", "createdBy", "createdAt", "updatedBy", "updatedAt"];
+    const raw = localStorage.getItem("mb_budget_hidden_v2");
     if (raw === null) return new Set(def);
     try { return new Set(JSON.parse(raw)); } catch (e) { return new Set(def); }
   }
@@ -82,7 +85,7 @@
   function loadWidths() { try { return JSON.parse(localStorage.getItem("mb_budget_widths") || "{}") || {}; } catch (e) { return {}; } }
   function saveColPrefs() {
     try {
-      localStorage.setItem("mb_budget_hidden", JSON.stringify([...view.hiddenCols]));
+      localStorage.setItem("mb_budget_hidden_v2", JSON.stringify([...view.hiddenCols]));
       localStorage.setItem("mb_budget_widths", JSON.stringify(view.colWidths));
       localStorage.setItem("mb_budget_order", JSON.stringify(view.colOrder));
     } catch (e) {}
@@ -147,12 +150,12 @@
           <input id="f-search" type="text" value="${S.escapeHtml(view.search)}" placeholder="Name, vendor, PO, notes" />
         </div>
         ${Object.keys(view.colFilters || {}).length ? `<div><label>&nbsp;</label><button id="bc-clear-filters" class="secondary" type="button" title="Remove all column filters">Clear filters (${Object.keys(view.colFilters).length})</button></div>` : ""}
-        <div><label>&nbsp;</label><span class="muted small" style="padding-top:8px; display:inline-block">Tip: click a column header to sort or filter.</span></div>
+        <div class="bar-spacer"></div>
         <div style="position:relative">
           <label>&nbsp;</label>
           <button id="bc-cols-btn" class="secondary" type="button">Columns</button>
           <div id="bc-cols-panel" style="display:none; position:absolute; right:0; top:100%; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:75vh; overflow:auto; min-width:260px;">
-            <div class="muted small" style="margin-bottom:6px">Show and order columns (drag, or use the arrows)</div>
+            <div class="muted small" style="margin-bottom:6px">Show and order columns (drag, or use the arrows). Tip: click a column header to sort or filter.</div>
             ${orderedCols().filter(c => c.key !== "actions").map((c, i, arr) => `<div class="bc-col-row" draggable="true" data-key="${c.key}" style="display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;cursor:grab;">
               <span class="muted" title="Drag to move" style="user-select:none">&#8942;&#8942;</span>
               <label style="display:flex;align-items:center;gap:8px;flex:1;margin:0;cursor:pointer;"><input type="checkbox" class="bc-col-chk" value="${c.key}" ${view.hiddenCols.has(c.key) ? "" : "checked"} /> ${S.escapeHtml(c.label)}</label>
@@ -164,13 +167,6 @@
         </div>
         <div>
           <label>&nbsp;</label>
-          <button id="bud-check" class="secondary" style="display:none" title="Check for updates">Check for updates</button>
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="bud-publish" class="primary" style="display:none; background:#0a7d33;" title="Publish changes">Publish changes</button>
-        </div>
-        <div>
           <button id="add-activity" class="primary">+ New budget line</button>
         </div>
       </div>
@@ -187,21 +183,26 @@
                 }).join("")}
               </tr>
             </thead>
+            <tbody id="activities-foot" class="totals-top"></tbody>
             <tbody id="activities-body"></tbody>
-            <tfoot id="activities-foot"></tfoot>
           </table>
         </div>
       </div>
     `;
 
-    if (window.MB_DATA && window.MB_DATA.wirePublishButton) window.MB_DATA.wirePublishButton(root.querySelector("#bud-publish"));
-    if (window.MB_DATA && window.MB_DATA.wireCheckButton) window.MB_DATA.wireCheckButton(root.querySelector("#bud-check"));
 
     // bind filters
     root.querySelector("#f-year").onchange = (e) => { view.year = +e.target.value; render(); };
     root.querySelector("#f-month").onchange = (e) => { view.monthFilter = e.target.value; renderRows(); };
     S.wireScopeFilter(root, "f", view.scope, renderRows, entityFilterLabel, view.year);
     root.querySelector("#f-search").oninput = (e) => { view.search = e.target.value; renderRows(); };
+    // Compact toolbar: year as buttons; month and M1 zone under "More filters".
+    S.yearButtons(root.querySelector("#f-year"));
+    const fEnt = root.querySelector("#f-entity");
+    S.moreFilters("budget", fEnt && fEnt.closest("div"), [root.querySelector("#f-month").closest("div"), root.querySelector("#f-m1") && root.querySelector("#f-m1").closest("div")]);
+    // Move the search box right after the entity, before "More filters".
+    const srch = root.querySelector("#f-search").closest("div");
+    if (fEnt) fEnt.closest("div").insertAdjacentElement("afterend", srch);
     const canEditBudget = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
     const addBtn = root.querySelector("#add-activity");
     if (canEditBudget) addBtn.onclick = () => openActivityModal(null);
@@ -597,14 +598,15 @@
         const statusName = (st && st.name) ? st.name : "";
         const statusSlug = statusName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const nameHtml = a.name && String(a.name).trim() ? S.escapeHtml(a.name) : "<span class='muted'>(no name)</span>";
-        const dateHtml = a.date ? S.fmtDate(a.date) : "<span class='muted'>(no date)</span>";
+        const dateHtml = a.date ? shortDate(a.date) : "<span class='muted'>(no date)</span>";
+        const subTxt = [at ? at.name : "", a.vendor || ""].filter(Boolean).join(" \u00b7 ");
         const cells = {
           actions: `<td class="bc-actions actions-cell">
               ${canEditRows ? `<button class="icon row-menu" title="Actions" aria-label="Actions">&#9776;</button>` : "<span class='muted'>-</span>"}
             </td>`,
           date: `<td class="bc-date">${dateHtml}</td>`,
           quarter: `<td class="bc-quarter">${quarterOf(a) || "<span class='muted'>-</span>"}</td>`,
-          name: `<td class="bc-name">${nameHtml}</td>`,
+          name: `<td class="bc-name" title="${S.escapeHtml(a.name || "")}"><span class="bn-main">${nameHtml}</span>${subTxt ? `<span class="bn-sub">${S.escapeHtml(subTxt)}</span>` : ""}</td>`,
           entity: `<td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>`,
           code: `<td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>`,
           svp: `<td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>`,
@@ -646,14 +648,25 @@
       return `<td class="bc-${c.key}">${c.key === labelKey ? `Total (${rows.length})` : ""}</td>`;
     }).join("")}</tr>`;
 
-    // bind row actions: one menu button per row opens Edit / Copy / Delete
+    // bind row actions: click a row to open it; the menu button per row has Edit / Copy / Delete
     if (!canEditRows) return;
+    tbody.querySelectorAll("tr[data-id]").forEach((tr) => {
+      tr.classList.add("clickable-row");
+      tr.onclick = (e) => { if (e.target.closest("a, button")) return; openActivityModal(tr.dataset.id); };
+    });
     tbody.querySelectorAll(".row-menu").forEach((btn) => {
       const id = btn.closest("tr").dataset.id;
       btn.onclick = (e) => { e.stopPropagation(); openRowMenu(btn, id); };
     });
   }
 
+  // "01 Feb": the year is already chosen above the table, so it is left out to save room.
+  function shortDate(iso) {
+    const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const y = String(iso).slice(0, 4), m = +String(iso).slice(5, 7), d = String(iso).slice(8, 10);
+    if (!m || !d) return S.fmtDate(iso);
+    return `${d} ${M[m - 1]}` + (+y !== view.year ? ` ${y}` : "");
+  }
   function openActivityModal(id, preset) {
     const data = S.state.data;
     const isEdit = !!id;

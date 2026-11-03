@@ -15,7 +15,7 @@
   <div id="login-overlay" class="overlay">
     <div class="login-card">
       <h1>Marketing Hub <span class="appver" id="login-version"></span></h1>
-      <p class="muted">Pick your name to start. All data is stored on this computer.</p>
+      <p class="muted">Pick your name to start. Your team's budget and agenda are shared through the team folder.</p>
       <div id="login-error" class="error hidden"></div>
       <label for="login-user">User</label>
       <select id="login-user"><option value="">Loading...</option></select>
@@ -46,7 +46,7 @@
     </nav>
     <div class="user-area">
       <button id="inbox-pill" class="inbox-pill hidden" type="button" title="Events proposed from email, waiting for your review"></button>
-      <button id="share-pill" class="share-pill hidden" type="button"></button>
+      <span class="sync-group"><button id="share-pill" class="share-pill hidden" type="button"></button><button id="hdr-publish" class="hdr-publish hidden" type="button" title="Publish your budget &amp; events changes to the shared folder">Publish</button></span>
       <button id="help-btn" class="link info-btn help-btn" type="button" title="Help (press ?)" aria-label="Help">?</button>
       <span class="info-wrap">
         <button id="info-btn" class="link info-btn" type="button" aria-label="Last updated">
@@ -58,12 +58,20 @@
           <div id="shared-updated"></div>
         </div>
       </span>
-      <span id="current-user" class="muted"></span>
-      <span id="role-badge" class="role-badge"></span>
       <span id="sync-status" class="sync">Idle</span>
       <button id="refresh-btn" class="link hidden" title="Check the shared folder for a new setup and new budget & events">&#8635; Refresh</button>
-      <button id="lock-btn" class="link" title="Admin access">&#128274;</button>
-      <button id="logout-btn" class="link">Switch user</button>
+      <span class="user-wrap">
+        <button id="user-btn" class="user-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span id="user-initials" class="user-initials" aria-hidden="true"></span>
+          <span id="current-user"></span>
+          <span id="role-badge" class="role-badge"></span>
+          <span aria-hidden="true" class="user-caret">&#9662;</span>
+        </button>
+        <div id="user-menu" class="user-menu hidden" role="menu">
+          <button id="lock-btn" type="button" role="menuitem">Unlock admin settings (pin)...</button>
+          <button id="logout-btn" type="button" role="menuitem">Switch user</button>
+        </div>
+      </span>
     </div>
   </header>
   <div id="share-banner" class="share-banner hidden"></div>

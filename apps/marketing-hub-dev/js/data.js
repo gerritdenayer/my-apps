@@ -1079,6 +1079,45 @@
     return { state: "ok", dir, bridge };
   }
   let bannerDismissed = false;
+  // ---- Header publish status ----
+  // How many budget lines and events differ from the last sync (new, changed or deleted here).
+  let lastShareState = "";
+  function countUnpublished() {
+    let base = null;
+    try { base = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { base = null; }
+    if (!base) return 0;
+    let n = 0;
+    [["a", "activities"], ["e", "events"]].forEach(([k, key]) => {
+      const B = Object.fromEntries((base[k] || []).map((x) => [x.id, x]));
+      const L = S.state.data[key] || [];
+      const ids = new Set(L.map((x) => x.id));
+      L.forEach((x) => { if (!B[x.id] || JSON.stringify(x) !== JSON.stringify(B[x.id])) n++; });
+      Object.keys(B).forEach((id) => { if (!ids.has(id)) n++; });
+    });
+    return n;
+  }
+  // The Publish button next to the status in the header (shown only when there is something to publish).
+  function updateHeaderPublish() {
+    const btn = document.getElementById("hdr-publish");
+    if (!btn) return;
+    const show = lastShareState === "ok" && budgetEventsDirty();
+    btn.classList.toggle("hidden", !show);
+    btn.onclick = async () => { btn.disabled = true; try { await publishBudgetEvents(); } finally { btn.disabled = false; } updateShareIndicator(); };
+  }
+  // Keep the header status current while people edit (cheap: no folder access).
+  let hdrTimer = null;
+  S.subscribe(() => {
+    clearTimeout(hdrTimer);
+    hdrTimer = setTimeout(() => {
+      if (lastShareState !== "ok") return;
+      const pill = document.getElementById("share-pill");
+      if (!pill) return;
+      const n = countUnpublished();
+      pill.className = "share-pill " + (n ? "pending" : "ok");
+      pill.innerHTML = `<span class="sp-dot"></span>Shared${n ? ` \u00b7 ${n} change${n === 1 ? "" : "s"} to publish` : " \u00b7 up to date"}`;
+      updateHeaderPublish();
+    }, 300);
+  });
   async function updateShareIndicator() {
     const pill = document.getElementById("share-pill");
     const banner = document.getElementById("share-banner");
@@ -1095,6 +1134,13 @@
       none: { cls: "off", text: "Local only", title: "Not connected to a shared folder: your data is only on this computer. Click to set it up." },
       unsupported: { cls: "off", text: "Local only", title: "This browser cannot use a shared folder. Use Chrome or Edge to share data with your team." },
     }[st.state];
+    lastShareState = st.state;
+    if (st.state === "ok") {
+      const n = countUnpublished();
+      P.cls = n ? "pending" : "ok";
+      P.text += n ? ` \u00b7 ${n} change${n === 1 ? "" : "s"} to publish` : " \u00b7 up to date";
+    }
+    updateHeaderPublish();
     pill.className = "share-pill " + P.cls;
     pill.innerHTML = `<span class="sp-dot"></span>${P.text}`;
     pill.title = P.title;
