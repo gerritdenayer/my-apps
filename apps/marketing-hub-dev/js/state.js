@@ -22,6 +22,21 @@
     });
   }
 
+  // Goal of a campaign / event. Each goal fills the matching A&P category (matched by name in the
+  // setup's A&P list, so it keeps working when ids differ between computers).
+  const GOALS = [
+    { key: "lead", label: "Lead Generation", ap: "lead generation" },
+    { key: "awareness", label: "Awareness", ap: "awareness" },
+    { key: "intimacy", label: "Customer Intimacy", ap: "customer intimacy" },
+  ];
+  function goalLabel(key) { const g = GOALS.find((x) => x.key === key); return g ? g.label : ""; }
+  function apCategoryForGoal(key) {
+    const g = GOALS.find((x) => x.key === key);
+    if (!g) return "";
+    const c = (state.data.settings.apCategories || []).find((x) => (x.name || "").toLowerCase().includes(g.ap));
+    return c ? c.id : "";
+  }
+
   // Outcome metrics shared by the campaign editor and the Outcomes report.
   // kind "ta" = target/actual pair; kind "pa" = potential/actual pair (revenue).
   const OUTCOME_METRICS = [
@@ -445,7 +460,7 @@
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
-    yearButtons, moreFilters,
+    yearButtons, moreFilters, GOALS, goalLabel, apCategoryForGoal,
     entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,

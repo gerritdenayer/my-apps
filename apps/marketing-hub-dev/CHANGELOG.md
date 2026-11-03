@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Added
+- Goal of a campaign / event: Lead Generation, Awareness or Customer Intimacy, on the Details tab.
+  Picking a goal fills the A&P category of the budget line on the Budget tab (Lead generation
+  campaigns, Enhance market awareness and perception, Customer intimacy); it stays editable, and
+  the event type no longer overrides it once a goal is set. The goal shows on the event card and in
+  the hover text, and can be used to group or color the timeline, as agenda lanes or a detail in
+  Download agenda, to group Outcomes, and in the Excel export of campaigns & events.
 - The dev copy shows its own build number (for example 5.2.0-dev.2), raised on every dev push, and
   loads its files with that number so the browser always runs the latest dev code.
 

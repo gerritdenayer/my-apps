@@ -148,12 +148,12 @@
     const rows = (D.events || []).filter((e) => S.inPeriodQ(e.start, year, quarters, "")).map((e) => {
       const en = S.entityById(e.entityId) || {};
       return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
-        (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
+        S.goalLabel(e.goal), (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
         (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", campN(e),
         S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
     });
     writeSheet("campaigns-events", "Events",
-      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
+      ["Start", "End", "Name", "Kind", "Goal", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
       rows);
   }
 

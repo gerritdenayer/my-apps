@@ -136,6 +136,7 @@
     if(dim==="type"){ const t=e.activityTypeId?S.actTypeById(e.activityTypeId):null; return t?t.name:"Unspecified"; }
     if(dim==="cluster") return clusterOf(e);
     if(dim==="campaign") return campaignNameOf(e);
+    if(dim==="goal") return S.goalLabel(e.goal)||"No goal";
     if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP / vertical"; }
     return e[dim]||"Unspecified";
   }
@@ -224,11 +225,11 @@
         <div class="bar-divider" aria-hidden="true"></div>
         <div><label>Group by</label>
           <select id="tl-group">
-            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None"]],view.groupBy)}
+            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["goal","Goal"],["none","None"]],view.groupBy)}
           </select></div>
         <div><label>Color by</label>
           <select id="tl-color">
-            ${opt([["kind","Event / Campaign"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
+            ${opt([["kind","Event / Campaign"],["goal","Goal"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
           </select></div>
         <div class="bar-spacer"></div>
         <div><label>&nbsp;</label><div><button id="tl-ppt" class="secondary" title="Download the current filtered view as a roadmap slide (PowerPoint)">Download agenda</button></div></div>
@@ -340,7 +341,7 @@
     const leg=document.getElementById("tl-legend");
     if(!leg) return;
     const cats=catList(events,view.colorBy);
-    const colorLabel={kind:"Event / Campaign",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
+    const colorLabel={kind:"Event / Campaign",goal:"Goal",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
     leg.innerHTML=`<span>Color by ${colorLabel}:</span>`+
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:#999"></span>single-day</span>`+
@@ -381,6 +382,7 @@
   }
   const AGENDA_FIELDS=[
     {key:"dates",    label:"Dates",             get:e=>fmtRange(e.start,e.end)},
+    {key:"goal",     label:"Goal",              get:e=>S.goalLabel(e.goal)},
     {key:"type",     label:"Event type",        get:e=>e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):""},
     {key:"owner",    label:"Owner",             get:e=>S.eventOwnerName(e)||""},
     {key:"entity",   label:"Organising entity", get:e=>S.eventEntityName(e)||""},
@@ -435,7 +437,7 @@
         <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
       </div>
       <div class="row">
-        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["goal","Goal"],["none","None (one lane)"]],groupBy)}</select></div>
         <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
       </div>
       <div class="row">
@@ -584,6 +586,7 @@
     return [
       e.name,
       `Kind: ${e.kind||"Event"}`,
+      `Goal: ${S.goalLabel(e.goal)||"-"}`,
       `Dates: ${dates}`,
       `Activity type: ${at||"-"}`,
       `Cluster: ${clusterOf(e)}`,
@@ -707,6 +710,7 @@
         <div><div class="lab">Cluster</div>${S.escapeHtml(clusterOf(e))}</div>
         <div><div class="lab">Owner</div>${S.escapeHtml(S.eventOwnerName(e)||"-")}</div>
         <div><div class="lab">Campaign code</div>${S.escapeHtml(e.campaignCode||"-")}</div>
+        <div><div class="lab">Goal</div>${S.escapeHtml(S.goalLabel(e.goal)||"-")}</div>
         <div><div class="lab">Countries</div>${S.escapeHtml(S.countryNamesOf(e.countryIds).join(", ")||"-")}</div>
       </div>
       ${false?`<div style="margin:6px 0"><div class="lab" style="color:#888;font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
@@ -876,11 +880,16 @@
                 <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${S.canonicalSvpId(e.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
             </div>
             <div class="row-3">
+              <div><label>Goal</label>
+                <select id="c-goal"><option value="">Select...</option>${S.GOALS.map(g=>`<option ${e.goal===g.key?"selected":""} value="${g.key}">${S.escapeHtml(g.label)}</option>`).join("")}</select></div>
               <div><label>Event type</label>
                 <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
               <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
                 <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
+            </div>
+            <div class="row-3">
               <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
+              <div></div><div></div>
             </div>
             <label>Notes</label>
             <textarea id="c-info" rows="4">${S.escapeHtml(e.info||"")}</textarea>
@@ -1095,7 +1104,17 @@
     };
     // Default the A&P category to the chosen type's category (still editable).
     const cTypeSel=modal.querySelector("#c-type"), cApcatSel=modal.querySelector("#c-bapcat");
-    if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{ const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId; });
+    const cGoalSel=modal.querySelector("#c-goal");
+    if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{
+      if(cGoalSel && cGoalSel.value && S.apCategoryForGoal(cGoalSel.value)) return; // the goal decides
+      const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId;
+    });
+    // Goal -> A&P category on the Budget tab (Lead Generation, Awareness, Customer Intimacy).
+    if(cGoalSel && cApcatSel){
+      const applyGoal=()=>{ const ap=S.apCategoryForGoal(cGoalSel.value); if(ap) cApcatSel.value=ap; };
+      cGoalSel.addEventListener("change", applyGoal);
+      if(cGoalSel.value && !cApcatSel.value) applyGoal();
+    }
 
     // Live: entering an actual value flips a Planned (or blank) budget status to Committed.
     const cbStatus=modal.querySelector("#c-bstatus"), cbAg=modal.querySelector("#c-bag"), cbAp=modal.querySelector("#c-bap");
@@ -1303,6 +1322,7 @@
         ownerId:modal.querySelector("#c-owner").value,
         svpId, campaignId,
         campaignCode:modal.querySelector("#c-code").value.trim(),
+        goal:modal.querySelector("#c-goal").value||undefined,
         info:modal.querySelector("#c-info").value,
         countryIds,
         partners, content, outcomes,

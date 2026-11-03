@@ -58,12 +58,13 @@
       <p><b>Names</b> (right above the timeline) chooses where the names show: <b>On the timeline</b>, next to each bar or diamond with the entity in the left column (the classic look, as in the presentations), <b>In the list</b>, in the left column with the entity and dates under each name, or <b>Both</b>. Your choice is remembered.</p>
       <h4>The form</h4>
       <table class="help-table">
-        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, event type, part of campaign, campaign code, notes, countries.</td></tr>
+        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, goal, event type, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
         <tr><td><b>Budget</b></td><td>The budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
         <tr><td><b>Outcomes</b></td><td>Targets and actuals: engagement, attendees, registrations, MQL, SQL, revenue.</td></tr>
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it.</p>
+      <p><b>Goal</b> is what the item is for: Lead Generation, Awareness or Customer Intimacy. Picking it fills the A&amp;P category on the Budget tab for you (Lead generation campaigns, Enhance market awareness and perception, Customer intimacy); you can still change it there. You can group and color the timeline by goal, use it for agenda lanes and details, and group Outcomes by it.</p>
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
@@ -78,7 +79,7 @@
 
     { id: "outcomes", title: "Outcomes", tabs: ["outcomes"], html: `
       <p>What campaigns and events delivered against what they cost. Results come from each item's Outcomes tab; spend comes from its linked budget lines (a line linked to several events is split equally).</p>
-      <p>Group by M1 zone, cluster, entity, SVP / vertical, month or quarter. You see revenue against spend, attendees, registrations, MQL, SQL, engagement, revenue ROI and cost per MQL, SQL and attendee.</p>
+      <p>Group by M1 zone, cluster, entity, SVP / vertical, goal, month or quarter. You see revenue against spend, attendees, registrations, MQL, SQL, engagement, revenue ROI and cost per MQL, SQL and attendee.</p>
       <p>Outcomes is only as good as what is filled in: enter actuals after each event and link the right budget lines.</p>` },
 
     { id: "sharing", title: "Publishing and updates", tabs: [], html: `

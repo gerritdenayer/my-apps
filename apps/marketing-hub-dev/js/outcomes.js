@@ -16,7 +16,7 @@
     chart: null,
   };
 
-  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", month: "Month", quarter: "Quarter" };
+  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", goal: "Goal", month: "Month", quarter: "Quarter" };
   const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"], ["roi", "Revenue ROI"], ["costmql", "Cost per MQL"], ["costsql", "Cost per SQL"], ["costatt", "Cost per attendee"]];
   const COST_MAP = { costmql: ["spendMql", "mql", "Cost per MQL"], costsql: ["spendSql", "sql", "Cost per SQL"], costatt: ["spendAtt", "attendees", "Cost per attendee"] };
 
@@ -82,6 +82,10 @@
       if (!p) return { key: "0000-0", label: "No date" };
       const q = Math.floor(p.m / 3) + 1;
       return { key: `${p.y}-${q}`, label: `Q${q} ${p.y}` };
+    }
+    if (view.dim === "goal") {
+      const g = S.goalLabel(ev.goal);
+      return { key: ev.goal || "_none", label: g || "No goal" };
     }
     if (view.dim === "svp") {
       const svp = ev.svpId ? S.svpById(ev.svpId) : null;
