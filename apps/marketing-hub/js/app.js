@@ -18,7 +18,15 @@
     document.getElementById("login-btn").onclick = onLogin;
     const loginPass = document.getElementById("login-pass");
     if (loginPass) loginPass.onkeydown = (e) => { if (e.key === "Enter") onLogin(); };
-    document.getElementById("logout-btn").onclick = onLogout;
+    document.getElementById("logout-btn").onclick = () => { closeUserMenu(); onLogout(); };
+    // User menu: your name and role in one button; admin pin and Switch user inside it.
+    const userBtn = document.getElementById("user-btn"), userMenu = document.getElementById("user-menu");
+    function closeUserMenu() { if (userMenu) { userMenu.classList.add("hidden"); userBtn.setAttribute("aria-expanded", "false"); } }
+    if (userBtn && userMenu) {
+      userBtn.onclick = (e) => { e.stopPropagation(); const open = userMenu.classList.contains("hidden"); userMenu.classList.toggle("hidden", !open); userBtn.setAttribute("aria-expanded", open ? "true" : "false"); };
+      document.addEventListener("click", closeUserMenu);
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeUserMenu(); });
+    }
 
     // First-time setup: point this browser at the team's shared folder from the login screen.
     const connectBtn = document.getElementById("login-connect");
@@ -67,6 +75,7 @@
 
     const lockBtn = document.getElementById("lock-btn");
     if (lockBtn) lockBtn.onclick = () => {
+      const um = document.getElementById("user-menu"); if (um) um.classList.add("hidden");
       window.MB_AUTH.promptPin(() => { window.MB_AUTH.applyTabVisibility(); switchTab("settings"); });
     };
 
@@ -163,7 +172,8 @@
 
       const userSel = document.getElementById("login-user");
       const users = (data.settings.users || []).filter((u) => u.active !== false);
-      const remembered = localStorage.getItem(LS_USER);
+      // Preselect whoever logged in last on this computer (kept after Switch user, too).
+      const remembered = localStorage.getItem(LS_USER) || localStorage.getItem("mb_last_user");
       if (users.length === 0) {
         userSel.innerHTML = `<option value="__new__">+ Add new user...</option>`;
       } else {
@@ -255,7 +265,10 @@
   function finishLogin(user) {
     S.state.currentUserId = user.id;
     localStorage.setItem(LS_USER, user.id);
+    try { localStorage.setItem("mb_last_user", user.id); } catch (e) {}
     document.getElementById("current-user").textContent = user.name || "Unknown";
+    const ini = document.getElementById("user-initials");
+    if (ini) ini.textContent = String(user.name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
     const passEl = document.getElementById("login-pass");
     if (passEl) passEl.value = "";
     showApp();
@@ -308,6 +321,8 @@
     window.MB_AUTH.applyTabVisibility();
     switchTab(window.MB_AUTH.firstAllowedTab());
     if (window.MB_DATA && window.MB_DATA.initSharedRefresh) window.MB_DATA.initSharedRefresh();
+    // First time on a new release: a short "What's new" (production only, once per release).
+    if (window.MB_HELP && window.MB_HELP.maybeShowWhatsNew) window.MB_HELP.maybeShowWhatsNew();
   }
 
   // ---- Settings sub-menu ----
@@ -321,7 +336,7 @@
     { group: "Lists" },
     { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
     { key: "countries", label: "Countries", tab: "settings", admin: true },
-    { key: "types", label: "Activity types & A&P", tab: "settings", admin: true },
+    { key: "types", label: "Event types & A&P", tab: "settings", admin: true },
     { key: "statuses", label: "Statuses", tab: "settings", admin: true },
     { group: "Team & data" },
     { key: "users", label: "Users & access", tab: "users", admin: true },

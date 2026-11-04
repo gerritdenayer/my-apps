@@ -9,15 +9,38 @@
 
   const PALETTE = ["#ff7900", "#4bb4e6", "#50be87", "#a885d8", "#ffb000",
                    "#ff5e8a", "#00c1b2", "#9ad14b", "#e8762b", "#7d8fff"];
-  const LABELW = 230, PXDAY = 3.6, ROWH = 30;
+  // LABELW: the left column (item name, then entity and dates). PXDAY: day width when several
+  // years are shown; one year (or less) is stretched to fill the screen width instead.
+  const LABELW = 280, PXDAY = 3.6, ROWH = 38;
 
-  const view = { groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
+  // Where item names show: "chart" next to the bars (the classic look used in presentations),
+  // "list" in the left column (name, entity and dates), or "both". Remembered per browser.
+  const NAMES_KEY = "mb_tl_names";
+  const loadNames = () => { try { const v = localStorage.getItem(NAMES_KEY); return ["chart", "list", "both"].includes(v) ? v : "chart"; } catch (e) { return "chart"; } };
+  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
 
   function ensureStyles() {
     if (document.getElementById("tl-styles")) return;
     const css = `
     #tab-timeline .tl-toolbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:12px}
-    #tab-timeline .tl-toolbar .grow{flex:1;min-width:160px}
+    #tab-timeline .tl-toolbar{gap:10px 10px}
+    #tab-timeline .tl-toolbar > div{min-width:0}
+    #tab-timeline .tl-toolbar .grow{flex:1 1 140px;min-width:130px;max-width:260px}
+    #tab-timeline .tl-rowlabel{flex-direction:column;align-items:flex-start !important;justify-content:center;cursor:pointer;line-height:1.25}
+    #tab-timeline .tl-rl-name{font-size:12.5px;font-weight:500;color:#1f2937;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    #tab-timeline .tl-rl-sub{font-size:11px;color:#6b7280;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    #tab-timeline .tl-rowlabel:hover .tl-rl-name{color:#c2410c;text-decoration:underline}
+    #tab-timeline .tl-rowlabel:hover .tl-rl-plain{color:#1f2937;text-decoration:none}
+    #tab-timeline .tl-rl-plain{font-weight:400;font-size:12px}
+    #tab-timeline .tl-names{gap:4px;margin-left:8px}
+    #tab-timeline .tl-nm{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;color:#374151;cursor:pointer}
+    #tab-timeline .tl-nm.on{background:#1f2937;border-color:#1f2937;color:#fff}
+    #tab-timeline.tl-compact .tl-row{height:30px}
+    #tab-timeline.tl-compact .tl-bar,#tab-timeline.tl-compact .tl-barlabel,#tab-timeline.tl-compact .tl-diflabel{top:6px}
+    #tab-timeline.tl-compact .tl-diamond{top:7px}
+    #tab-timeline .tl-bar,#tab-timeline .tl-barlabel{top:10px}
+    #tab-timeline .tl-diamond{top:11px}
+    #tab-timeline .tl-diflabel{top:10px}
     #tab-timeline .tl-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:4px 0 10px;font-size:12px;color:#555}
     #tab-timeline .tl-legend .k{display:flex;align-items:center;gap:6px}
     #tab-timeline .tl-swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
@@ -113,6 +136,7 @@
     if(dim==="type"){ const t=e.activityTypeId?S.actTypeById(e.activityTypeId):null; return t?t.name:"Unspecified"; }
     if(dim==="cluster") return clusterOf(e);
     if(dim==="campaign") return campaignNameOf(e);
+    if(dim==="goal") return S.goalLabel(e.goal)||"No goal";
     if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP / vertical"; }
     return e[dim]||"Unspecified";
   }
@@ -160,6 +184,8 @@
     return `<h3 style="margin:12px 0 2px">Outcomes</h3><div class="tl-rollup">${cells.join("")}</div>`;
   }
 
+  let tlResize=null;
+  window.addEventListener("resize",()=>{ clearTimeout(tlResize); tlResize=setTimeout(()=>{ const t=document.getElementById("tab-timeline"); if(t&&t.classList.contains("active")&&S.state.data) render(); },200); });
   // ---------- render ----------
   function render(){
     ensureStyles();
@@ -171,41 +197,46 @@
       view._forUser = S.state.currentUserId;
       const u = S.state.currentUserId ? S.userById(S.state.currentUserId) : null;
       view.country = (u && u.homeCountryId) || "";
+      // Open on one year (this year if it has items, else the latest), so the timeline fits the screen.
+      if (!view.year) {
+        const ys = tlYears(data.events || []), now = new Date().getFullYear();
+        view.year = ys.includes(now) ? String(now) : (ys.length ? String(ys[ys.length - 1]) : "");
+      }
     }
     const events=data.events||[];
 
     root.innerHTML=`
       <div class="tl-toolbar filter-bar">
-        <div><label>Group</label>
-          <select id="tl-group">
-            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["none","None"]],view.groupBy)}
-          </select></div>
-        <div><label>Color</label>
-          <select id="tl-color">
-            ${opt([["kind","Event / Campaign"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
-          </select></div>
-        <div><label>Kind</label>
-          <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
         <div><label>Year</label>
-          <select id="tl-year"><option value="">All</option>${tlYears(events).map(y=>`<option ${String(view.year)===String(y)?"selected":""} value="${y}">${y}</option>`).join("")}</select></div>
-        <div><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
-        <div><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
+          <select id="tl-year">${tlYears(events).map(y=>`<option ${String(view.year)===String(y)?"selected":""} value="${y}">${y}</option>`).join("")}<option value="" ${!view.year?"selected":""}>All</option></select></div>
         ${S.scopeFilterHtml("tl", view.scope, null, view.year?+view.year:0)}
+        <div class="grow tl-searchbox"><label>Search</label>
+          <input id="tl-search" type="text" value="${S.escapeHtml(view.q)}" placeholder="Name, owner, type" /></div>
+        <div class="tl-more-kind"><label>Kind</label>
+          <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
+        <div class="tl-more-q"><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
+        <div class="tl-more-month"><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
         ${(data.settings.countries||[]).length ? `<div><label>Country</label>
           <select id="tl-country">
             <option value="">All countries</option>
             ${(data.settings.countries||[]).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"",undefined,{sensitivity:"base"})).map(c=>`<option ${view.country===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
             <option value="__untagged" ${view.country==="__untagged"?"selected":""}>(untagged)</option>
           </select></div>` : ""}
-        <div class="grow"><label>Search</label>
-          <input id="tl-search" type="text" value="${S.escapeHtml(view.q)}" placeholder="Name, owner, domain, type" /></div>
+        <div class="bar-divider" aria-hidden="true"></div>
+        <div><label>Group by</label>
+          <select id="tl-group">
+            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["goal","Goal"],["none","None"]],view.groupBy)}
+          </select></div>
+        <div><label>Color by</label>
+          <select id="tl-color">
+            ${opt([["kind","Event / Campaign"],["goal","Goal"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
+          </select></div>
+        <div class="bar-spacer"></div>
         <div><label>&nbsp;</label><div><button id="tl-ppt" class="secondary" title="Download the current filtered view as a roadmap slide (PowerPoint)">Download agenda</button></div></div>
-        <div><label>&nbsp;</label><div><button id="tl-check" class="secondary" style="display:none" title="Check for updates">Check for updates</button></div></div>
-        <div><label>&nbsp;</label><div><button id="tl-publish" class="primary" style="display:none; background:#0a7d33;" title="Publish changes">Publish changes</button></div></div>
-        <div><label>&nbsp;</label><div><button id="tl-add" class="primary">New</button></div></div>
+        <div><label>&nbsp;</label><div><button id="tl-add" class="primary" title="New campaign or event">+ New</button></div></div>
       </div>
       <div class="tl-sub">
-        <span>${events.length} campaigns &amp; events</span>
+        <span id="tl-count">${events.length} campaigns &amp; events</span>
       </div>
       <div class="tl-legend" id="tl-legend"></div>
       <div class="tl-scroll"><div class="tl-chart" id="tl-chart">
@@ -229,8 +260,12 @@
     const addBtn=root.querySelector("#tl-add");
     if(canEdit) addBtn.onclick=()=>openCampaignModal(null);
     else addBtn.style.display="none";
-    if(window.MB_DATA && window.MB_DATA.wirePublishButton) window.MB_DATA.wirePublishButton(root.querySelector("#tl-publish"));
-    if(window.MB_DATA && window.MB_DATA.wireCheckButton) window.MB_DATA.wireCheckButton(root.querySelector("#tl-check"));
+    // Compact toolbar: year as buttons; the less-used filters under "More filters".
+    S.yearButtons(root.querySelector("#tl-year"));
+    const pick=(sel)=>{ const el=root.querySelector(sel); return el?el.closest("div"):null; };
+    S.moreFilters("timeline", root.querySelector(".tl-searchbox"), [
+      root.querySelector(".tl-more-kind"), root.querySelector(".tl-more-q"), root.querySelector(".tl-more-month"),
+      pick("#tl-m1"), pick("#tl-entity"), pick("#tl-country")]);
     const pptBtn=root.querySelector("#tl-ppt");
     if(pptBtn) pptBtn.onclick=()=>{
       if(!window.MB_PPT) return S.toast("Export not available.","error");
@@ -270,9 +305,14 @@
   function geom(events){
     const yb=periodWindow()||yearBounds(events);
     const totalDays=dayDiff(yb.start,yb.end)+1;
-    return { yb, totalDays, trackW:Math.round(totalDays*PXDAY) };
+    // One year or less: stretch the days so the whole period fits the width, nothing off-screen.
+    let px=PXDAY;
+    const sc=document.querySelector("#tab-timeline .tl-scroll");
+    const avail=sc?sc.clientWidth-LABELW-2:0;
+    if(totalDays<=366 && avail>300) px=avail/totalDays;
+    return { yb, totalDays, px, trackW:Math.floor(totalDays*px) };
   }
-  function xOf(date,g){ return clamp(dayDiff(g.yb.start,date),0,g.totalDays)*PXDAY; }
+  function xOf(date,g){ return clamp(dayDiff(g.yb.start,date),0,g.totalDays)*g.px; }
 
   function buildMonths(events){
     const g=geom(events);
@@ -283,7 +323,7 @@
     let d=new Date(g.yb.start);
     while(d<=g.yb.end){
       const next=new Date(d.getFullYear(),d.getMonth()+1,1);
-      const w=dayDiff(d,next)*PXDAY;
+      const w=dayDiff(d,next)*g.px;
       const q=Math.floor(d.getMonth()/3)%2===1;
       const jan=d.getMonth()===0;
       const lbl=jan?`${d.toLocaleDateString("en-GB",{month:"short"})} ${d.getFullYear()}`:d.toLocaleDateString("en-GB",{month:"short"});
@@ -301,12 +341,16 @@
     const leg=document.getElementById("tl-legend");
     if(!leg) return;
     const cats=catList(events,view.colorBy);
-    const colorLabel={kind:"Event / Campaign",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
+    const colorLabel={kind:"Event / Campaign",goal:"Goal",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
     leg.innerHTML=`<span>Color by ${colorLabel}:</span>`+
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:#999"></span>single-day</span>`+
       `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#3b6d11;color:#fff;font-weight:700;font-size:10px">€</span> has budget</span>`+
-      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed #555"></span> spans beyond period</span>`:"");
+      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed #555"></span> spans beyond period</span>`:"")+
+      `<span class="k tl-names" role="group" aria-label="Show names"><span>Names:</span>${[["chart","On the timeline"],["list","In the list"],["both","Both"]].map(([v,l])=>`<button type="button" class="tl-nm${view.names===v?" on":""}" data-v="${v}" aria-pressed="${view.names===v}">${l}</button>`).join("")}</span>`;
+    leg.querySelectorAll(".tl-nm").forEach(b=>b.onclick=()=>{ view.names=b.dataset.v; try{ localStorage.setItem(NAMES_KEY,view.names); }catch(e){} drawRows(); });
+    const tab=document.getElementById("tab-timeline");
+    if(tab) tab.classList.toggle("tl-compact", view.names==="chart");
   }
 
   function tlYears(events){
@@ -338,6 +382,7 @@
   }
   const AGENDA_FIELDS=[
     {key:"dates",    label:"Dates",             get:e=>fmtRange(e.start,e.end)},
+    {key:"goal",     label:"Goal",              get:e=>S.goalLabel(e.goal)},
     {key:"type",     label:"Event type",        get:e=>e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):""},
     {key:"owner",    label:"Owner",             get:e=>S.eventOwnerName(e)||""},
     {key:"entity",   label:"Organising entity", get:e=>S.eventEntityName(e)||""},
@@ -392,7 +437,7 @@
         <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
       </div>
       <div class="row">
-        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["goal","Goal"],["none","None (one lane)"]],groupBy)}</select></div>
         <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
       </div>
       <div class="row">
@@ -511,7 +556,9 @@
     if(!rowsEl) return;
     const list=filtered(events);
     rowsEl.innerHTML="";
-    if(!list.length){ rowsEl.innerHTML=`<div class="tl-empty">No campaigns match. ${events.length===0?'Click "+ New campaign" to add one.':''}</div>`; return; }
+    const cnt=document.getElementById("tl-count");
+    if(cnt) cnt.textContent=`${list.length} campaign${list.length===1?"":"s"} & event${list.length===1?"":"s"}${view.year?` in ${view.year}`:""}${list.length!==events.length?` (of ${events.length})`:""}`;
+    if(!list.length){ rowsEl.innerHTML=`<div class="tl-empty">Nothing matches these filters. ${events.length===0?'Click "+ New campaign or event" to add one.':''}</div>`; return; }
 
     let groups;
     if(view.groupBy==="none") groups=[["All items",list]];
@@ -539,6 +586,7 @@
     return [
       e.name,
       `Kind: ${e.kind||"Event"}`,
+      `Goal: ${S.goalLabel(e.goal)||"-"}`,
       `Dates: ${dates}`,
       `Activity type: ${at||"-"}`,
       `Cluster: ${clusterOf(e)}`,
@@ -570,8 +618,13 @@
     const row=document.createElement("div");
     row.className="tl-row"; row.style.width=(LABELW+g.trackW)+"px";
     const label=document.createElement("div");
-    label.className="tl-rowlabel"; label.style.width=LABELW+"px";
-    label.textContent=subLabelFor(e); label.title=tip;
+    label.className="tl-rowlabel"; label.style.width=LABELW+"px"; label.title=tip;
+    const dTxt=(e.end&&e.end!==e.start)?`${S.fmtDate(e.start)} - ${S.fmtDate(e.end)}`:S.fmtDate(e.start);
+    const sub=[subLabelFor(e), dTxt].filter(Boolean).join(" \u00b7 ");
+    if(view.names==="chart") label.innerHTML=`<span class="tl-rl-name tl-rl-plain">${S.escapeHtml(subLabelFor(e))}</span>`;
+    else label.innerHTML=`<span class="tl-rl-name">${S.escapeHtml(e.name||"(no name)")}</span><span class="tl-rl-sub">${S.escapeHtml(sub)}</span>`;
+    const onChart=view.names!=="list";
+    label.onclick=()=>openCampaignDetail(e.id);
     row.appendChild(label);
 
     const track=document.createElement("div");
@@ -583,35 +636,42 @@
     if(single){
       const dm=document.createElement("div");
       dm.className="tl-diamond"; dm.style.left=(xOf(s,g)-8)+"px"; dm.style.background=col; dm.title=tip;
-      const lbl=document.createElement("div");
-      lbl.className="tl-diflabel"; lbl.style.left=(xOf(s,g)+12)+"px"; lbl.title=tip;
-      if(hasBudget) lbl.appendChild(makeEur());
-      lbl.appendChild(document.createTextNode(markerText(e)));
       dm.onclick=()=>openCampaignDetail(e.id);
-      track.appendChild(dm); track.appendChild(lbl);
+      track.appendChild(dm);
+      if(hasBudget||onChart){
+        const lbl=document.createElement("div"); lbl.className="tl-diflabel"; lbl.style.left=(xOf(s,g)+12)+"px"; lbl.title=tip;
+        if(hasBudget) lbl.appendChild(makeEur());
+        if(onChart) lbl.appendChild(document.createTextNode(markerText(e)));
+        // Near the end of the period the name goes to the left of the marker, so it stays in view.
+        const estW=(onChart?markerText(e).length*6.6:0)+(hasBudget?19:0);
+        if(xOf(s,g)+12+estW>g.trackW){ lbl.style.left=Math.max(0,xOf(s,g)-12-estW)+"px"; }
+        track.appendChild(lbl);
+      }
     } else {
       const bar=document.createElement("div");
       const openLeft = s < g.yb.start;   // starts before the visible window
       const openRight = end > g.yb.end;  // ends after the visible window
       bar.className="tl-bar"+(openLeft?" open-left":"")+(openRight?" open-right":"");
-      const left=xOf(s,g), w=Math.max(16,xOf(end,g)-left+PXDAY);
+      const left=xOf(s,g), w=Math.max(10,xOf(end,g)-left+g.px);
       bar.style.left=left+"px"; bar.style.width=w+"px"; bar.style.background=col;
       bar.title=tip + (openLeft||openRight ? "\n(spans beyond the selected period)" : "");
       bar.onclick=()=>openCampaignDetail(e.id);
       track.appendChild(bar);
-      // Name (and the budget badge) go inside the bar only if they fit; otherwise outside, to the right.
-      const mtxt = markerText(e);
-      const fits = (mtxt.length * 6.6 + 14 + (hasBudget ? 19 : 0)) <= w;
+      // Names on the timeline: inside the bar when it fits, otherwise just after it.
+      const mtxt = onChart ? markerText(e) : "";
+      const fits = !!mtxt && (mtxt.length * 6.6 + 14 + (hasBudget ? 19 : 0)) <= w;
       if (fits) {
         if(hasBudget) bar.appendChild(makeEur());
         bar.appendChild(document.createTextNode(mtxt));
-      } else {
+      } else if (hasBudget || mtxt) {
         const lbl=document.createElement("div");
         lbl.className="tl-barlabel";
         lbl.style.left=(left+w+6)+"px";
         lbl.title=tip;
         if(hasBudget) lbl.appendChild(makeEur());
-        lbl.appendChild(document.createTextNode(mtxt));
+        if(mtxt) lbl.appendChild(document.createTextNode(mtxt));
+        const estW=(mtxt?mtxt.length*6.6:0)+(hasBudget?19:0);
+        if(left+w+6+estW>g.trackW){ lbl.style.left=Math.max(0,left-6-estW)+"px"; }
         lbl.onclick=()=>openCampaignDetail(e.id);
         track.appendChild(lbl);
       }
@@ -620,6 +680,12 @@
     return row;
   }
 
+  // "Created 16 Jun 2026, 10:47 by Gerrit Denayer · Updated ..." leaving out what is unknown.
+  function auditLine(e){
+    const who=(id)=>{ const u=id?S.userById(id):null; return u?u.name:""; };
+    const part=(label,at,by)=>{ if(!at&&!by) return ""; return label+(at?" "+tlFmtDT(at):"")+(who(by)?" by "+S.escapeHtml(who(by)):""); };
+    return [part("Created",e.createdAt,e.createdBy), part("Last updated",e.updatedAt,e.updatedBy)].filter(Boolean).join(" &middot; ");
+  }
   // ---------- campaign detail ----------
   function openCampaignDetail(id){
     const data=S.state.data;
@@ -644,9 +710,11 @@
         <div><div class="lab">Cluster</div>${S.escapeHtml(clusterOf(e))}</div>
         <div><div class="lab">Owner</div>${S.escapeHtml(S.eventOwnerName(e)||"-")}</div>
         <div><div class="lab">Campaign code</div>${S.escapeHtml(e.campaignCode||"-")}</div>
+        <div><div class="lab">Goal</div>${S.escapeHtml(S.goalLabel(e.goal)||"-")}</div>
+        <div><div class="lab">CustomerLink Campaign</div>${S.customerLinkOfEvent(e)?`<a href="${S.escapeHtml(S.customerLinkOfEvent(e))}" target="_blank" rel="noopener">Open in CLinks &#8599;</a>`:"-"}</div>
         <div><div class="lab">Countries</div>${S.escapeHtml(S.countryNamesOf(e.countryIds).join(", ")||"-")}</div>
       </div>
-      ${(e.domains&&e.domains.length)?`<div style="margin:6px 0"><div class="lab" style="color:#888;font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
+      ${false?`<div style="margin:6px 0"><div class="lab" style="color:#888;font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
       ${e.info?`<div style="margin:6px 0;color:#555">${S.escapeHtml(e.info)}</div>`:""}
 
       <div class="tl-rollup">
@@ -675,7 +743,7 @@
 
       <div class="actions" style="margin-top:16px">
         <button class="secondary" id="d-close">Close</button>
-        ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="secondary" id="d-edit">Edit campaign</button>':''}
+        ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="secondary" id="d-edit">Edit</button>':''}
         ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="primary" id="d-addline">+ Add budget line</button>':''}
       </div>
     `);
@@ -688,7 +756,8 @@
       window.MB_APP.switchTab("budget");
       // Inherit the campaign's entity and SVP so a new line matches its campaign by default (still editable).
       window.MB_BUDGET.newActivity({
-        eventIds:[id], name:e.name, date:e.start, activityTypeId:e.activityTypeId||"",
+        eventIds:[id], name:e.name, date:e.start,
+        apCategoryId:S.apCategoryForGoal(e.goal)||((S.actTypeById(e.activityTypeId)||{}).apCategoryId)||"",
         entityId:e.entityId||"", svpId:e.svpId||"",
       });
     };
@@ -727,6 +796,8 @@
     // Budget entity defaults to the organising entity, else the managed line's entity
     const presetEntityId=orgEntId||(managed?managed.entityId:"")||"";
     const presetTypeId=e.activityTypeId||(managed?managed.activityTypeId:"")||"";
+    // An older item whose type is really a goal gets that goal filled in (its type stays until changed).
+    const presetGoal=e.goal||S.goalOfType(presetTypeId)||"";
     const presetStatusId=managed?managed.statusId:defaultStatusId();
     const bFG=managed?(managed.forecastGross||0):0, bFP=managed?(managed.forecastPartner||0):0;
     const bAG=managed?(managed.actualGross||0):0, bAP=managed?(managed.actualPartner||0):0;
@@ -812,10 +883,17 @@
               <div><label>SVP / vertical</label>
                 <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${S.canonicalSvpId(e.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
             </div>
-            <div class="row">
+            <div class="row-3">
+              <div><label>Goal</label>
+                <select id="c-goal"><option value="">Select...</option>${S.GOALS.map(g=>`<option ${presetGoal===g.key?"selected":""} value="${g.key}">${S.escapeHtml(g.label)}</option>`).join("")}</select></div>
+              <div><label>Event type</label>
+                <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).filter(t=>!S.hiddenEventType(t.id)||t.id===presetTypeId).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}${S.goalOfType(t.id)?" (a goal: pick an event type)":S.hiddenEventType(t.id)?" (no longer used for events)":""}</option>`).join("")}</select></div>
               <div id="c-campaign-wrap"${e.kind==="Campaign"?' style="display:none"':''}><label>Part of campaign</label>
                 <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
+            </div>
+            <div class="row-3">
               <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
+              <div style="grid-column: span 2"><label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label><input id="c-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(S.customerLinkOfEvent(e))}" /></div>
             </div>
             <label>Notes</label>
             <textarea id="c-info" rows="4">${S.escapeHtml(e.info||"")}</textarea>
@@ -837,7 +915,7 @@
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
       </div>
       <div class="modal-pane hidden" data-pane="budget">
-      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, organising entity, owner and SVP / vertical are taken from the Details tab.</p>
+      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, event type, organising entity, owner and SVP / vertical are taken from the Details tab.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
@@ -848,12 +926,11 @@
       <p id="c-bpartner" class="muted small" style="margin:10px 0 0" ${bMode==="partner"?"":"hidden"}>A partner pays for this ${S.escapeHtml((e.kind||"event").toLowerCase())} in full, so no budget line is needed and nothing counts against our budget. Add the partner and their role on the Partners &amp; content tab.</p>
       <div id="c-bnew" ${bMode==="new"?"":"hidden"}>
         <div class="row-3">
-          <div><label>Type (activity type) *</label>
-            <select id="c-type"><option value="">Select...</option>${(data.settings.activityTypes||[]).map(t=>`<option ${presetTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}</select></div>
           <div><label>A&amp;P category</label>
             <select id="c-bapcat"><option value="">Select...</option>${(data.settings.apCategories||[]).map(c=>`<option ${presetApCatId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}</select></div>
           <div><label>Status</label>
             <select id="c-bstatus"><option value="">Select...</option>${(data.settings.statuses||[]).map(s=>`<option ${presetStatusId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+          <div></div>
         </div>
         <div class="row-3">
           <div><label>Vendor / Partner</label><input id="c-bvendor" type="text" value="${S.escapeHtml(presetVendor)}" /></div>
@@ -885,10 +962,7 @@
       </div>
 
       <div class="actions sticky-actions">
-        ${isEdit ? `<div class="muted small audit">
-        Created by ${S.escapeHtml((e.createdBy && S.userById(e.createdBy) ? S.userById(e.createdBy).name : "") || "-")} on ${tlFmtDT(e.createdAt)}
-        &middot; Last updated by ${S.escapeHtml((e.updatedBy && S.userById(e.updatedBy) ? S.userById(e.updatedBy).name : "") || "-")} on ${tlFmtDT(e.updatedAt)}
-      </div>` : ""}
+        ${isEdit ? `<div class="muted small audit">${auditLine(e)}</div>` : ""}
         <button class="secondary" id="c-cancel">Cancel</button>
         ${isEdit?'<button class="secondary" id="c-delete" style="color:#a00">Delete</button>':''}
         <button class="primary" id="c-save">${isEdit?"Save":"Create"}</button>
@@ -917,7 +991,7 @@
       const bm=v("#c-bmode");
       if(!v("#c-name").trim() || !v("#c-start") || (v("#c-end") && v("#c-end")<v("#c-start"))) return showPane("details");
       if(bm==="new" && !v("#c-entity")) return showPane("details");
-      if(bm==="new" && !v("#c-type")) return showPane("budget");
+      if(bm==="new" && !v("#c-type")) return showPane("details");
       if(bm==="existing" && !modal.querySelector("#c-bexlist .bx-chk:checked")) return showPane("budget");
     });
 
@@ -981,14 +1055,14 @@
       };
     }
 
-    // Kind drives a default activity type: Event -> "Event"; Campaign -> "Digital campaign"
-    // (or Lead generation). Auto-filled on change, still editable.
+    // Kind drives a default event type: Event -> "Event"; Campaign -> "Digital campaign" when the
+    // list has one (otherwise the type is left for the user to pick). Still editable.
     const kindSel=modal.querySelector("#c-kind"), typeSelEl=modal.querySelector("#c-type");
     if(kindSel && typeSelEl){
       const typeIdBy=(names)=>{ for(const n of names){ const t=(data.settings.activityTypes||[]).find(x=>(x.name||"").trim().toLowerCase()===n); if(t) return t.id; } return ""; };
       kindSel.onchange=()=>{
         const id = kindSel.value==="Campaign"
-          ? typeIdBy(["digital campaign","lead generation campaigns","lead generation campaign"])
+          ? typeIdBy(["digital campaign"])
           : typeIdBy(["event"]);
         if(id) typeSelEl.value=id;
         // A campaign is not "part of" another campaign, so hide that field for campaigns.
@@ -1034,7 +1108,17 @@
     };
     // Default the A&P category to the chosen type's category (still editable).
     const cTypeSel=modal.querySelector("#c-type"), cApcatSel=modal.querySelector("#c-bapcat");
-    if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{ const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId; });
+    const cGoalSel=modal.querySelector("#c-goal");
+    if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{
+      if(cGoalSel && cGoalSel.value && S.apCategoryForGoal(cGoalSel.value)) return; // the goal decides
+      const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId;
+    });
+    // Goal -> A&P category on the Budget tab (Lead Generation, Awareness, Customer Intimacy).
+    if(cGoalSel && cApcatSel){
+      const applyGoal=()=>{ const ap=S.apCategoryForGoal(cGoalSel.value); if(ap) cApcatSel.value=ap; };
+      cGoalSel.addEventListener("change", applyGoal);
+      if(cGoalSel.value && !cApcatSel.value) applyGoal();
+    }
 
     // Live: entering an actual value flips a Planned (or blank) budget status to Committed.
     const cbStatus=modal.querySelector("#c-bstatus"), cbAg=modal.querySelector("#c-bag"), cbAp=modal.querySelector("#c-bap");
@@ -1124,16 +1208,16 @@
       const orgEntityId=modal.querySelector("#c-entity").value;
       const typeFromField=modal.querySelector("#c-type").value;
       const selectedExisting=[...modal.querySelectorAll("#c-bexlist input.bx-chk:checked")].map(cb=>cb.value);
-      // Activity type lives on the budget line. For a new line it comes from the Type field; when
-      // linking existing lines the event inherits the type of the first linked line.
+      // Event type: from the Details tab. When it is left empty and existing budget lines are
+      // linked, the event takes the type of the first linked line.
       let activityTypeId=typeFromField;
-      if(bmode==="existing"){
+      if(!activityTypeId && bmode==="existing"){
         const fl=(data.activities||[]).find(x=>x.id===selectedExisting[0]);
         activityTypeId = fl ? (fl.activityTypeId||"") : (e.activityTypeId||"");
       }
       if(!name) return S.toast("Name is required","error");
       if(!start) return S.toast("Start date is required","error");
-      if(bmode==="new" && !typeFromField) return S.toast("Activity type is required for the budget line.","error");
+      if(bmode==="new" && !typeFromField) return S.toast("Pick the event type on the Details tab: the new budget line needs it.","error");
       if(bmode==="new" && !orgEntityId) return S.toast("Set the organising entity above to create a budget line.","error");
       if(bmode==="existing" && selectedExisting.length===0) return S.toast("Pick at least one existing budget line, or switch to create a new one.","error");
       const end=modal.querySelector("#c-end").value;
@@ -1184,7 +1268,7 @@
         const links=new Set(line.eventIds||[]); links.add(e.id);
         Object.assign(line,{
           name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId,
-          activityTypeId:typeFromField, apCategoryId:(bapc||typeCatId), statusId:bStatus,
+          apCategoryId:(bapc||typeCatId), statusId:bStatus,
           ownerId:(modal.querySelector("#c-owner").value||line.ownerId||S.state.currentUserId||""),
           vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
@@ -1192,6 +1276,7 @@
         // A line with an actual value cannot stay "Planned": bump it to "Committed".
         line.statusId=S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
         // Stamp the managed line's update only if it already existed and its content changed.
+        delete line.activityTypeId; // budget lines carry the A&P category, not a type
         if(!isNewLine && contentSig(line)!==beforeSig){
           line.updatedBy=S.state.currentUserId; line.updatedAt=new Date().toISOString();
         }
@@ -1242,6 +1327,7 @@
         ownerId:modal.querySelector("#c-owner").value,
         svpId, campaignId,
         campaignCode:modal.querySelector("#c-code").value.trim(),
+        goal:modal.querySelector("#c-goal").value||undefined,
         info:modal.querySelector("#c-info").value,
         countryIds,
         partners, content, outcomes,
@@ -1249,6 +1335,22 @@
         fullyPartnerFunded: bmode==="partner" ? true : undefined,
         entity:undefined, owner:undefined, type:undefined, globalCampaignId:undefined, // drop legacy fields
       };
+      // CustomerLink Campaign: one link for the event and its budget lines. Lines that had no link,
+      // or the old one, get the new one; the event's Content & assets list gets it too.
+      const clOld=S.customerLinkOfEvent(e), clNew=S.normUrl(modal.querySelector("#c-clink").value);
+      base.customerLinkUrl=clNew||undefined;
+      if(!clNew && clOld){
+        // Cleared on purpose: take the old link off the event and the budget lines that had it.
+        base.content=(base.content||[]).filter(c=>!((c.label||"")===S.CLINK_LABEL && (c.url||"").trim()===clOld));
+        (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id) && a.customerLinkUrl===clOld){ delete a.customerLinkUrl; stampUpdated(a); } });
+      }
+      if(clNew){
+        base.content=S.contentWithLink(base.content, clNew, clOld);
+        (data.activities||[]).forEach(a=>{
+          if(!(a.eventIds||[]).includes(e.id)) return;
+          if(!a.customerLinkUrl || a.customerLinkUrl===clOld){ if(a.customerLinkUrl!==clNew){ a.customerLinkUrl=clNew; stampUpdated(a); } }
+        });
+      }
       // Stamp "updated by/on" only when the campaign content really changed (not a no-op save).
       let updated=base;
       if(isEdit && contentSig(base)!==contentSig(e)){
@@ -1257,7 +1359,8 @@
       if(isEdit){ const idx=data.events.findIndex(x=>x.id===id); data.events[idx]=updated; }
       else data.events.push(updated);
       S.scheduleSave(); S.notify(); S.closeModal();
-      S.toast((isEdit?"Campaign updated":"Campaign created")+(bmode==="new"||bmode==="existing"?" and linked to the budget":bmode==="partner"?" (fully partner funded)":""),"success");
+      const kindWord=(updated.kind||"Event")==="Campaign"?"Campaign":"Event";
+      S.toast(kindWord+(isEdit?" updated":" created")+(bmode==="new"||bmode==="existing"?" and linked to the budget":bmode==="partner"?" (fully partner funded)":""),"success");
       if(opts.onSaved) opts.onSaved(updated);
     };
   }

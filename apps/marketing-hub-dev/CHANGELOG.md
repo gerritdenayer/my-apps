@@ -1,19 +1,39 @@
 # Changelog
 
-## [Unreleased]
+## [v5.2.0] - 2026-11-04 - New interface, goals, A&P categories on budget lines
 
-### Changed
-- Budget lines no longer have an activity type: it said the same as the A&P category. The A&P
-  category is now the line's classification and is required. The Type column on the Budget tab is
-  replaced by an A&P category column (shown under the name, and as an optional column), and the
-  Reporting drill-down, the Excel exports, bulk edit and bulk import use the A&P category. A new
-  line linked to an event gets its A&P category from the event's goal (or its event type).
-- Settings: "Activity types & A&P" is now "Event types & A&P". Event types are the means of a
-  campaign or event, each with a default A&P category.
-- The one-time cleanup also files every budget line under an explicit A&P category, removes the
-  activity type from budget lines, and deletes the goal-named types once no event uses them.
+### Changed: new interface
+- Top bar: one status for the shared folder on every tab, "Shared · up to date" or "Shared · 3 changes
+  to publish", with a Publish button right next to it when there is something to publish. The
+  Publish and Check for updates buttons on the Budget and Campaigns & events tabs are gone; click the
+  status to load the latest. Your name, role, the admin pin and Switch user are now one user menu.
+- Budget: a compact toolbar on one line: year buttons, cluster, entity, search and "More filters"
+  (month, M1 zone; the number on it shows how many are set), with Columns and "+ New budget line" on
+  the right. The table now fits a laptop and shows the money by default: date, name (with type and
+  vendor under it), entity, status, owner, forecast net and actual net. The other columns are still
+  under Columns (everyone gets this new default once). Totals are at the top. Click a row to open it.
+- Campaigns & events: a compact toolbar on one line: year buttons, cluster, search and "More filters"
+  (kind, quarters, month, M1 zone, entity, country), then Group by and Color by, Download agenda and
+  "+ New". It opens on the current year, and a single year always fits the screen width (January to
+  December), so nothing runs off the right edge. A "Names" switch above the timeline chooses where
+  the names show: On the timeline (next to the bars, the classic look used in presentations), In the
+  list (left column, with entity and dates), or Both. The choice is remembered per browser. The count
+  shows how many items are in view.
+- Event form: "Event type" moved to the Details tab, so every event can have a type, also agenda-only
+  and partner-funded ones. A new budget line takes the type from there.
+- Login: the text no longer says the data is stored on this computer, and the last person who logged
+  in on that computer is selected.
+- Wording: "Edit" instead of "Edit campaign" on the card, and "Event created" / "Campaign created"
+  depending on the item. The form footer reads "Created 16 Jun 2026, 10:47 by ..." and leaves out
+  what is unknown.
+- Event card: the old "Domains" field is no longer shown.
+- Reporting: amounts where actual is above forecast are now dark red on the cluster rows (they were
+  pale pink and hard to read), and a short note explains the red.
+- Outcomes: when no results are entered yet for the selection, a note says so above the chart.
 
 ### Added
+- After each new release, a short "What's new" overview pops up once, the first time you open the
+  app, with a link to the full release notes in the help.
 - Reporting: a "By A&P category" table under the matrix, with lines, forecast, share and actual
   per A&P category for the selected year and scope.
 - "CustomerLink Campaign" on the campaign / event form (Details tab), the same link as on the
@@ -46,34 +66,16 @@
 - The dev copy shows its own build number (for example 5.2.0-dev.2), raised on every dev push, and
   loads its files with that number so the browser always runs the latest dev code.
 
-### Changed (new interface)
-- Top bar: one status for the shared folder on every tab, "Shared · up to date" or "Shared · 3 changes
-  to publish", with a Publish button right next to it when there is something to publish. The
-  Publish and Check for updates buttons on the Budget and Campaigns & events tabs are gone; click the
-  status to load the latest. Your name, role, the admin pin and Switch user are now one user menu.
-- Budget: a compact toolbar on one line: year buttons, cluster, entity, search and "More filters"
-  (month, M1 zone; the number on it shows how many are set), with Columns and "+ New budget line" on
-  the right. The table now fits a laptop and shows the money by default: date, name (with type and
-  vendor under it), entity, status, owner, forecast net and actual net. The other columns are still
-  under Columns (everyone gets this new default once). Totals are at the top. Click a row to open it.
-- Campaigns & events: a compact toolbar on one line: year buttons, cluster, search and "More filters"
-  (kind, quarters, month, M1 zone, entity, country), then Group by and Color by, Download agenda and
-  "+ New". It opens on the current year, and a single year always fits the screen width (January to
-  December), so nothing runs off the right edge. A "Names" switch above the timeline chooses where
-  the names show: On the timeline (next to the bars, the classic look used in presentations), In the
-  list (left column, with entity and dates), or Both. The choice is remembered per browser. The count
-  shows how many items are in view.
-- Event form: "Event type" moved to the Details tab, so every event can have a type, also agenda-only
-  and partner-funded ones. A new budget line takes the type from there.
-- Login: the text no longer says the data is stored on this computer, and the last person who logged
-  in on that computer is selected.
-- Wording: "Edit" instead of "Edit campaign" on the card, and "Event created" / "Campaign created"
-  depending on the item. The form footer reads "Created 16 Jun 2026, 10:47 by ..." and leaves out
-  what is unknown.
-- Event card: the old "Domains" field is no longer shown.
-- Reporting: amounts where actual is above forecast are now dark red on the cluster rows (they were
-  pale pink and hard to read), and a short note explains the red.
-- Outcomes: when no results are entered yet for the selection, a note says so above the chart.
+### Changed
+- Budget lines no longer have an activity type: it said the same as the A&P category. The A&P
+  category is now the line's classification and is required. The Type column on the Budget tab is
+  replaced by an A&P category column (shown under the name, and as an optional column), and the
+  Reporting drill-down, the Excel exports, bulk edit and bulk import use the A&P category. A new
+  line linked to an event gets its A&P category from the event's goal (or its event type).
+- Settings: "Activity types & A&P" is now "Event types & A&P". Event types are the means of a
+  campaign or event, each with a default A&P category.
+- The one-time cleanup also files every budget line under an explicit A&P category, removes the
+  activity type from budget lines, and deletes the goal-named types once no event uses them.
 
 ## [v5.1.18] - 2026-11-02 - Dev and production copies
 

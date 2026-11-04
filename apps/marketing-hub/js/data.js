@@ -27,8 +27,10 @@
       ${xlsxExportHtml()}
       ${datasetGridHtml()}
       ${shareCardHtml()}
+      ${window.MB_CLEANUP ? window.MB_CLEANUP.cardHtml() : ""}
     `;
 
+    if (window.MB_CLEANUP) window.MB_CLEANUP.wire(root);
     const fileInput = root.querySelector("#dm-file-input");
     const exporterName = () => {
       const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
@@ -132,14 +134,14 @@
     const rows = (D.activities || []).filter((a) => S.inPeriodQ(a.date, year, quarters, "")).map((a) => {
       const e = S.entityById(a.entityId) || {};
       return [a.date || "", a.name || "", e.group || "", e.name || "",
-        (S.actTypeById(a.activityTypeId) || {}).name || "", ap(a.apCategoryId),
+        ((S.apCategoryForActivity(a) || {}).name || ap(a.apCategoryId)),
         (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "",
         (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
         a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
         a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
     });
     writeSheet("budget-lines", "Budget lines",
-      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
       rows);
   }
   function exportEventsXlsx(year, quarters) {
@@ -148,12 +150,12 @@
     const rows = (D.events || []).filter((e) => S.inPeriodQ(e.start, year, quarters, "")).map((e) => {
       const en = S.entityById(e.entityId) || {};
       return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
-        (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
+        S.goalLabel(e.goal), (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
         (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", campN(e),
         S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
     });
     writeSheet("campaigns-events", "Events",
-      ["Start", "End", "Name", "Kind", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
+      ["Start", "End", "Name", "Kind", "Goal", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
       rows);
   }
 
@@ -182,7 +184,7 @@
       { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
       { key: "entity", label: "Entity", text: (a) => entN(a.entityId), sort: (a) => entN(a.entityId).toLowerCase() },
       { key: "svp", label: "SVP / vertical", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
-      { key: "type", label: "Type", text: (a) => typeN(a.activityTypeId), sort: (a) => typeN(a.activityTypeId).toLowerCase() },
+      { key: "apcat", label: "A&P category", text: (a) => (S.apCategoryForActivity(a) || {}).name || "", sort: (a) => ((S.apCategoryForActivity(a) || {}).name || "").toLowerCase() },
       { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
       { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
       { key: "fN", label: "Forecast net", num: true, text: (a) => S.fmtMoney((a.forecastGross || 0) - (a.forecastPartner || 0)), sort: (a) => (a.forecastGross || 0) - (a.forecastPartner || 0) },
@@ -209,13 +211,13 @@
       { field: "statusId", label: "Status", opts: () => opt(D.settings.statuses || []) },
       { field: "ownerId", label: "Owner", opts: users },
       { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
-      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "apCategoryId", label: "A&P category", opts: () => opt(D.settings.apCategories || []) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "date", label: "Date", date: true },
     ];
     return [
       { field: "ownerId", label: "Owner", opts: users },
-      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "activityTypeId", label: "Event type", opts: () => opt(D.settings.activityTypes || []) },
       { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
       { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
@@ -1079,6 +1081,45 @@
     return { state: "ok", dir, bridge };
   }
   let bannerDismissed = false;
+  // ---- Header publish status ----
+  // How many budget lines and events differ from the last sync (new, changed or deleted here).
+  let lastShareState = "";
+  function countUnpublished() {
+    let base = null;
+    try { base = JSON.parse(localStorage.getItem(BASE_KEY) || "null"); } catch (e) { base = null; }
+    if (!base) return 0;
+    let n = 0;
+    [["a", "activities"], ["e", "events"]].forEach(([k, key]) => {
+      const B = Object.fromEntries((base[k] || []).map((x) => [x.id, x]));
+      const L = S.state.data[key] || [];
+      const ids = new Set(L.map((x) => x.id));
+      L.forEach((x) => { if (!B[x.id] || JSON.stringify(x) !== JSON.stringify(B[x.id])) n++; });
+      Object.keys(B).forEach((id) => { if (!ids.has(id)) n++; });
+    });
+    return n;
+  }
+  // The Publish button next to the status in the header (shown only when there is something to publish).
+  function updateHeaderPublish() {
+    const btn = document.getElementById("hdr-publish");
+    if (!btn) return;
+    const show = lastShareState === "ok" && budgetEventsDirty();
+    btn.classList.toggle("hidden", !show);
+    btn.onclick = async () => { btn.disabled = true; try { await publishBudgetEvents(); } finally { btn.disabled = false; } updateShareIndicator(); };
+  }
+  // Keep the header status current while people edit (cheap: no folder access).
+  let hdrTimer = null;
+  S.subscribe(() => {
+    clearTimeout(hdrTimer);
+    hdrTimer = setTimeout(() => {
+      if (lastShareState !== "ok") return;
+      const pill = document.getElementById("share-pill");
+      if (!pill) return;
+      const n = countUnpublished();
+      pill.className = "share-pill " + (n ? "pending" : "ok");
+      pill.innerHTML = `<span class="sp-dot"></span>Shared${n ? ` \u00b7 ${n} change${n === 1 ? "" : "s"} to publish` : " \u00b7 up to date"}`;
+      updateHeaderPublish();
+    }, 300);
+  });
   async function updateShareIndicator() {
     const pill = document.getElementById("share-pill");
     const banner = document.getElementById("share-banner");
@@ -1095,6 +1136,13 @@
       none: { cls: "off", text: "Local only", title: "Not connected to a shared folder: your data is only on this computer. Click to set it up." },
       unsupported: { cls: "off", text: "Local only", title: "This browser cannot use a shared folder. Use Chrome or Edge to share data with your team." },
     }[st.state];
+    lastShareState = st.state;
+    if (st.state === "ok") {
+      const n = countUnpublished();
+      P.cls = n ? "pending" : "ok";
+      P.text += n ? ` \u00b7 ${n} change${n === 1 ? "" : "s"} to publish` : " \u00b7 up to date";
+    }
+    updateHeaderPublish();
     pill.className = "share-pill " + P.cls;
     pill.innerHTML = `<span class="sp-dot"></span>${P.text}`;
     pill.title = P.title;

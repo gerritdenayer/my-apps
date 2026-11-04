@@ -12,7 +12,7 @@ window.MB_CONFIG = {
   // SHA-256 of (pinSalt + PIN). Default PIN is 2468.
   adminPinHash: "94c4d698ea9ed65b0e8a4f73b107d6bb7ea3169836657e5d983c36e1421dfc10",
   // Single source of truth for the version shown in the header. Bump this on each change set.
-  appVersion: "5.1.18",
+  appVersion: "5.2.0",
 };
 
 // ---- Dev copy safeguards (apps/marketing-hub-dev, see js/env.js) ----
@@ -25,7 +25,7 @@ window.MB_CONFIG = {
   const env = (window.MB_ENV && window.MB_ENV.name) || "prod";
   window.MB_CONFIG.env = env;
   if (env !== "dev") return;
-  window.MB_CONFIG.appVersion += "-dev";
+  window.MB_CONFIG.appVersion = window.MB_ENV.build || (window.MB_CONFIG.appVersion + "-dev");
   const P = "mbdev:";
   const sp = Storage.prototype, get = sp.getItem, set = sp.setItem, del = sp.removeItem;
   sp.getItem = function (k) { return get.call(this, P + k); };

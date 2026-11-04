@@ -132,7 +132,7 @@
         <tr><td>I work on two computers</td><td>Publish on the first before you switch, then click the <b>Shared</b> status on the second.</td></tr>
       </table>` },
 
-    { id: "new", title: "What's new", tabs: [], html: `<div id="help-news" class="muted">Loading...</div>` },
+    { id: "new", title: "What's new", tabs: [], html: `<p class="muted small">After each new release, a short overview pops up once when you open the app. The full release notes are here.</p><div id="help-news" class="muted">Loading...</div>` },
   ];
 
   const plain = (html) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&gt;/g, ">").replace(/\s+/g, " ").toLowerCase();
@@ -227,5 +227,66 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 
-  window.MB_HELP = { open, topics: TOPICS };
+  // ---- "What's new" pop-up, once per person per release (production only) ----
+  // Read the release notes of the version now running from CHANGELOG.md and show a short
+  // overview: the first sentence of each item, grouped as new interface / new / changes / fixes.
+  const SEEN_KEY = "mb_seen_release";
+  function releaseNotes(md, ver) {
+    const block = md.split(/\n(?=## \[)/).find((b) => b.startsWith(`## [v${ver}]`));
+    if (!block) return null;
+    const lines = block.split("\n");
+    const title = lines[0].replace(/^## \[v[^\]]*\]\s*-\s*[0-9-]+\s*-?\s*/, "").trim();
+    const groups = []; let g = null, item = null;
+    lines.slice(1).forEach((l) => {
+      if (/^### /.test(l)) {
+        const h = l.slice(4).toLowerCase();
+        const name = h.includes("interface") ? "New interface" : h.startsWith("added") ? "New" : h.startsWith("fixed") ? "Fixes" : "Changes";
+        g = groups.find((x) => x.name === name) || (groups.push({ name, items: [] }), groups[groups.length - 1]);
+        item = null;
+      } else if (/^- /.test(l)) {
+        if (!g) { g = { name: "Changes", items: [] }; groups.push(g); }
+        item = l.slice(2).trim(); g.items.push(item);
+      } else if (/^\s{2,}\S/.test(l) && g && g.items.length) {
+        g.items[g.items.length - 1] += " " + l.trim();
+      }
+    });
+    // Short version of each item: its first sentence, at most about 170 characters.
+    const short = (t) => {
+      let s = t.split(/(?<=\.)\s+(?=[A-Z"(])/)[0];
+      if (s.length > 170) s = s.slice(0, 170).replace(/\s+\S*$/, "") + "...";
+      return s;
+    };
+    groups.forEach((x) => { x.items = x.items.map(short); });
+    const order = ["New interface", "New", "Changes", "Fixes"];
+    groups.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+    return { title, groups };
+  }
+  async function maybeShowWhatsNew() {
+    const cfg = window.MB_CONFIG || {};
+    if (cfg.env === "dev") return; // not needed in the dev copy
+    const ver = cfg.appVersion || "";
+    let seen = null;
+    try { seen = localStorage.getItem(SEEN_KEY); } catch (e) { return; }
+    if (!ver || seen === ver) return;
+    let notes = null;
+    try { const res = await fetch("CHANGELOG.md", { cache: "no-store" }); if (res.ok) notes = releaseNotes(await res.text(), ver); } catch (e) {}
+    if (!notes || !notes.groups.length) { try { localStorage.setItem(SEEN_KEY, ver); } catch (e) {} return; }
+    // Wait until the app is open and no other window (setup, unpublished changes...) is showing.
+    let tries = 0;
+    const tryShow = () => {
+      const busy = document.querySelector("#modal-root .modal") || document.getElementById("app-header").classList.contains("hidden");
+      if (busy) { if (++tries < 120) setTimeout(tryShow, 1000); return; }
+      try { localStorage.setItem(SEEN_KEY, ver); } catch (e) {}
+      const m = S.openModal(`
+        <div class="wn-head"><span class="wn-badge">What's new</span><h2>Marketing Hub ${S.escapeHtml(ver)}</h2></div>
+        ${notes.title ? `<p class="wn-sub">${S.escapeHtml(notes.title)}</p>` : ""}
+        <div class="wn-body">${notes.groups.map((x) => `<h4>${S.escapeHtml(x.name)}</h4><ul>${x.items.map((i) => `<li>${S.escapeHtml(i)}</li>`).join("")}</ul>`).join("")}</div>
+        <div class="actions"><button class="secondary" id="wn-help" type="button">See the details in Help</button><button class="primary" id="wn-ok" type="button">Got it</button></div>`, { cls: "modal-whatsnew" });
+      m.querySelector("#wn-ok").onclick = S.closeModal;
+      m.querySelector("#wn-help").onclick = () => { S.closeModal(); open("new"); };
+    };
+    setTimeout(tryShow, 1500);
+  }
+
+  window.MB_HELP = { open, topics: TOPICS, maybeShowWhatsNew };
 })();

@@ -16,7 +16,7 @@
     chart: null,
   };
 
-  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", month: "Month", quarter: "Quarter" };
+  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", goal: "Goal", month: "Month", quarter: "Quarter" };
   const CHART_METRICS = [["revenue", "Revenue vs spend"], ["attendees", "Attendees"], ["registrations", "Registrations"], ["mql", "MQL"], ["sql", "SQL"], ["engagement", "Engagement"], ["roi", "Revenue ROI"], ["costmql", "Cost per MQL"], ["costsql", "Cost per SQL"], ["costatt", "Cost per attendee"]];
   const COST_MAP = { costmql: ["spendMql", "mql", "Cost per MQL"], costsql: ["spendSql", "sql", "Cost per SQL"], costatt: ["spendAtt", "attendees", "Cost per attendee"] };
 
@@ -82,6 +82,10 @@
       if (!p) return { key: "0000-0", label: "No date" };
       const q = Math.floor(p.m / 3) + 1;
       return { key: `${p.y}-${q}`, label: `Q${q} ${p.y}` };
+    }
+    if (view.dim === "goal") {
+      const g = S.goalLabel(ev.goal);
+      return { key: ev.goal || "_none", label: g || "No goal" };
     }
     if (view.dim === "svp") {
       const svp = ev.svpId ? S.svpById(ev.svpId) : null;
@@ -208,6 +212,7 @@
     const totals = totalsOf(rows);
     host.innerHTML = `
       <div class="kpi-row">${kpiCards(totals)}</div>
+      <div id="o-chart-note" class="o-chart-note hidden"></div>
       <div class="chart-wrap"><canvas id="o-chart"></canvas></div>
       <div class="card"><div class="table-wrap">${tableHtml(rows, totals)}</div></div>
     `;
@@ -329,6 +334,15 @@
       ];
       title = label + " (actual vs target)" + byDim;
       yTicks = plain;
+    }
+    // Say so when the results behind the chart have not been entered yet, instead of empty bars.
+    const note = document.getElementById("o-chart-note");
+    if (note) {
+      const first = datasets[0] || { data: [] };
+      const empty = !first.data.some((v) => +v);
+      const what = metric === "revenue" ? "actual revenue" : (first.label || "results").toLowerCase();
+      note.textContent = empty ? `No ${what} entered yet for this selection. Owners add results on the Outcomes tab of each campaign or event.` : "";
+      note.classList.toggle("hidden", !empty);
     }
     view.chart = new Chart(ctx, {
       type: "bar",

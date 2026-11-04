@@ -22,6 +22,67 @@
     });
   }
 
+  // Goal of a campaign / event. Each goal fills the matching A&P category (matched by name in the
+  // setup's A&P list, so it keeps working when ids differ between computers).
+  const GOALS = [
+    { key: "lead", label: "Lead Generation", ap: "lead generation" },
+    { key: "awareness", label: "Awareness", ap: "awareness" },
+    { key: "intimacy", label: "Customer Intimacy", ap: "customer intimacy" },
+  ];
+  function goalLabel(key) { const g = GOALS.find((x) => x.key === key); return g ? g.label : ""; }
+  function apCategoryForGoal(key) {
+    const g = GOALS.find((x) => x.key === key);
+    if (!g) return "";
+    const c = (state.data.settings.apCategories || []).find((x) => (x.name || "").toLowerCase().includes(g.ap));
+    return c ? c.id : "";
+  }
+
+  // An activity type that is really a goal (its name is the A&P category a goal maps to, such as
+  // "Lead generation campaigns"). The event form hides these: the goal is what you want to achieve,
+  // the event type is the means. Returns the goal key, or "".
+  // Types that are goals under another name, and types not offered for events at all.
+  const TYPE_AS_GOAL = { "digital or lead generation campaign": "lead" };
+  const TYPE_NOT_FOR_EVENTS = ["abm - pan european"];
+  function hiddenEventType(typeId) {
+    const t = typeId ? actTypeById(typeId) : null;
+    return !!t && (!!goalOfType(typeId) || TYPE_NOT_FOR_EVENTS.includes((t.name || "").trim().toLowerCase()));
+  }
+  function goalOfType(typeId) {
+    const t = typeId ? actTypeById(typeId) : null;
+    if (!t) return "";
+    const n = (t.name || "").trim().toLowerCase();
+    if (TYPE_AS_GOAL[n]) return TYPE_AS_GOAL[n];
+    const g = GOALS.find((x) => { const ap = apCategoryForGoal(x.key); const c = ap && (state.data.settings.apCategories || []).find((y) => y.id === ap); return c && (c.name || "").trim().toLowerCase() === n; });
+    return g ? g.key : "";
+  }
+
+  // CustomerLink Campaign: one link to the campaign in CLinks, shared by an event and its budget
+  // lines. Adds "https://" when it was left out.
+  const CLINK_LABEL = "CustomerLink Campaign";
+  function normUrl(v) {
+    const t = String(v || "").trim();
+    if (!t) return "";
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(t) ? t : "https://" + t;
+  }
+  // The link to show for an event: its own, else one of its budget lines', else the content entry.
+  function customerLinkOfEvent(ev) {
+    if (!ev) return "";
+    if (ev.customerLinkUrl) return ev.customerLinkUrl;
+    const line = (state.data.activities || []).find((a) => (a.eventIds || []).includes(ev.id) && a.customerLinkUrl);
+    if (line) return line.customerLinkUrl;
+    const c = (ev.content || []).find((x) => (x.label || "") === CLINK_LABEL && x.url);
+    return c ? c.url : "";
+  }
+  // Put the link under an event's Content & assets: replace the old link, or add it once.
+  function contentWithLink(content, url, oldUrl) {
+    const list = Array.isArray(content) ? content.slice() : [];
+    if (!url || list.some((c) => (c.url || "").trim() === url)) return list;
+    const i = oldUrl ? list.findIndex((c) => (c.url || "").trim() === oldUrl) : -1;
+    if (i >= 0) list[i] = { ...list[i], url };
+    else list.push({ label: CLINK_LABEL, url });
+    return list;
+  }
+
   // Outcome metrics shared by the campaign editor and the Outcomes report.
   // kind "ta" = target/actual pair; kind "pa" = potential/actual pair (revenue).
   const OUTCOME_METRICS = [
@@ -285,6 +346,51 @@
     return true;
   }
   // HTML for the three cascading selects. Ids are `${prefix}-m1/-cluster/-entity`.
+  // ---- Toolbar helpers (used by Budget and Campaigns & events) ----
+  // Show a year <select> as a row of buttons. The select stays (hidden) and keeps driving the
+  // tab's existing change handler, so nothing else needs to know.
+  function yearButtons(select) {
+    if (!select) return;
+    const wrap = document.createElement("div");
+    wrap.className = "seg"; wrap.setAttribute("role", "group"); wrap.setAttribute("aria-label", "Year");
+    [...select.options].forEach((o) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = o.textContent; b.className = "seg-btn" + (o.selected ? " on" : "");
+      b.setAttribute("aria-pressed", o.selected ? "true" : "false");
+      b.onclick = () => { if (select.value === o.value) return; select.value = o.value; select.dispatchEvent(new Event("change")); };
+      wrap.appendChild(b);
+    });
+    select.style.display = "none";
+    select.insertAdjacentElement("afterend", wrap);
+  }
+  // Fold less-used filters into a "More filters" button with a drop-down panel. The badge counts
+  // the filters in it that are set. The panel stays open across re-renders of the same tab.
+  const moreOpen = {}, moreClose = {};
+  let moreListening = false;
+  function moreFilters(id, anchor, nodes) {
+    nodes = (nodes || []).filter(Boolean);
+    if (!anchor || !nodes.length) return;
+    const box = document.createElement("div");
+    box.className = "more-wrap";
+    box.innerHTML = `<label>&nbsp;</label><button type="button" class="secondary more-btn" aria-expanded="false">More filters <span class="more-count"></span></button><div class="more-panel hidden"></div>`;
+    const btn = box.querySelector(".more-btn"), panel = box.querySelector(".more-panel");
+    nodes.forEach((n) => panel.appendChild(n));
+    const count = () => {
+      let n = 0;
+      panel.querySelectorAll("select").forEach((s) => { if (s.value !== "" && s.value !== "all") n++; });
+      if (panel.querySelector("input[type=checkbox]:checked")) n++;
+      const c = box.querySelector(".more-count");
+      c.textContent = n ? String(n) : ""; c.style.display = n ? "" : "none";
+    };
+    const setOpen = (on) => { moreOpen[id] = on; panel.classList.toggle("hidden", !on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
+    btn.onclick = (e) => { e.stopPropagation(); setOpen(panel.classList.contains("hidden")); };
+    panel.addEventListener("click", (e) => e.stopPropagation());
+    panel.addEventListener("change", count);
+    moreClose[id] = () => setOpen(false);
+    if (!moreListening) { moreListening = true; document.addEventListener("click", () => Object.values(moreClose).forEach((f) => f())); }
+    anchor.insertAdjacentElement("afterend", box);
+    count(); setOpen(!!moreOpen[id]);
+  }
   // Keep the current choice in a list even when it does not apply to the year (no silent reset).
   function withSel(list, sel) { return sel && !list.includes(sel) ? list.concat([sel]).sort() : list; }
   function scopeFilterHtml(prefix, scope, labelFn, year) {
@@ -400,6 +506,7 @@
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
+    yearButtons, moreFilters, CLINK_LABEL, normUrl, customerLinkOfEvent, contentWithLink, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
     entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,

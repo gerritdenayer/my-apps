@@ -321,6 +321,8 @@
     window.MB_AUTH.applyTabVisibility();
     switchTab(window.MB_AUTH.firstAllowedTab());
     if (window.MB_DATA && window.MB_DATA.initSharedRefresh) window.MB_DATA.initSharedRefresh();
+    // First time on a new release: a short "What's new" (production only, once per release).
+    if (window.MB_HELP && window.MB_HELP.maybeShowWhatsNew) window.MB_HELP.maybeShowWhatsNew();
   }
 
   // ---- Settings sub-menu ----

@@ -1,5 +1,82 @@
 # Changelog
 
+## [v5.2.0] - 2026-11-04 - New interface, goals, A&P categories on budget lines
+
+### Changed: new interface
+- Top bar: one status for the shared folder on every tab, "Shared · up to date" or "Shared · 3 changes
+  to publish", with a Publish button right next to it when there is something to publish. The
+  Publish and Check for updates buttons on the Budget and Campaigns & events tabs are gone; click the
+  status to load the latest. Your name, role, the admin pin and Switch user are now one user menu.
+- Budget: a compact toolbar on one line: year buttons, cluster, entity, search and "More filters"
+  (month, M1 zone; the number on it shows how many are set), with Columns and "+ New budget line" on
+  the right. The table now fits a laptop and shows the money by default: date, name (with type and
+  vendor under it), entity, status, owner, forecast net and actual net. The other columns are still
+  under Columns (everyone gets this new default once). Totals are at the top. Click a row to open it.
+- Campaigns & events: a compact toolbar on one line: year buttons, cluster, search and "More filters"
+  (kind, quarters, month, M1 zone, entity, country), then Group by and Color by, Download agenda and
+  "+ New". It opens on the current year, and a single year always fits the screen width (January to
+  December), so nothing runs off the right edge. A "Names" switch above the timeline chooses where
+  the names show: On the timeline (next to the bars, the classic look used in presentations), In the
+  list (left column, with entity and dates), or Both. The choice is remembered per browser. The count
+  shows how many items are in view.
+- Event form: "Event type" moved to the Details tab, so every event can have a type, also agenda-only
+  and partner-funded ones. A new budget line takes the type from there.
+- Login: the text no longer says the data is stored on this computer, and the last person who logged
+  in on that computer is selected.
+- Wording: "Edit" instead of "Edit campaign" on the card, and "Event created" / "Campaign created"
+  depending on the item. The form footer reads "Created 16 Jun 2026, 10:47 by ..." and leaves out
+  what is unknown.
+- Event card: the old "Domains" field is no longer shown.
+- Reporting: amounts where actual is above forecast are now dark red on the cluster rows (they were
+  pale pink and hard to read), and a short note explains the red.
+- Outcomes: when no results are entered yet for the selection, a note says so above the chart.
+
+### Added
+- After each new release, a short "What's new" overview pops up once, the first time you open the
+  app, with a link to the full release notes in the help.
+- Reporting: a "By A&P category" table under the matrix, with lines, forecast, share and actual
+  per A&P category for the selected year and scope.
+- "CustomerLink Campaign" on the campaign / event form (Details tab), the same link as on the
+  budget lines. Filled in on the event, it goes to its budget lines that had no link (or the old
+  one); filled in on a budget line, it goes to the linked events. It also stays listed under Content
+  & assets, and the event card has an "Open in CLinks" link. Clearing it on the event takes it off
+  the budget lines that had it.
+- One-time cleanup of the 2026 test year, for admins in Settings > Data & sharing ("Preview
+  cleanup", then "Apply cleanup"). It fills in goals on events (from an event type that was really
+  a goal, which then becomes "Event", or from the A&P category of the linked budget lines), moves
+  budget lines from "ABM - Pan European" to "ABM" and from "Digital or Lead generation campaign" to
+  "Advertising" (keeping their A&P category) and deletes those two types, fills a missing SVP /
+  vertical from an event's single old domain tag and removes the hidden domain tags, and points
+  old "None" SVP values at N.A. Budget lines whose type had been deleted earlier get a real one
+  (content work: "Whitepaper, Content and Sales enablement"; Google / LinkedIn ads: "Advertising").
+  Changed rows are stamped as updated. Afterwards: publish the setup
+  and the budget & events. Running it again finds nothing to do.
+- Goal of a campaign / event: Lead Generation, Awareness or Customer Intimacy, on the Details tab.
+  Picking a goal fills the A&P category of the budget line on the Budget tab (Lead generation
+  campaigns, Enhance market awareness and perception, Customer intimacy); it stays editable, and
+  the event type no longer overrides it once a goal is set. The goal shows on the event card and in
+  the hover text, and can be used to group or color the timeline, as agenda lanes or a detail in
+  Download agenda, to group Outcomes, and in the Excel export of campaigns & events.
+- The event form's Event type list no longer offers the types that are really goals (Lead
+  generation campaigns, Enhance market awareness and perception, Customer intimacy). Budget lines
+  still have them. An older event that has one of these as its type gets the matching goal filled
+  in when opened, and its type is marked "(a goal: pick an event type)" until it is changed.
+  "Digital or Lead generation campaign" counts as the goal Lead Generation in the same way, and
+  "ABM - Pan European" is no longer offered for events (use ABM).
+- The dev copy shows its own build number (for example 5.2.0-dev.2), raised on every dev push, and
+  loads its files with that number so the browser always runs the latest dev code.
+
+### Changed
+- Budget lines no longer have an activity type: it said the same as the A&P category. The A&P
+  category is now the line's classification and is required. The Type column on the Budget tab is
+  replaced by an A&P category column (shown under the name, and as an optional column), and the
+  Reporting drill-down, the Excel exports, bulk edit and bulk import use the A&P category. A new
+  line linked to an event gets its A&P category from the event's goal (or its event type).
+- Settings: "Activity types & A&P" is now "Event types & A&P". Event types are the means of a
+  campaign or event, each with a default A&P category.
+- The one-time cleanup also files every budget line under an explicit A&P category, removes the
+  activity type from budget lines, and deletes the goal-named types once no event uses them.
+
 ## [v5.1.18] - 2026-11-02 - Dev and production copies
 
 ### Added
