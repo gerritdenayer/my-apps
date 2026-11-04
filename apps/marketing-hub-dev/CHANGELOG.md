@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Campaigns & events now opens on your home cluster instead of your home country, so you see all events of your cluster, the same as the Budget tab. You can still pick a country under More filters.
+- A new budget line or a new campaign or event now starts on your home cluster, so the entity list only shows the entities of your cluster. You can still pick another cluster.
+
 ## [v5.2.0] - 2026-11-04 - New interface, goals, A&P categories on budget lines
 
 ### Changed: new interface

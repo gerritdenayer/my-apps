@@ -192,11 +192,16 @@
     const root=document.getElementById("tab-timeline");
     const data=S.state.data;
     if(!data){ root.innerHTML=""; return; }
-    // On first view for a user, default the country filter to their home country (if set).
+    // On a new login, open on the user's home cluster (set in Users), like the Budget tab.
+    // No country filter by default, so they see everything in their cluster.
     if(view._forUser !== S.state.currentUserId){
       view._forUser = S.state.currentUserId;
       const u = S.state.currentUserId ? S.userById(S.state.currentUserId) : null;
-      view.country = (u && u.homeCountryId) || "";
+      const hc = (u && u.homeCluster) || "";
+      const known = S.clusterList ? S.clusterList("").includes(hc) : !!hc;
+      view.country = "";
+      view.scope.m1 = ""; view.scope.entityId = "";
+      view.scope.cluster = known ? hc : "";
       // Open on one year (this year if it has items, else the latest), so the timeline fits the screen.
       if (!view.year) {
         const ys = tlYears(data.events || []), now = new Date().getFullYear();
@@ -792,7 +797,8 @@
     // Organising entity (by id) and its cluster
     const orgEntId=e.entityId||"";
     const orgEnt=orgEntId?S.entityById(orgEntId):null;
-    const initialCluster=(orgEnt?(orgEnt.group||""):"")||e.cluster||"";
+    // A new item without an entity starts on the user's home cluster.
+    const initialCluster=(orgEnt?(orgEnt.group||""):"")||e.cluster||(!isEdit?S.homeCluster():"");
     // Budget entity defaults to the organising entity, else the managed line's entity
     const presetEntityId=orgEntId||(managed?managed.entityId:"")||"";
     const presetTypeId=e.activityTypeId||(managed?managed.activityTypeId:"")||"";
