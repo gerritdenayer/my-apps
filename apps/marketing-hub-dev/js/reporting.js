@@ -87,6 +87,32 @@
     return g - p; // net
   }
 
+  // Totals per A&P category for the selected year and scope, in the chosen measure.
+  function apCategoryCard() {
+    const allowed = new Set(reportEntities().map((e) => e.id));
+    const rows = {};
+    activitiesInYear().forEach((a) => {
+      if (!allowed.has(S.canonicalEntityId(a.entityId))) return;
+      const c = S.apCategoryForActivity(a);
+      const k = c ? c.name : "No A&P category";
+      const r = rows[k] = rows[k] || { n: 0, f: 0, a: 0 };
+      r.n++; r.f += valueOf(a, "forecast"); r.a += valueOf(a, "actual");
+    });
+    const list = Object.entries(rows).sort((x, y) => y[1].f - x[1].f);
+    if (!list.length) return "";
+    const totF = list.reduce((t, [, r]) => t + r.f, 0), totA = list.reduce((t, [, r]) => t + r.a, 0);
+    const m = { net: "net", gross: "gross", partner: "partner" }[view.measure] || "net";
+    return `<div class="card" style="margin-top:16px">
+      <h2 style="margin:0 0 4px">By A&amp;P category</h2>
+      <p class="muted small" style="margin:0 0 10px">Budget lines in ${S.escapeHtml(String(view.year))} for the selected scope, ${m} amounts.</p>
+      <table style="width:100%">
+        <thead><tr><th>A&amp;P category</th><th class="num">Lines</th><th class="num">Forecast</th><th class="num">% of forecast</th><th class="num">Actual</th></tr></thead>
+        <tbody>${list.map(([k, r]) => `<tr><td>${S.escapeHtml(k)}</td><td class="num">${r.n}</td><td class="num">${S.fmtMoney(r.f)}</td><td class="num">${totF ? Math.round(r.f / totF * 100) : 0}%</td><td class="num ${r.a > r.f ? "over-forecast" : ""}">${S.fmtMoney(r.a)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr class="total-row"><td>Total</td><td class="num">${list.reduce((t, [, r]) => t + r.n, 0)}</td><td class="num">${S.fmtMoney(totF)}</td><td class="num">100%</td><td class="num">${S.fmtMoney(totA)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  }
+
   function activitiesInYear() {
     return S.state.data.activities.filter((a) => S.inPeriod(a.date, view.year, view.quarter, view.month));
   }
@@ -272,6 +298,7 @@
           </table>
         </div>
       </div>
+      ${apCategoryCard()}
     `;
     return html;
   }
@@ -450,7 +477,7 @@
                 <th>Date</th>
                 <th>Name</th>
                 <th>SVP / vertical</th>
-                <th>Type</th>
+                <th>A&amp;P category</th>
                 <th>Status</th>
                 <th>Owner</th>
                 <th>Vendor</th>
@@ -474,7 +501,7 @@
                   <td>${S.fmtDate(a.date)}</td>
                   <td>${S.escapeHtml(a.name)}</td>
                   <td>${S.escapeHtml((S.svpById(a.svpId)||{}).name || "")}</td>
-                  <td>${S.escapeHtml((S.actTypeById(a.activityTypeId)||{}).name || "")}</td>
+                  <td>${S.escapeHtml((S.apCategoryForActivity(a)||{}).name || "")}</td>
                   <td>${S.escapeHtml((S.statusById(a.statusId)||{}).name || "")}</td>
                   <td>${S.escapeHtml((S.userById(a.ownerId)||{}).name || "")}</td>
                   <td>${S.escapeHtml(a.vendor || "")}</td>
@@ -554,7 +581,7 @@
       Entity: (S.entityById(a.entityId)||{}).name || "",
       "Entity group": (S.entityById(a.entityId)||{}).group || "",
       "SVP / vertical": (S.svpById(a.svpId)||{}).name || "",
-      Type: (S.actTypeById(a.activityTypeId)||{}).name || "",
+      "A&P category": (S.apCategoryForActivity(a)||{}).name || "",
       Status: (S.statusById(a.statusId)||{}).name || "",
       Owner: (S.userById(a.ownerId)||{}).name || "",
       Vendor: a.vendor || "",

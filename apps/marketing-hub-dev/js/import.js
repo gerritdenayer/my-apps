@@ -339,7 +339,7 @@
         date: a.date,
         entityId: findOrCreate(data.settings.entities, a.entity, { group: "" }),
         svpId: findOrCreate(data.settings.svps, a.svp),
-        activityTypeId: findOrCreate(data.settings.activityTypes, a.activityType),
+        apCategoryId: findOrCreate(data.settings.apCategories = data.settings.apCategories || [], a.activityType),
         statusId: findOrCreate(data.settings.statuses, a.status),
         ownerId: S.state.currentUserId || "",
         vendor: a.vendor || "",

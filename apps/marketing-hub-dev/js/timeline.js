@@ -711,6 +711,7 @@
         <div><div class="lab">Owner</div>${S.escapeHtml(S.eventOwnerName(e)||"-")}</div>
         <div><div class="lab">Campaign code</div>${S.escapeHtml(e.campaignCode||"-")}</div>
         <div><div class="lab">Goal</div>${S.escapeHtml(S.goalLabel(e.goal)||"-")}</div>
+        <div><div class="lab">CustomerLink Campaign</div>${S.customerLinkOfEvent(e)?`<a href="${S.escapeHtml(S.customerLinkOfEvent(e))}" target="_blank" rel="noopener">Open in CLinks &#8599;</a>`:"-"}</div>
         <div><div class="lab">Countries</div>${S.escapeHtml(S.countryNamesOf(e.countryIds).join(", ")||"-")}</div>
       </div>
       ${false?`<div style="margin:6px 0"><div class="lab" style="color:#888;font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
@@ -755,7 +756,8 @@
       window.MB_APP.switchTab("budget");
       // Inherit the campaign's entity and SVP so a new line matches its campaign by default (still editable).
       window.MB_BUDGET.newActivity({
-        eventIds:[id], name:e.name, date:e.start, activityTypeId:e.activityTypeId||"",
+        eventIds:[id], name:e.name, date:e.start,
+        apCategoryId:S.apCategoryForGoal(e.goal)||((S.actTypeById(e.activityTypeId)||{}).apCategoryId)||"",
         entityId:e.entityId||"", svpId:e.svpId||"",
       });
     };
@@ -891,7 +893,7 @@
             </div>
             <div class="row-3">
               <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
-              <div></div><div></div>
+              <div style="grid-column: span 2"><label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label><input id="c-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(S.customerLinkOfEvent(e))}" /></div>
             </div>
             <label>Notes</label>
             <textarea id="c-info" rows="4">${S.escapeHtml(e.info||"")}</textarea>
@@ -1266,7 +1268,7 @@
         const links=new Set(line.eventIds||[]); links.add(e.id);
         Object.assign(line,{
           name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId,
-          activityTypeId:typeFromField, apCategoryId:(bapc||typeCatId), statusId:bStatus,
+          apCategoryId:(bapc||typeCatId), statusId:bStatus,
           ownerId:(modal.querySelector("#c-owner").value||line.ownerId||S.state.currentUserId||""),
           vendor:bvendor, poNumber:bpo,
           forecastGross:fg, forecastPartner:fp, actualGross:ag, actualPartner:ap,
@@ -1274,6 +1276,7 @@
         // A line with an actual value cannot stay "Planned": bump it to "Committed".
         line.statusId=S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
         // Stamp the managed line's update only if it already existed and its content changed.
+        delete line.activityTypeId; // budget lines carry the A&P category, not a type
         if(!isNewLine && contentSig(line)!==beforeSig){
           line.updatedBy=S.state.currentUserId; line.updatedAt=new Date().toISOString();
         }
@@ -1332,6 +1335,22 @@
         fullyPartnerFunded: bmode==="partner" ? true : undefined,
         entity:undefined, owner:undefined, type:undefined, globalCampaignId:undefined, // drop legacy fields
       };
+      // CustomerLink Campaign: one link for the event and its budget lines. Lines that had no link,
+      // or the old one, get the new one; the event's Content & assets list gets it too.
+      const clOld=S.customerLinkOfEvent(e), clNew=S.normUrl(modal.querySelector("#c-clink").value);
+      base.customerLinkUrl=clNew||undefined;
+      if(!clNew && clOld){
+        // Cleared on purpose: take the old link off the event and the budget lines that had it.
+        base.content=(base.content||[]).filter(c=>!((c.label||"")===S.CLINK_LABEL && (c.url||"").trim()===clOld));
+        (data.activities||[]).forEach(a=>{ if((a.eventIds||[]).includes(e.id) && a.customerLinkUrl===clOld){ delete a.customerLinkUrl; stampUpdated(a); } });
+      }
+      if(clNew){
+        base.content=S.contentWithLink(base.content, clNew, clOld);
+        (data.activities||[]).forEach(a=>{
+          if(!(a.eventIds||[]).includes(e.id)) return;
+          if(!a.customerLinkUrl || a.customerLinkUrl===clOld){ if(a.customerLinkUrl!==clNew){ a.customerLinkUrl=clNew; stampUpdated(a); } }
+        });
+      }
       // Stamp "updated by/on" only when the campaign content really changed (not a no-op save).
       let updated=base;
       if(isEdit && contentSig(base)!==contentSig(e)){

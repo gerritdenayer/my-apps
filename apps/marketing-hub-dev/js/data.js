@@ -134,14 +134,14 @@
     const rows = (D.activities || []).filter((a) => S.inPeriodQ(a.date, year, quarters, "")).map((a) => {
       const e = S.entityById(a.entityId) || {};
       return [a.date || "", a.name || "", e.group || "", e.name || "",
-        (S.actTypeById(a.activityTypeId) || {}).name || "", ap(a.apCategoryId),
+        ((S.apCategoryForActivity(a) || {}).name || ap(a.apCategoryId)),
         (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "",
         (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
         a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
         a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
     });
     writeSheet("budget-lines", "Budget lines",
-      ["Date", "Expenditure or Activity", "Cluster", "Entity", "Activity type", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
       rows);
   }
   function exportEventsXlsx(year, quarters) {
@@ -184,7 +184,7 @@
       { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
       { key: "entity", label: "Entity", text: (a) => entN(a.entityId), sort: (a) => entN(a.entityId).toLowerCase() },
       { key: "svp", label: "SVP / vertical", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
-      { key: "type", label: "Type", text: (a) => typeN(a.activityTypeId), sort: (a) => typeN(a.activityTypeId).toLowerCase() },
+      { key: "apcat", label: "A&P category", text: (a) => (S.apCategoryForActivity(a) || {}).name || "", sort: (a) => ((S.apCategoryForActivity(a) || {}).name || "").toLowerCase() },
       { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
       { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
       { key: "fN", label: "Forecast net", num: true, text: (a) => S.fmtMoney((a.forecastGross || 0) - (a.forecastPartner || 0)), sort: (a) => (a.forecastGross || 0) - (a.forecastPartner || 0) },
@@ -211,13 +211,13 @@
       { field: "statusId", label: "Status", opts: () => opt(D.settings.statuses || []) },
       { field: "ownerId", label: "Owner", opts: users },
       { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
-      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "apCategoryId", label: "A&P category", opts: () => opt(D.settings.apCategories || []) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "date", label: "Date", date: true },
     ];
     return [
       { field: "ownerId", label: "Owner", opts: users },
-      { field: "activityTypeId", label: "Type", opts: () => opt(D.settings.activityTypes || []) },
+      { field: "activityTypeId", label: "Event type", opts: () => opt(D.settings.activityTypes || []) },
       { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
       { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },

@@ -42,12 +42,13 @@
     { id: "budget", title: "Budget", tabs: ["budget"], html: `
       <p>The Budget tab lists every budget line: one cost on one date for one entity. It opens on the current year and on your home cluster, if an admin set one.</p>
       <h4>Filters and columns</h4>
-      <p>Pick the year with the year buttons, then a cluster and entity, or type in Search. Month and M1 zone are under <b>More filters</b> (the number on it tells how many of those are set). Click a column header to sort or filter that column, Excel-style. <b>Columns</b> chooses which columns show and in what order: by default you see date, name (with type and vendor under it), entity, status, owner and the net amounts; quarter, budget code, SVP / vertical, gross and partner amounts and the rest can be switched on there.</p>
+      <p>Pick the year with the year buttons, then a cluster and entity, or type in Search. Month and M1 zone are under <b>More filters</b> (the number on it tells how many of those are set). Click a column header to sort or filter that column, Excel-style. <b>Columns</b> chooses which columns show and in what order: by default you see date, name (with A&amp;P category and vendor under it), entity, status, owner and the net amounts; quarter, budget code, SVP / vertical, A&amp;P category, gross and partner amounts and the rest can be switched on there.</p>
       <h4>Budget left</h4>
       <p>The card above the table shows the yearly budget, planned (forecast net), spent (actual net), left after planned and left after actual. Pick one entity to see its budget code; open <b>Per budget code</b> to see every code in your selection. Red means over budget. The card always covers the whole year: quarter, month and search do not change it.</p>
       <h4>Adding a line</h4>
-      <p>Click <b>+ New budget line</b>, or click a row to open it (the &#9776; button on each row also has Copy and Delete). Name, date, cluster and entity are required. The cluster and entity lists follow the year of the date, so retired ones (such as Pan European from 2027) are not offered. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
-      <p><b>CustomerLink Campaign</b> takes the link to the campaign in CLinks. When you save, the link is also added to each linked campaign or event, under Content &amp; assets (a changed link replaces the old one there). The CustomerLink column in the table opens it.</p>
+      <p>Click <b>+ New budget line</b>, or click a row to open it (the &#9776; button on each row also has Copy and Delete). Name, date, cluster, entity and A&amp;P category are required. The cluster and entity lists follow the year of the date, so retired ones (such as Pan European from 2027) are not offered. Net is always gross minus the partner part. Entering an actual amount moves a Planned line to Committed. Tick <b>Fully partner funded</b> when a partner pays the whole cost: the partner amounts then follow gross and net stays 0. Link the line to one or more campaigns or events so it shows up in Outcomes.</p>
+      <p>The <b>A&amp;P category</b> is the marketing budget bucket the line is filed under (Lead generation campaigns, Account Based Marketing, Content and Sales enablement...). Budget lines have no activity type: what kind of activity it is shows on the campaign or event it is linked to (its goal and event type). A line created from an event gets its A&amp;P category from the event's goal. Reporting shows the totals per A&amp;P category.</p>
+      <p><b>CustomerLink Campaign</b> takes the link to the campaign in CLinks. It is the same link as on the linked campaigns and events: fill it in here or on the event form and it shows on both (and under Content &amp; assets). The CustomerLink column in the table opens it.</p>
       <p>When you are done, click <b>Publish</b> in the top bar so the team sees it.</p>` },
 
     { id: "events", title: "Campaigns & events", tabs: ["timeline"], html: `
@@ -65,6 +66,7 @@
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it.</p>
       <p><b>Goal</b> is what the item is for: Lead Generation, Awareness or Customer Intimacy. Picking it fills the A&amp;P category on the Budget tab for you (Lead generation campaigns, Enhance market awareness and perception, Customer intimacy); you can still change it there. The event type is the means (Event, Tradeshow, ABM, Advertising...), so types that are really goals are not offered there. You can group and color the timeline by goal, use it for agenda lanes and details, and group Outcomes by it.</p>
+      <p><b>CustomerLink Campaign</b> (Details tab) is the link to the campaign in CLinks. It is one link shared with the item's budget lines: fill it in on the event or on a budget line and it shows on the other too, and under Content &amp; assets. Clearing it on the event also takes it off the budget lines that had it.</p>
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
@@ -75,6 +77,7 @@
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
       <p>The budget by month. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
+      <p>Under the matrix, <b>By A&amp;P category</b> shows the forecast and actual per A&amp;P category for the year and scope you picked.</p>
       <p><b>Export to Excel</b> downloads the year as a workbook.</p>` },
 
     { id: "outcomes", title: "Outcomes", tabs: ["outcomes"], html: `
@@ -106,7 +109,8 @@
         <tr><td><b>Entities &amp; clusters</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years. The active years decide which entities and clusters the forms and filters offer for a given year.</td></tr>
         <tr><td><b>Budget structure</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Set the numbers or copy last year forward.</td></tr>
         <tr><td><b>SVPs &amp; verticals</b></td><td>The SVPs and vertical industries used for reporting on budget lines and events. "N.A." (not applicable) is always there; add verticals such as Manufacturing or Retail as needed.</td></tr>
-        <tr><td><b>Countries, Activity types &amp; A&amp;P, Statuses</b></td><td>The other lists used in budget lines and events.</td></tr>
+        <tr><td><b>Event types &amp; A&amp;P</b></td><td>Event types (the means: Event, Tradeshow, ABM...) with their default A&amp;P category, and the A&amp;P categories budget lines are filed under.</td></tr>
+        <tr><td><b>Countries, Statuses</b></td><td>The other lists used in budget lines and events.</td></tr>
         <tr><td><b>Users &amp; access</b></td><td>Add users, set role and home cluster, deactivate, reset a password to 1234. Also the admin pin.</td></tr>
         <tr><td><b>Data &amp; sharing</b></td><td>The shared folder, publish setup and budget &amp; events, file dates, backups and Excel exports, the second folder (bridge).</td></tr>
         <tr><td><b>One-time cleanup</b> (in Data &amp; sharing)</td><td>Tidies the 2026 test-year data once: goals on events, old event types replaced, hidden domain tags turned into SVP / vertical where possible. Preview first, then Apply, then publish the setup and your budget &amp; events.</td></tr>

@@ -10,6 +10,10 @@
 //  3b. Budget lines whose type no longer exists in the setup (deleted earlier) get a real one:
 //     content work -> "Whitepaper, Content and Sales enablement", Google / LinkedIn ads ->
 //     "Advertising". Anything else is listed and left alone.
+//  3c. Budget lines no longer have an activity type: each line's A&P category is made explicit
+//     (taken from its type when it was inherited), then the type is removed from the line.
+//     The old types and the types that are really goals are deleted from the setup when no
+//     campaign or event uses them any more.
 //  4. Events with no SVP / vertical and exactly one old "Domains" tag that matches an SVP /
 //     vertical name get that value. Then the hidden "domains" and "scope" fields are removed.
 //  5. Rows still pointing at the old "None" SVP point at N.A. directly.
@@ -57,10 +61,6 @@
     if (abmPan && abm) remap.push([abmPan, abm]);
     if (digLead && adv) remap.push([digLead, adv]);
     remap.forEach(([from, to]) => {
-      acts.filter((a) => a.activityTypeId === from.id).forEach((a) => {
-        steps.push({ kind: "line", id: a.id, what: `Type ${from.name} → ${to.name}`, name: a.name,
-          fix: (x) => { if (!x.apCategoryId && from.apCategoryId) x.apCategoryId = from.apCategoryId; x.activityTypeId = to.id; } });
-      });
       evs.filter((e) => e.activityTypeId === from.id).forEach((e) => {
         steps.push({ kind: "event", id: e.id, what: `Type ${from.name} → ${to.name}`, name: e.name, fix: (x) => { x.activityTypeId = to.id; } });
       });
@@ -69,13 +69,25 @@
     const content = types.find((t) => low(t.name).startsWith("whitepaper"));
     const known = new Set(types.map((t) => t.id));
     const apName = (id) => { const c = (set.apCategories || []).find((x) => x.id === id); return c ? c.name : ""; };
-    [["line", acts], ["event", evs]].forEach(([k, list]) => list.forEach((r) => {
+    [["event", evs]].forEach(([k, list]) => list.forEach((r) => {
       if (!r.activityTypeId || known.has(r.activityTypeId)) return;
       const txt = low([r.name, r.vendor, apName(r.apCategoryId)].join(" "));
       const to = /google|linkedin|\bads\b|advertis/.test(txt) ? adv : /content|designer|sales enablement|whitepaper/.test(txt) ? content : null;
       if (to) steps.push({ kind: k, id: r.id, name: r.name, what: `Type (deleted earlier) \u2192 ${to.name}`, fix: (x) => { x.activityTypeId = to.id; } });
       else steps.push({ kind: k, id: r.id, name: r.name, what: "Type was deleted earlier: please pick one", fix: () => {} , noop: true });
     }));
+    // 3c: budget lines keep their A&P category and lose the activity type
+    const apContent = (set.apCategories || []).find((c) => low(c.name).startsWith("content"));
+    const apAds = (set.apCategories || []).find((c) => low(c.name).startsWith("enhance market awareness"));
+    acts.forEach((a) => {
+      if (!("activityTypeId" in a)) return;
+      let ap = a.apCategoryId || typeAp(a.activityTypeId);
+      if (!ap) { const txt = low([a.name, a.vendor].join(" ")); ap = /google|linkedin|\bads\b|advertis/.test(txt) && apAds ? apAds.id : /content|designer|whitepaper/.test(txt) && apContent ? apContent.id : ""; }
+      const apN = apName(ap);
+      steps.push({ kind: "line", id: a.id, name: a.name, quiet: !!a.apCategoryId || !a.activityTypeId,
+        what: apN ? `A&P category ${apN} (was set by its type)` : "Activity type removed; please pick an A&P category",
+        fix: (x) => { if (!x.apCategoryId && ap) x.apCategoryId = ap; delete x.activityTypeId; } });
+    });
     // 4: domains -> SVP / vertical, then drop the old fields
     evs.forEach((e) => {
       const doms = Array.isArray(e.domains) ? e.domains : [];
@@ -94,7 +106,13 @@
     [["line", acts], ["event", evs]].forEach(([k, list]) => list.forEach((r) => {
       if (r.svpId && aliases[r.svpId]) steps.push({ kind: k, id: r.id, name: r.name, quiet: true, what: "SVP / vertical None → N.A.", fix: (x) => { x.svpId = aliases[x.svpId]; } });
     }));
-    const delTypes = remap.map(([from]) => from);
+    // Types to delete: the two old ones, and the goal-named ones that no event uses after this.
+    const evTypeAfter = new Set(evs.map((e) => {
+      if (S.goalOfType(e.activityTypeId)) return (e.kind || "Event") === "Campaign" ? "" : (evType ? evType.id : "");
+      const r = remap.find(([from]) => from.id === e.activityTypeId);
+      return r ? r[1].id : e.activityTypeId;
+    }).filter(Boolean));
+    const delTypes = types.filter((t) => remap.some(([from]) => from === t) || (S.goalOfType(t.id) && !evTypeAfter.has(t.id)));
     return { steps, delTypes };
   }
 
@@ -121,7 +139,7 @@
     if (!(window.MB_AUTH && window.MB_AUTH.canSeeSettings && window.MB_AUTH.canSeeSettings())) return "";
     return `<div class="card" id="cu-card">
       <h2>One-time cleanup: 2026 test year</h2>
-      <p class="muted small">Moves 2026 values to the fields the app now uses (goals, event types, SVP / vertical) and removes what is no longer used (the old types "ABM - Pan European" and "Digital or Lead generation campaign", hidden domain tags). Preview first; nothing changes until you click Apply. Afterwards, publish the setup and your budget &amp; events.</p>
+      <p class="muted small">Moves 2026 values to the fields the app now uses (goals, event types, A&amp;P categories on budget lines, SVP / vertical) and removes what is no longer used (activity types on budget lines, old and goal-named types, hidden domain tags). Preview first; nothing changes until you click Apply. Afterwards, publish the setup and your budget &amp; events.</p>
       <div style="display:flex;gap:8px;margin-top:8px"><button class="secondary" id="cu-preview" type="button">Preview cleanup</button></div>
       <div id="cu-out" style="margin-top:10px"></div>
     </div>`;
@@ -143,7 +161,7 @@
           <table class="tl-mini" style="width:100%;font-size:12.5px"><thead><tr><th>Item</th><th>Change</th></tr></thead><tbody>
           ${shown.map((s) => `<tr><td>${S.escapeHtml(s.name || "(no name)")} <span class="muted small">${s.kind === "line" ? "budget line" : "event"}</span></td><td>${S.escapeHtml(s.what)}</td></tr>`).join("")}
           </tbody></table></div>
-        ${quiet ? `<p class="muted small" style="margin:6px 0 0">Plus ${quiet} small change${quiet === 1 ? "" : "s"} not listed: old domain tags removed, old "None" SVP values pointed at N.A.</p>` : ""}
+        ${quiet ? `<p class="muted small" style="margin:6px 0 0">Plus ${quiet} small change${quiet === 1 ? "" : "s"} not listed: activity type removed from budget lines that already had their A&amp;P category, old domain tags removed, old "None" SVP values pointed at N.A.</p>` : ""}
         <div style="display:flex;gap:8px;margin-top:10px"><button class="primary" id="cu-apply" type="button">Apply cleanup</button></div>`;
       out.querySelector("#cu-apply").onclick = async () => {
         if (!(await S.confirmDialog(`Apply the cleanup to ${rowsTouched} rows${p.delTypes.length ? " and delete " + p.delTypes.length + " old types" : ""}? Then publish the setup and your budget & events so everyone gets it.`))) return;

@@ -32,7 +32,7 @@
     { key: "entity", label: "Entity", def: 150 },
     { key: "code", label: "Budget code", def: 120 },
     { key: "svp", label: "SVP / vertical", def: 130 },
-    { key: "type", label: "Type", def: 130 },
+    { key: "apcat", label: "A&P category", def: 170 },
     { key: "status", label: "Status", def: 110 },
     { key: "owner", label: "Owner", def: 120 },
     { key: "vendor", label: "Vendor", def: 120 },
@@ -55,10 +55,15 @@
     // By default the table shows what fits a laptop and matters most: date, name (with type and
     // vendor under it), entity, status, owner and the net amounts. The rest is one click away in
     // Columns. (v2 key: everyone gets this default once, then their own choice is kept.)
-    const def = ["quarter", "code", "svp", "type", "vendor", "po", "clink", "fG", "fP", "aG", "aP", "createdBy", "createdAt", "updatedBy", "updatedAt"];
+    const def = ["quarter", "code", "svp", "apcat", "vendor", "po", "clink", "fG", "fP", "aG", "aP", "createdBy", "createdAt", "updatedBy", "updatedAt"];
     const raw = localStorage.getItem("mb_budget_hidden_v2");
     if (raw === null) return new Set(def);
-    try { return new Set(JSON.parse(raw)); } catch (e) { return new Set(def); }
+    try {
+      const set = new Set(JSON.parse(raw));
+      // The A&P category column is new (it replaced "Type"): hidden at first, as it shows under the name.
+      if (!localStorage.getItem("mb_budget_seen_apcat")) { set.add("apcat"); localStorage.setItem("mb_budget_seen_apcat", "1"); }
+      return set;
+    } catch (e) { return new Set(def); }
   }
   // Column order, per browser. Unknown keys are dropped and new columns are added at the end, so
   // a saved order keeps working when columns are added later. "actions" always stays first.
@@ -297,7 +302,7 @@
       case "entity": return ((S.entityById(a.entityId) || {}).name || "").toLowerCase();
       case "code": return S.budgetCodeForActivity(a).toLowerCase();
       case "svp": return ((S.svpById(a.svpId) || {}).name || "").toLowerCase();
-      case "type": return ((S.actTypeById(a.activityTypeId) || {}).name || "").toLowerCase();
+      case "apcat": return ((S.apCategoryForActivity(a) || {}).name || "").toLowerCase();
       case "status": return ((S.statusById(a.statusId) || {}).name || "").toLowerCase();
       case "owner": return ((S.userById(a.ownerId) || {}).name || "").toLowerCase();
       case "vendor": return (a.vendor || "").toLowerCase();
@@ -346,7 +351,7 @@
       case "entity": return (S.entityById(a.entityId) || {}).name || "";
       case "code": return S.budgetCodeForActivity(a);
       case "svp": return (S.svpById(a.svpId) || {}).name || "";
-      case "type": return (S.actTypeById(a.activityTypeId) || {}).name || "";
+      case "apcat": return (S.apCategoryForActivity(a) || {}).name || "";
       case "status": return (S.statusById(a.statusId) || {}).name || "";
       case "owner": return (S.userById(a.ownerId) || {}).name || "";
       case "vendor": return a.vendor || "";
@@ -592,14 +597,14 @@
         const aNet = (a.actualGross || 0) - (a.actualPartner || 0);
         const ent = S.entityById(a.entityId);
         const svp = S.svpById(a.svpId);
-        const at = S.actTypeById(a.activityTypeId);
+        const apc = S.apCategoryForActivity(a);
         const st = S.statusById(a.statusId);
         const own = S.userById(a.ownerId);
         const statusName = (st && st.name) ? st.name : "";
         const statusSlug = statusName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
         const nameHtml = a.name && String(a.name).trim() ? S.escapeHtml(a.name) : "<span class='muted'>(no name)</span>";
         const dateHtml = a.date ? shortDate(a.date) : "<span class='muted'>(no date)</span>";
-        const subTxt = [at ? at.name : "", a.vendor || ""].filter(Boolean).join(" \u00b7 ");
+        const subTxt = [apc ? apc.name : "", a.vendor || ""].filter(Boolean).join(" \u00b7 ");
         const cells = {
           actions: `<td class="bc-actions actions-cell">
               ${canEditRows ? `<button class="icon row-menu" title="Actions" aria-label="Actions">&#9776;</button>` : "<span class='muted'>-</span>"}
@@ -610,7 +615,7 @@
           entity: `<td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>`,
           code: `<td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>`,
           svp: `<td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>`,
-          type: `<td class="bc-type">${at ? S.escapeHtml(at.name) : "<span class='muted'>-</span>"}</td>`,
+          apcat: `<td class="bc-apcat">${apc ? S.escapeHtml(apc.name) : "<span class='muted'>-</span>"}</td>`,
           status: `<td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>`,
           owner: `<td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>`,
           vendor: `<td class="bc-vendor">${S.escapeHtml(a.vendor || "")}</td>`,
@@ -735,16 +740,12 @@
               <select id="m-svp"><option value="">Select...</option>
                 ${data.settings.svps.map(s => `<option ${S.canonicalSvpId(a.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
               </select></div>
-            <div><label>Activity type</label>
-              <select id="m-type"><option value="">Select...</option>
-                ${data.settings.activityTypes.map(t => `<option ${a.activityTypeId===t.id?"selected":""} value="${t.id}">${S.escapeHtml(t.name)}</option>`).join("")}
+            <div><label>A&amp;P category *</label>
+              <select id="m-apcat"><option value="">Select...</option>
+                ${(data.settings.apCategories||[]).map(c => `<option ${((S.apCategoryForActivity(a)||{}).id)===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
               </select></div>
           </div>
           <div class="row">
-            <div><label>A&amp;P category <span class="muted small">(defaults from type)</span></label>
-              <select id="m-apcat"><option value="">Select...</option>
-                ${(data.settings.apCategories||[]).map(c => `<option ${a.apCategoryId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
-              </select></div>
             <div><label>Owner</label>
               <select id="m-owner"><option value="">Unassigned</option>${S.activeOwnerOptions(a.ownerId)}</select></div>
           </div>
@@ -754,7 +755,7 @@
           </div>
           <label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label>
           <input id="m-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(a.customerLinkUrl || "")}" />
-          <p class="muted small" style="margin:3px 0 0">Also added to the linked campaigns / events, under Content &amp; assets.</p>
+          <p class="muted small" style="margin:3px 0 0">The same link as on the linked campaigns / events (it is also listed under their Content &amp; assets).</p>
         </div>
         <div>
           <label>Linked campaigns / events <span class="muted small">(Ctrl or Cmd to pick several, or none)</span></label>
@@ -855,12 +856,17 @@
       }
     };
 
-    // A&P category defaults from the activity type unless overridden.
+    // A&P category: what the line is for in the marketing budget. A new line linked to an event
+    // takes it from the event's goal (or its event type) when it is still empty.
     const apcatSel = modal.querySelector("#m-apcat");
-    const typeSel = modal.querySelector("#m-type");
-    const typeCatId = (tid) => { const t = tid ? S.actTypeById(tid) : null; return (t && t.apCategoryId) || ""; };
-    if (!a.apCategoryId) apcatSel.value = typeCatId(a.activityTypeId);
-    typeSel.addEventListener("change", () => { apcatSel.value = typeCatId(typeSel.value); });
+    const evSel = modal.querySelector("#m-event");
+    if (evSel) evSel.addEventListener("change", () => {
+      if (apcatSel.value) return;
+      const ev = [...evSel.selectedOptions].map((o) => S.eventById(o.value)).find(Boolean);
+      const t = ev && ev.activityTypeId ? S.actTypeById(ev.activityTypeId) : null;
+      const ap = ev ? (S.apCategoryForGoal(ev.goal) || (t && t.apCategoryId) || "") : "";
+      if (ap) apcatSel.value = ap;
+    });
 
     // Live: entering an actual value flips a Planned (or blank) status to Committed right away.
     const statusSel = modal.querySelector("#m-status");
@@ -892,6 +898,7 @@
       if (!date) return S.toast("Date is required", "error");
       if (!group) return S.toast("Cluster is required", "error");
       if (!entityId) return S.toast("Entity is required", "error");
+      if (!modal.querySelector("#m-apcat").value) return S.toast("A&P category is required", "error");
 
       const eventIds = [...modal.querySelectorAll("#m-event option")].filter(o => o.selected).map(o => o.value).filter(Boolean);
       const base = {
@@ -902,7 +909,7 @@
         apCategoryId: modal.querySelector("#m-apcat").value,
         entityId,
         svpId: modal.querySelector("#m-svp").value,
-        activityTypeId: modal.querySelector("#m-type").value,
+        activityTypeId: undefined, // budget lines no longer have an activity type (A&P category instead)
         statusId: modal.querySelector("#m-status").value,
         ownerId: modal.querySelector("#m-owner").value,
         vendor: modal.querySelector("#m-vendor").value.trim(),
@@ -959,12 +966,12 @@
     let n = 0;
     (S.state.data.events || []).forEach((ev) => {
       if (!(line.eventIds || []).includes(ev.id)) return;
-      const content = Array.isArray(ev.content) ? ev.content.slice() : [];
-      if (content.some((c) => (c.url || "").trim() === url)) return;
-      const old = oldUrl ? content.findIndex((c) => (c.url || "").trim() === oldUrl) : -1;
-      if (old >= 0) content[old] = { ...content[old], url };
-      else content.push({ label: CLINK_LABEL, url });
-      ev.content = content;
+      let changed = false;
+      // The event's own CustomerLink field: filled when empty or still the old link.
+      if (!ev.customerLinkUrl || ev.customerLinkUrl === oldUrl) { if (ev.customerLinkUrl !== url) { ev.customerLinkUrl = url; changed = true; } }
+      const content = S.contentWithLink(ev.content, url, oldUrl);
+      if (content.length !== (ev.content || []).length || JSON.stringify(content) !== JSON.stringify(ev.content || [])) { ev.content = content; changed = true; }
+      if (!changed) return;
       ev.updatedBy = S.state.currentUserId; ev.updatedAt = new Date().toISOString();
       n++;
     });
@@ -986,7 +993,7 @@
     view.colFilters = {};
     const addEq = (key, name) => { if (name) view.colFilters[key] = { op: "eq", value: name }; };
     if (f.svpId) addEq("svp", (S.svpById(f.svpId) || {}).name);
-    if (f.typeId) addEq("type", (S.actTypeById(f.typeId) || {}).name);
+    if (f.apCategoryId) addEq("apcat", (S.apCategoryById(f.apCategoryId) || {}).name);
     if (f.statusId) addEq("status", (S.statusById(f.statusId) || {}).name);
     if (f.ownerId) addEq("owner", (S.userById(f.ownerId) || {}).name);
     view.search = f.search || "";

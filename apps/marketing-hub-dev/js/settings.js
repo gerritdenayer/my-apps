@@ -113,9 +113,9 @@
       </div>
 
       <div class="card" data-sec="types">
-        <h2>Activity types &amp; A&amp;P categories</h2>
-        <p class="muted small">Each activity type belongs to one A&amp;P category. Budget lines inherit the category from their type, and can override it per line.</p>
-        <h3>Activity types</h3>
+        <h2>Event types &amp; A&amp;P categories</h2>
+        <p class="muted small">Event types are the means of a campaign or event (Event, Tradeshow, ABM...). A&amp;P categories are the marketing budget buckets every budget line is filed under. Each event type has a default A&amp;P category, used for a new budget line created from an event without a goal.</p>
+        <h3>Event types</h3>
         <div id="types-list"></div>
         <div class="row-3">
           <div><label>New type</label><input id="new-type" type="text" placeholder="e.g. Webinar" /></div>
@@ -545,8 +545,8 @@
       btn.onclick = async () => {
         const id = btn.dataset.id;
         const t = types.find((x) => x.id === id);
-        const used = (S.state.data.activities || []).filter((a) => a.activityTypeId === id).length;
-        const msg = used > 0 ? `Delete type "${t.name}"? ${used} budget line(s) use it.` : `Delete type "${t.name}"?`;
+        const used = (S.state.data.events || []).filter((e) => e.activityTypeId === id).length;
+        const msg = used > 0 ? `Delete event type "${t.name}"? ${used} campaign(s) / event(s) use it.` : `Delete event type "${t.name}"?`;
         if (!await S.confirmDialog(msg)) return;
         S.state.data.settings.activityTypes = types.filter((x) => x.id !== id);
         persistAndRefresh();

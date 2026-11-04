@@ -2,7 +2,25 @@
 
 ## [Unreleased]
 
+### Changed
+- Budget lines no longer have an activity type: it said the same as the A&P category. The A&P
+  category is now the line's classification and is required. The Type column on the Budget tab is
+  replaced by an A&P category column (shown under the name, and as an optional column), and the
+  Reporting drill-down, the Excel exports, bulk edit and bulk import use the A&P category. A new
+  line linked to an event gets its A&P category from the event's goal (or its event type).
+- Settings: "Activity types & A&P" is now "Event types & A&P". Event types are the means of a
+  campaign or event, each with a default A&P category.
+- The one-time cleanup also files every budget line under an explicit A&P category, removes the
+  activity type from budget lines, and deletes the goal-named types once no event uses them.
+
 ### Added
+- Reporting: a "By A&P category" table under the matrix, with lines, forecast, share and actual
+  per A&P category for the selected year and scope.
+- "CustomerLink Campaign" on the campaign / event form (Details tab), the same link as on the
+  budget lines. Filled in on the event, it goes to its budget lines that had no link (or the old
+  one); filled in on a budget line, it goes to the linked events. It also stays listed under Content
+  & assets, and the event card has an "Open in CLinks" link. Clearing it on the event takes it off
+  the budget lines that had it.
 - One-time cleanup of the 2026 test year, for admins in Settings > Data & sharing ("Preview
   cleanup", then "Apply cleanup"). It fills in goals on events (from an event type that was really
   a goal, which then becomes "Event", or from the A&P category of the linked budget lines), moves

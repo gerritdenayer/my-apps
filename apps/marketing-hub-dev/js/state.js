@@ -56,6 +56,33 @@
     return g ? g.key : "";
   }
 
+  // CustomerLink Campaign: one link to the campaign in CLinks, shared by an event and its budget
+  // lines. Adds "https://" when it was left out.
+  const CLINK_LABEL = "CustomerLink Campaign";
+  function normUrl(v) {
+    const t = String(v || "").trim();
+    if (!t) return "";
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(t) ? t : "https://" + t;
+  }
+  // The link to show for an event: its own, else one of its budget lines', else the content entry.
+  function customerLinkOfEvent(ev) {
+    if (!ev) return "";
+    if (ev.customerLinkUrl) return ev.customerLinkUrl;
+    const line = (state.data.activities || []).find((a) => (a.eventIds || []).includes(ev.id) && a.customerLinkUrl);
+    if (line) return line.customerLinkUrl;
+    const c = (ev.content || []).find((x) => (x.label || "") === CLINK_LABEL && x.url);
+    return c ? c.url : "";
+  }
+  // Put the link under an event's Content & assets: replace the old link, or add it once.
+  function contentWithLink(content, url, oldUrl) {
+    const list = Array.isArray(content) ? content.slice() : [];
+    if (!url || list.some((c) => (c.url || "").trim() === url)) return list;
+    const i = oldUrl ? list.findIndex((c) => (c.url || "").trim() === oldUrl) : -1;
+    if (i >= 0) list[i] = { ...list[i], url };
+    else list.push({ label: CLINK_LABEL, url });
+    return list;
+  }
+
   // Outcome metrics shared by the campaign editor and the Outcomes report.
   // kind "ta" = target/actual pair; kind "pa" = potential/actual pair (revenue).
   const OUTCOME_METRICS = [
@@ -479,7 +506,7 @@
     state, subscribe, notify, scheduleSave, setSyncStatus, setLastUpdated, toast,
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
-    yearButtons, moreFilters, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
+    yearButtons, moreFilters, CLINK_LABEL, normUrl, customerLinkOfEvent, contentWithLink, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
     entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,

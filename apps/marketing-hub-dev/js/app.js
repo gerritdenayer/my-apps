@@ -334,7 +334,7 @@
     { group: "Lists" },
     { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
     { key: "countries", label: "Countries", tab: "settings", admin: true },
-    { key: "types", label: "Activity types & A&P", tab: "settings", admin: true },
+    { key: "types", label: "Event types & A&P", tab: "settings", admin: true },
     { key: "statuses", label: "Statuses", tab: "settings", admin: true },
     { group: "Team & data" },
     { key: "users", label: "Users & access", tab: "users", admin: true },
