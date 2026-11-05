@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.2.1] - 2026-11-05 - Home cluster defaults, clearer setup pop-up
 
 ### Fixed
 - The pop-up "Your setup changes are not published" no longer appears when nothing really changed. The app sorts lists A to Z when it opens, so a list published in another order (for example a new partner added at the end) looked like a change.

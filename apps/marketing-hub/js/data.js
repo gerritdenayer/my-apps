@@ -1210,23 +1210,37 @@
   // Canonical signature of a settings object: sorted keys, empty values dropped, countries skipped
   // (countries are auto-created when pulling budget & events, so they are not a real edit).
   const PW_FIELDS = { pwSalt: 1, pwHash: 1, mustChangePassword: 1, pwChangedAt: 1 };
-  function setupSig(settings) {
-    const norm = (v) => {
-      if (Array.isArray(v)) { const a = v.map(norm).filter((x) => x !== undefined); return a.length ? a : undefined; }
-      if (v && typeof v === "object") {
-        const o = {};
-        Object.keys(v).sort().forEach((k) => {
-          if (PW_FIELDS[k]) return; // passwords sync through their own file
-          const n = norm(v[k]); if (n !== undefined) o[k] = n;
-        });
-        return Object.keys(o).length ? o : undefined;
+  // v2 ignores the ORDER of lists: the app sorts lists A to Z on every load, so a list that was
+  // published in another order (for example a partner added at the end) is not a real change.
+  function sigNorm(v, sortLists) {
+    if (Array.isArray(v)) {
+      let a = v.map((x) => sigNorm(x, sortLists)).filter((x) => x !== undefined);
+      if (sortLists) {
+        if (a.every((x) => x && typeof x === "object" && x.id)) a = a.slice().sort((x, y) => String(x.id).localeCompare(String(y.id)));
+        else if (a.every((x) => typeof x !== "object")) a = a.slice().sort((x, y) => String(x).localeCompare(String(y)));
       }
-      if (v === null || v === undefined || v === "") return undefined;
-      return v;
-    };
-    const s = {};
-    Object.keys(settings || {}).forEach((k) => { if (k !== "countries") s[k] = settings[k]; });
-    return JSON.stringify(norm(s) || {});
+      return a.length ? a : undefined;
+    }
+    if (v && typeof v === "object") {
+      const o = {};
+      Object.keys(v).sort().forEach((k) => {
+        if (PW_FIELDS[k]) return; // passwords sync through their own file
+        const n = sigNorm(v[k], sortLists); if (n !== undefined) o[k] = n;
+      });
+      return Object.keys(o).length ? o : undefined;
+    }
+    if (v === null || v === undefined || v === "") return undefined;
+    return v;
+  }
+  const settingsNoCountries = (settings) => { const s = {}; Object.keys(settings || {}).forEach((k) => { if (k !== "countries") s[k] = settings[k]; }); return s; };
+  function setupSig(settings) { return "v2:" + JSON.stringify(sigNorm(settingsNoCountries(settings), true) || {}); }
+  function legacySetupSig(settings) { return JSON.stringify(sigNorm(settingsNoCountries(settings), false) || {}); }
+  // Does this setup differ from the stored baseline? null when there is no baseline yet. Baselines
+  // stored before v2 are compared the old way, so nobody gets a pop-up just because of the update.
+  function differsFromBase(settings) {
+    const base = localStorage.getItem(SETUP_BASE_KEY);
+    if (base === null) return null;
+    return base.startsWith("v2:") ? setupSig(settings) !== base : legacySetupSig(settings) !== base;
   }
   function markSetupSynced(fileObj) {
     try {
@@ -1242,10 +1256,9 @@
     const localSig = setupSig(S.state.data.settings);
     const remoteSig = setupSig(remote.settings);
     if (localSig === remoteSig) return "same";
-    const base = localStorage.getItem(SETUP_BASE_KEY);
-    if (base === null) return "unknown";
-    const remoteChanged = remoteSig !== base;
-    const localChanged = localSig !== base;
+    if (differsFromBase(remote.settings) === null) return "unknown";
+    const remoteChanged = differsFromBase(remote.settings);
+    const localChanged = differsFromBase(S.state.data.settings);
     if (remoteChanged && localChanged) return "both-changed";
     if (remoteChanged) return "remote-newer";
     if (localChanged) return "local-changes";
@@ -1259,32 +1272,89 @@
     return `${ents} entities, budget years ${years.length ? years.join(", ") : "none"}`;
   }
   // Plain-language list of what differs between two setups ("from" = the one being replaced),
-  // so the pop-up shows the actual change instead of two identical summaries.
+  // so the pop-up shows the actual change. Returns { summary: [...], details: [...] }: the summary
+  // is one line per kind of change, the details list every changed item and field (old -> new).
   function setupDiff(fromS, toS) {
     fromS = fromS || {}; toS = toS || {};
-    const out = [];
+    const summary = [], details = [];
     const nm = (x) => (x && (x.name || x.code || x.id)) || "?";
-    const sig = (x) => { const c = {}; Object.keys(x || {}).sort().forEach((k) => { if (!PW_FIELDS[k] && k !== "updatedAt") c[k] = x[k]; }); return JSON.stringify(c); };
-    const lists = [["users", "user"], ["entities", "entity"], ["svps", "SVP / vertical"], ["activityTypes", "event type"],
-      ["budgetCodes", "budget code"], ["partners", "partner"], ["statuses", "status"], ["apCategories", "category"], ["countryGroups", "country group"]];
+    const skipField = (k) => PW_FIELDS[k] || k === "updatedAt" || k === "updatedBy";
+    const clean = (v) => sigNorm(v, true);
+    const same = (a, b) => JSON.stringify(clean(a)) === JSON.stringify(clean(b));
+    const entName = (id) => { const e = [...(toS.entities || []), ...(fromS.entities || [])].find((x) => x.id === id); return e ? e.name : id; };
+    const anyName = (id) => {
+      for (const k of Object.keys(toS).concat(Object.keys(fromS))) {
+        const arr = Array.isArray(toS[k]) ? toS[k] : Array.isArray(fromS[k]) ? fromS[k] : null;
+        const hit = arr && arr.find && arr.find((x) => x && x.id === id);
+        if (hit) return nm(hit);
+      }
+      return null;
+    };
+    const show = (v) => {
+      if (v === undefined || v === null || v === "") return "(empty)";
+      if (Array.isArray(v)) return v.length ? v.map((x) => (typeof x === "string" && anyName(x)) || (typeof x === "object" ? nm(x) : String(x))).join(", ") : "(empty)";
+      if (typeof v === "object") return JSON.stringify(v).slice(0, 80);
+      if (typeof v === "string" && /^id-/.test(v)) return anyName(v) || v;
+      return String(v);
+    };
     const names = (arr) => arr.length > 4 ? arr.slice(0, 4).join(", ") + " and " + (arr.length - 4) + " more" : arr.join(", ");
-    lists.forEach(([k, label]) => {
-      if (!Array.isArray(fromS[k] || []) || !Array.isArray(toS[k] || [])) return;
-      const a = Object.fromEntries((fromS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
-      const b = Object.fromEntries((toS[k] || []).filter((x) => x && x.id).map((x) => [x.id, x]));
-      const added = Object.keys(b).filter((id) => !a[id]).map((id) => nm(b[id]));
-      const removed = Object.keys(a).filter((id) => !b[id]).map((id) => nm(a[id]));
-      const changed = Object.keys(b).filter((id) => a[id] && sig(a[id]) !== sig(b[id])).map((id) => nm(b[id]));
-      const plural = (n) => n === 1 ? label : (label === "entity" ? "entities" : label === "status" ? "statuses" : label === "category" ? "categories" : label + "s");
-      if (added.length) out.push("New " + plural(added.length) + ": " + names(added));
-      if (removed.length) out.push("Removed " + plural(removed.length) + ": " + names(removed));
-      if (changed.length) out.push("Changed " + plural(changed.length) + ": " + names(changed));
+    const LABELS = { users: ["user", "users"], entities: ["entity", "entities"], svps: ["SVP / vertical", "SVPs / verticals"],
+      activityTypes: ["event type", "event types"], partners: ["partner", "partners"], statuses: ["status", "statuses"],
+      apCategories: ["A&P category", "A&P categories"], countryGroups: ["country group", "country groups"],
+      m1Levels: ["M1 zone", "M1 zones"], yearlyBudgets: ["yearly budgets"], budgetCodes: ["budget codes"],
+      svpAliases: ["SVP / vertical aliases"], adminPinHash: ["admin pin"] };
+    const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner",
+      apCategoryId: "A&P category", activeYears: "active years", m1: "M1 zone", name: "name", role: "role", active: "active", email: "email" };
+    const label = (k, n) => { const l = LABELS[k]; return l ? (n === 1 || !l[1] ? l[0] : l[1]) : k; };
+    const keys = [...new Set([...Object.keys(fromS), ...Object.keys(toS)])].filter((k) => k !== "countries").sort();
+    keys.forEach((k) => {
+      const a = fromS[k], b = toS[k];
+      if (same(a, b)) return;
+      const isIdList = (x) => Array.isArray(x) && x.every((y) => y && typeof y === "object" && y.id);
+      if ((a === undefined || isIdList(a)) && (b === undefined || isIdList(b))) {
+        const A = Object.fromEntries((a || []).map((x) => [x.id, x])), B = Object.fromEntries((b || []).map((x) => [x.id, x]));
+        const added = Object.keys(B).filter((id) => !A[id]), removed = Object.keys(A).filter((id) => !B[id]);
+        const changed = Object.keys(B).filter((id) => A[id] && !same(A[id], B[id]));
+        if (added.length) { summary.push("New " + label(k, added.length) + ": " + names(added.map((id) => nm(B[id])))); added.forEach((id) => details.push(`Added ${label(k, 1)} "${nm(B[id])}"`)); }
+        if (removed.length) { summary.push("Removed " + label(k, removed.length) + ": " + names(removed.map((id) => nm(A[id])))); removed.forEach((id) => details.push(`Removed ${label(k, 1)} "${nm(A[id])}"`)); }
+        if (changed.length) {
+          summary.push("Changed " + label(k, changed.length) + ": " + names(changed.map((id) => nm(B[id]))));
+          changed.forEach((id) => {
+            const fa = A[id], fb = B[id];
+            const fields = [...new Set([...Object.keys(fa), ...Object.keys(fb)])].filter((f) => !skipField(f) && !same(fa[f], fb[f]));
+            details.push(`${label(k, 1)} "${nm(fb)}": ` + (fields.length ? fields.map((f) => `${FIELD[f] || f} ${show(fa[f])} → ${show(fb[f])}`).join("; ") : "only the password or edit stamp changed"));
+          });
+        }
+        return;
+      }
+      if (Array.isArray(a) || Array.isArray(b)) {
+        summary.push("Changed " + label(k, 2));
+        details.push(`${label(k, 2)}: ${show(a)} → ${show(b)}`);
+        return;
+      }
+      if ((a && typeof a === "object") || (b && typeof b === "object")) {
+        // Nested settings such as yearly budgets or budget codes: { year: { entityId: value } }.
+        const changedPaths = [];
+        const walk = (x, y, path) => {
+          if (same(x, y)) return;
+          const ox = x && typeof x === "object" && !Array.isArray(x), oy = y && typeof y === "object" && !Array.isArray(y);
+          if (ox || oy) { [...new Set([...Object.keys(x || {}), ...Object.keys(y || {})])].forEach((kk) => walk((x || {})[kk], (y || {})[kk], path.concat([kk]))); return; }
+          changedPaths.push([path, x, y]);
+        };
+        walk(a, b, []);
+        const years = [...new Set(changedPaths.map(([p]) => p[0]).filter((y) => /^\d{4}$/.test(y)))].sort();
+        summary.push(k === "yearlyBudgets" && years.length ? "Yearly budgets changed for " + years.join(", ")
+          : k === "budgetCodes" && years.length ? "Budget codes changed for " + years.join(", ") : "Changed " + label(k, 2));
+        changedPaths.slice(0, 40).forEach(([p, x, y]) => details.push(`${label(k, 2)} ${p.map((q) => /^\d{4}$/.test(q) ? q : entName(q)).join(" > ")}: ${show(x)} → ${show(y)}`));
+        if (changedPaths.length > 40) details.push(`... and ${changedPaths.length - 40} more in ${label(k, 2)}`);
+        return;
+      }
+      if (k === "adminPinHash") { summary.push("The admin pin changed"); details.push("The admin pin changed"); return; }
+      if (k.startsWith("_")) { summary.push("An automatic one-time update ran (" + k.replace(/^_/, "") + ")"); details.push(`Internal marker ${k}: ${show(a)} → ${show(b)}. The app set this itself after a one-time data update; it is safe to publish.`); return; }
+      summary.push("Changed setting " + k); details.push(`${k}: ${show(a)} → ${show(b)}`);
     });
-    const ya = fromS.yearlyBudgets || {}, yb = toS.yearlyBudgets || {};
-    const yrs = [...new Set([...Object.keys(ya), ...Object.keys(yb)])].filter((y) => JSON.stringify(ya[y] || {}) !== JSON.stringify(yb[y] || {})).sort();
-    if (yrs.length) out.push("Yearly budgets changed for " + yrs.join(", "));
-    if (!out.length) out.push("Small changes to other settings");
-    return out;
+    if (!summary.length) { summary.push("Only the order of a list differs (nothing to publish)"); }
+    return { summary, details };
   }
   async function publishSetupTo(dir) {
     const obj = API.stampExport(API.pickSetup(S.state.data), shareUserName(), "setup");
@@ -1498,8 +1568,8 @@
     const dir = await SH.savedFolder();
     if (!dir) return { show: true, noFolder: true };
     const localSig = setupSig(S.state.data.settings);
-    const base = localStorage.getItem(SETUP_BASE_KEY);
-    if (base !== null) return { show: true, dirty: localSig !== base };
+    const dirtyVsBase = differsFromBase(S.state.data.settings);
+    if (dirtyVsBase !== null) return { show: true, dirty: dirtyVsBase };
     // Never synced on this computer: compare with the shared file if we already have access.
     if (await SH.hasPerm(dir, "readwrite")) {
       let remote = null;
@@ -1638,7 +1708,9 @@
       </div>`;
     const diff = status === "local-changes" ? setupDiff(remote.settings, S.state.data.settings) : setupDiff(S.state.data.settings, remote.settings);
     const diffHead = status === "local-changes" ? "What you changed" : status === "remote-newer" ? "What changed" : "What is different in the shared setup";
-    const diffBox = `<div style="margin:6px 0 4px"><strong>${diffHead}:</strong><ul style="margin:4px 0 0 18px; padding:0">${diff.map((d) => `<li>${S.escapeHtml(d)}</li>`).join("")}</ul></div>`;
+    const diffBox = `<div style="margin:6px 0 4px"><strong>${diffHead}:</strong><ul style="margin:4px 0 0 18px; padding:0">${diff.summary.map((d) => `<li>${S.escapeHtml(d)}</li>`).join("")}</ul>
+      ${diff.details.length ? `<button type="button" class="linkbtn" id="su-details" style="margin-top:6px">Show details</button>
+      <ul id="su-details-list" class="hidden small" style="margin:6px 0 0 18px; padding:0; max-height:220px; overflow:auto">${diff.details.map((d) => `<li>${S.escapeHtml(d)}</li>`).join("")}</ul>` : ""}</div>`;
     const keepNote = diffBox + `<p class="muted small">Your budget lines and events are never touched by this choice.</p>`;
     let html;
     if (status === "remote-newer") {
@@ -1668,6 +1740,8 @@
       const m = S.openModal(html, { closeOnBackdrop: false });
       const done = () => { S.closeModal(); resolve(); };
       const later = m.querySelector("#su-later"), pull = m.querySelector("#su-pull"), pub = m.querySelector("#su-publish");
+      const detBtn = m.querySelector("#su-details"), detList = m.querySelector("#su-details-list");
+      if (detBtn) detBtn.onclick = () => { const open = detList.classList.toggle("hidden"); detBtn.textContent = open ? "Show details" : "Hide details"; };
       if (later) later.onclick = done;
       if (pull) pull.onclick = () => {
         try { pullSetupFrom(remote); S.toast("Setup updated from the shared folder.", "success"); }

@@ -245,6 +245,12 @@
   }
   function actTypeById(id) { return (state.data.settings.activityTypes || []).find((x) => x.id === id); }
   function userById(id) { return (state.data.settings.users || []).find((x) => x.id === id); }
+  // The logged-in user's home cluster (set in Users), or "" when none is set or it no longer exists.
+  function homeCluster() {
+    const u = state.currentUserId ? userById(state.currentUserId) : null;
+    const hc = (u && u.homeCluster) || "";
+    return hc && clusterList("").includes(hc) ? hc : "";
+  }
   // Options for an "owner" dropdown: active users only, plus the current owner even if now
   // inactive (so editing an old record does not silently drop its owner). Alphabetical.
   function activeOwnerOptions(selectedId) {
@@ -507,7 +513,7 @@
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     yearButtons, moreFilters, CLINK_LABEL, normUrl, customerLinkOfEvent, contentWithLink, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
-    entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, statusById, activeOwnerOptions,
+    entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, homeCluster, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,

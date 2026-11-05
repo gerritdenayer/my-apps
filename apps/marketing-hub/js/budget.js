@@ -708,7 +708,8 @@
     }
 
     const initialEnt = a.entityId ? S.entityById(a.entityId) : null;
-    const initialGroup = initialEnt ? (initialEnt.group || "") : "";
+    // A new line without an entity starts on the user's home cluster, so the entity list is short.
+    const initialGroup = initialEnt ? (initialEnt.group || "") : (!isEdit ? S.homeCluster() : "");
     // Clusters in use in the line's year (from the entities active that year), plus the current one.
     const clustersFor = (yr) => { const l = S.clusterList("", yr); return initialGroup && !l.includes(initialGroup) ? l.concat([initialGroup]).sort() : l; };
     const yearOf = (d) => d ? new Date(d).getFullYear() : new Date().getFullYear();
