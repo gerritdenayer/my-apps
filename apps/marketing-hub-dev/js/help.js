@@ -127,6 +127,7 @@
         <tr><td>Folder not found</td><td>OneDrive is not syncing or the folder moved. Check OneDrive, then reconnect in Settings &gt; Data &amp; sharing.</td></tr>
         <tr><td>Chrome says "Can't open this folder"</td><td>Pick the MarketingHub folder itself, not Documents or the OneDrive root.</td></tr>
         <tr><td>"A newer setup is available"</td><td>An admin changed the setup. The pop-up lists what. Click <b>Pull the new setup</b>.</td></tr>
+        <tr><td>"Your setup changes are not published"</td><td>The setup on this computer differs from the shared one. Click <b>Show details</b> to see exactly which item and field changed, from what to what. If you did not make that change on purpose, click <b>Later</b> and check with the person who last published.</td></tr>
         <tr><td>I deleted something by mistake</td><td>An admin restores it in Settings &gt; Deleted items.</td></tr>
         <tr><td>The agenda has many slides</td><td>Use fewer details per box, or filter on one cluster or quarter.</td></tr>
         <tr><td>I work on two computers</td><td>Publish on the first before you switch, then click the <b>Shared</b> status on the second.</td></tr>

@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- The pop-up "Your setup changes are not published" no longer appears when nothing really changed. The app sorts lists A to Z when it opens, so a list published in another order (for example a new partner added at the end) looked like a change.
+
 ### Changed
 - Campaigns & events now opens on your home cluster instead of your home country, so you see all events of your cluster, the same as the Budget tab. You can still pick a country under More filters.
+- The setup pop-ups ("Your setup changes are not published" and the others) now have a Show details button that lists each changed item and field, with the old and new value.
 - A new budget line or a new campaign or event now starts on your home cluster, so the entity list only shows the entities of your cluster. You can still pick another cluster.
 
 ## [v5.2.0] - 2026-11-04 - New interface, goals, A&P categories on budget lines
