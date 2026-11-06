@@ -141,7 +141,7 @@
           ${(p.partners || []).length ? `<span class="k">Partners</span><span>${S.escapeHtml(p.partners.map((x) => typeof x === "string" ? x : x.name).join(", "))}</span>` : ""}
           ${p.notes ? `<span class="k">Notes</span><span>${S.escapeHtml(p.notes).slice(0, 300)}</span>` : ""}
         </div>
-        ${exists ? `<div class="ib-warn" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">Already in Marketing Hub as "${S.escapeHtml(exists.name)}" (${fmtD(exists.start)}). Nothing to add.</div>` : ""}
+        ${exists ? `<div class="ib-warn" style="background:var(--bg-f0fdf4);border-color:var(--bd-bbf7d0);color:var(--fg-166534)">Already in Marketing Hub as "${S.escapeHtml(exists.name)}" (${fmtD(exists.start)}). Nothing to add.</div>` : ""}
         ${!done && !exists && warn.length ? `<div class="ib-warn">${warn.map(S.escapeHtml).join("<br>")}</div>` : ""}
         ${!done && exists ? `<div class="ib-actions"><button class="secondary ib-handled" data-id="${it.id}" data-ev="${exists.id}">Mark as handled</button></div>` : ""}
         ${!done && !exists ? `<div class="ib-actions"><button class="secondary ib-reject" data-id="${it.id}">Reject</button><button class="primary ib-review" data-id="${it.id}">Review &amp; add</button></div>` : ""}

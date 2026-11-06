@@ -157,7 +157,7 @@
       const rowsTouched = new Set(p.steps.filter((s) => !s.noop).map((s) => s.kind + s.id)).size;
       out.innerHTML = `
         <p><strong>${rowsTouched} row${rowsTouched === 1 ? "" : "s"} will change</strong>${p.delTypes.length ? `, and ${p.delTypes.length} type${p.delTypes.length === 1 ? "" : "s"} will be deleted (${p.delTypes.map((t) => S.escapeHtml(t.name)).join(", ")})` : ""}.</p>
-        <div style="max-height:280px;overflow:auto;border:1px solid #eef0f3;border-radius:8px">
+        <div style="max-height:280px;overflow:auto;border:1px solid var(--bd-eef0f3);border-radius:8px">
           <table class="tl-mini" style="width:100%;font-size:12.5px"><thead><tr><th>Item</th><th>Change</th></tr></thead><tbody>
           ${shown.map((s) => `<tr><td>${S.escapeHtml(s.name || "(no name)")} <span class="muted small">${s.kind === "line" ? "budget line" : "event"}</span></td><td>${S.escapeHtml(s.what)}</td></tr>`).join("")}
           </tbody></table></div>

@@ -137,6 +137,14 @@ and warns when a name is not found):
 
 Status becomes `accepted` (with `eventId`) or `rejected`, with `decidedBy` and `decidedAt`.
 
+## Colors and dark mode
+
+All colors in `css/styles.css` and in the inline styles of the JS files go through CSS variables,
+named after their light value (`--bg-fff3eb`, `--fg-6b7280`, `--bd-e5e7eb`). The top of
+`styles.css` defines them twice: `:root` (light) and `html[data-theme="dark"]`. `js/theme.js`
+(loaded in `<head>`) sets `data-theme` from the user's choice (`mb_theme`: light, dark or system).
+When you add a new color, use a variable and add it to both blocks.
+
 ## Online help
 
 The help window (the "?" button in the header) lives in `js/help.js`. Update it whenever a change

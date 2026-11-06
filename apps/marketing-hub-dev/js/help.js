@@ -25,7 +25,7 @@
         <tr><td><b>Shared &middot; 3 changes to publish</b> and <b>Publish</b></td><td>You have changes your colleagues cannot see yet. Click <b>Publish</b> right next to it.</td></tr>
         <tr><td><b>No access</b>, <b>Folder not found</b>, <b>Local only</b></td><td>You are not on the shared data. Click the pill to fix it before you edit.</td></tr>
         <tr><td>Clock icon</td><td>Hover to see when your data and the shared files were last updated.</td></tr>
-        <tr><td>Your name</td><td>Opens a small menu: unlock admin settings with the pin, or <b>Switch user</b> to log out.</td></tr>
+        <tr><td>Your name</td><td>Opens a small menu: pick a <b>Theme</b> (Light, Dark, or Auto to follow your computer), unlock admin settings with the pin, or <b>Switch user</b> to log out. The theme is remembered on this computer.</td></tr>
       </table>` },
 
     { id: "roles", title: "Roles and passwords", tabs: [], html: `

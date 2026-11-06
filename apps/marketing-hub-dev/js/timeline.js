@@ -27,65 +27,65 @@
     #tab-timeline .tl-toolbar > div{min-width:0}
     #tab-timeline .tl-toolbar .grow{flex:1 1 140px;min-width:130px;max-width:260px}
     #tab-timeline .tl-rowlabel{flex-direction:column;align-items:flex-start !important;justify-content:center;cursor:pointer;line-height:1.25}
-    #tab-timeline .tl-rl-name{font-size:12.5px;font-weight:500;color:#1f2937;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-    #tab-timeline .tl-rl-sub{font-size:11px;color:#6b7280;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-    #tab-timeline .tl-rowlabel:hover .tl-rl-name{color:#c2410c;text-decoration:underline}
-    #tab-timeline .tl-rowlabel:hover .tl-rl-plain{color:#1f2937;text-decoration:none}
+    #tab-timeline .tl-rl-name{font-size:12.5px;font-weight:500;color:var(--fg-1f2937);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    #tab-timeline .tl-rl-sub{font-size:11px;color:var(--fg-6b7280);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    #tab-timeline .tl-rowlabel:hover .tl-rl-name{color:var(--fg-c2410c);text-decoration:underline}
+    #tab-timeline .tl-rowlabel:hover .tl-rl-plain{color:var(--fg-1f2937);text-decoration:none}
     #tab-timeline .tl-rl-plain{font-weight:400;font-size:12px}
     #tab-timeline .tl-names{gap:4px;margin-left:8px}
-    #tab-timeline .tl-nm{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;color:#374151;cursor:pointer}
-    #tab-timeline .tl-nm.on{background:#1f2937;border-color:#1f2937;color:#fff}
+    #tab-timeline .tl-nm{border:1px solid var(--bd-d1d5db);background:var(--bg-ffffff);border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;color:var(--fg-374151);cursor:pointer}
+    #tab-timeline .tl-nm.on{background:var(--bg-1f2937);border-color:var(--bd-1f2937);color:var(--fg-ffffff)}
     #tab-timeline.tl-compact .tl-row{height:30px}
     #tab-timeline.tl-compact .tl-bar,#tab-timeline.tl-compact .tl-barlabel,#tab-timeline.tl-compact .tl-diflabel{top:6px}
     #tab-timeline.tl-compact .tl-diamond{top:7px}
     #tab-timeline .tl-bar,#tab-timeline .tl-barlabel{top:10px}
     #tab-timeline .tl-diamond{top:11px}
     #tab-timeline .tl-diflabel{top:10px}
-    #tab-timeline .tl-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:4px 0 10px;font-size:12px;color:#555}
+    #tab-timeline .tl-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:4px 0 10px;font-size:12px;color:var(--fg-555555)}
     #tab-timeline .tl-legend .k{display:flex;align-items:center;gap:6px}
     #tab-timeline .tl-swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
-    #tab-timeline .tl-scroll{overflow:auto;border:1px solid #e3e6ea;border-radius:10px;background:#fff;max-height:62vh;position:relative}
+    #tab-timeline .tl-scroll{overflow:auto;border:1px solid var(--bd-e3e6ea);border-radius:10px;background:var(--bg-ffffff);max-height:62vh;position:relative}
     #tab-timeline .tl-chart{position:relative}
-    #tab-timeline .tl-months{position:sticky;top:0;z-index:6;display:flex;background:#f6f7f9;border-bottom:1px solid #e3e6ea;height:30px}
-    #tab-timeline .tl-lblspace{position:sticky;left:0;z-index:7;background:#f6f7f9;border-right:1px solid #e3e6ea}
-    #tab-timeline .tl-month{border-right:1px solid #eef0f3;font-size:11px;color:#777;display:flex;align-items:center;padding-left:6px;flex:0 0 auto}
-    #tab-timeline .tl-month.q{background:#fbfcfd}
-    #tab-timeline .tl-month.jan{border-left:2px solid #d7dbe0}
-    #tab-timeline .tl-grouphdr{position:sticky;left:0;z-index:5;display:flex;align-items:center;gap:8px;background:#eef1f4;border-bottom:1px solid #e3e6ea;border-top:1px solid #e3e6ea;padding:6px 12px;cursor:pointer;font-weight:600;font-size:12px;color:#333}
-    #tab-timeline .tl-grouphdr .gcount{color:#888;font-weight:400}
-    #tab-timeline .tl-row{position:relative;height:${ROWH}px;border-bottom:1px solid #f1f3f5}
-    #tab-timeline .tl-row:hover{background:#fafbfc}
-    #tab-timeline .tl-rowlabel{position:sticky;left:0;z-index:4;height:100%;display:flex;align-items:center;padding:0 10px;background:#fff;border-right:1px solid #e3e6ea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#222}
-    #tab-timeline .tl-row:hover .tl-rowlabel{background:#fafbfc}
+    #tab-timeline .tl-months{position:sticky;top:0;z-index:6;display:flex;background:var(--bg-f6f7f9);border-bottom:1px solid var(--bd-e3e6ea);height:30px}
+    #tab-timeline .tl-lblspace{position:sticky;left:0;z-index:7;background:var(--bg-f6f7f9);border-right:1px solid var(--bd-e3e6ea)}
+    #tab-timeline .tl-month{border-right:1px solid var(--bd-eef0f3);font-size:11px;color:var(--fg-777777);display:flex;align-items:center;padding-left:6px;flex:0 0 auto}
+    #tab-timeline .tl-month.q{background:var(--bg-fbfcfd)}
+    #tab-timeline .tl-month.jan{border-left:2px solid var(--bd-d7dbe0)}
+    #tab-timeline .tl-grouphdr{position:sticky;left:0;z-index:5;display:flex;align-items:center;gap:8px;background:var(--bg-eef1f4);border-bottom:1px solid var(--bd-e3e6ea);border-top:1px solid var(--bd-e3e6ea);padding:6px 12px;cursor:pointer;font-weight:600;font-size:12px;color:var(--fg-333333)}
+    #tab-timeline .tl-grouphdr .gcount{color:var(--fg-888888);font-weight:400}
+    #tab-timeline .tl-row{position:relative;height:${ROWH}px;border-bottom:1px solid var(--bd-f1f3f5)}
+    #tab-timeline .tl-row:hover{background:var(--bg-fafbfc)}
+    #tab-timeline .tl-rowlabel{position:sticky;left:0;z-index:4;height:100%;display:flex;align-items:center;padding:0 10px;background:var(--bg-ffffff);border-right:1px solid var(--bd-e3e6ea);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--fg-222222)}
+    #tab-timeline .tl-row:hover .tl-rowlabel{background:var(--bg-fafbfc)}
     #tab-timeline .tl-track{position:absolute;top:0;height:100%}
-    #tab-timeline .tl-bar{position:absolute;top:6px;height:18px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 7px;font-size:11px;color:#11130f;overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.18)}
-    #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid #333}
-    #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:#3b6d11;color:#fff;font-weight:700;font-size:10px;margin-right:5px}
+    #tab-timeline .tl-bar{position:absolute;top:6px;height:18px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 7px;font-size:11px;color:var(--fg-11130f);overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+    #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid var(--bd-333333)}
+    #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px;margin-right:5px}
     #tab-timeline .tl-bar.open-left{border-top-left-radius:0;border-bottom-left-radius:0;border-left:3px dashed rgba(0,0,0,.55)}
     #tab-timeline .tl-bar.open-right{border-top-right-radius:0;border-bottom-right-radius:0;border-right:3px dashed rgba(0,0,0,.55)}
-    #tab-timeline .tl-barlabel{position:absolute;top:6px;display:flex;align-items:center;font-size:11px;color:#333;white-space:nowrap;cursor:pointer}
+    #tab-timeline .tl-barlabel{position:absolute;top:6px;display:flex;align-items:center;font-size:11px;color:var(--fg-333333);white-space:nowrap;cursor:pointer}
     #tab-timeline .tl-barlabel:hover{text-decoration:underline}
     #tab-timeline .tl-diamond{position:absolute;top:7px;width:16px;height:16px;transform:rotate(45deg);border-radius:3px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.2)}
-    #tab-timeline .tl-diamond:hover{filter:brightness(1.1);outline:2px solid #333}
-    #tab-timeline .tl-diflabel{position:absolute;top:6px;display:flex;align-items:center;font-size:11px;color:#333;white-space:nowrap;pointer-events:none}
-    #tab-timeline .tl-today{position:absolute;top:30px;bottom:0;width:2px;background:#ff4d6d;z-index:3;pointer-events:none}
-    #tab-timeline .tl-todayflag{position:absolute;top:30px;transform:translateX(-50%);background:#ff4d6d;color:#fff;font-size:10px;padding:1px 6px;border-radius:0 0 6px 6px;z-index:6}
-    #tab-timeline .tl-empty{padding:36px;text-align:center;color:#888}
-    #tab-timeline .tl-sub{display:flex;gap:8px;align-items:center;margin:2px 0 14px;color:#666;font-size:12px}
+    #tab-timeline .tl-diamond:hover{filter:brightness(1.1);outline:2px solid var(--bd-333333)}
+    #tab-timeline .tl-diflabel{position:absolute;top:6px;display:flex;align-items:center;font-size:11px;color:var(--fg-333333);white-space:nowrap;pointer-events:none}
+    #tab-timeline .tl-today{position:absolute;top:30px;bottom:0;width:2px;background:var(--bg-ff4d6d);z-index:3;pointer-events:none}
+    #tab-timeline .tl-todayflag{position:absolute;top:30px;transform:translateX(-50%);background:var(--bg-ff4d6d);color:var(--fg-ffffff);font-size:10px;padding:1px 6px;border-radius:0 0 6px 6px;z-index:6}
+    #tab-timeline .tl-empty{padding:36px;text-align:center;color:var(--fg-888888)}
+    #tab-timeline .tl-sub{display:flex;gap:8px;align-items:center;margin:2px 0 14px;color:var(--fg-666666);font-size:12px}
     .tl-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-bottom:8px}
-    .tl-detail-grid .lab{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+    .tl-detail-grid .lab{color:var(--fg-888888);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
     .tl-chips{display:flex;flex-wrap:wrap;gap:5px}
-    .tl-chip{background:#eef1f4;border-radius:20px;padding:2px 9px;font-size:11px;color:#444}
-    .tl-rollup{display:flex;gap:18px;flex-wrap:wrap;background:#f6f7f9;border:1px solid #e3e6ea;border-radius:8px;padding:10px 14px;margin:8px 0}
-    .tl-rollup .n{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.03em}
+    .tl-chip{background:var(--bg-eef1f4);border-radius:20px;padding:2px 9px;font-size:11px;color:var(--fg-444444)}
+    .tl-rollup{display:flex;gap:18px;flex-wrap:wrap;background:var(--bg-f6f7f9);border:1px solid var(--bd-e3e6ea);border-radius:8px;padding:10px 14px;margin:8px 0}
+    .tl-rollup .n{font-size:11px;color:var(--fg-888888);text-transform:uppercase;letter-spacing:.03em}
     .tl-rollup .v{font-size:16px;font-weight:650}
     .tl-mini{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
-    .tl-mini th,.tl-mini td{text-align:left;padding:5px 8px;border-bottom:1px solid #eef0f3}
+    .tl-mini th,.tl-mini td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--bd-eef0f3)}
     .tl-mini td.num,.tl-mini th.num{text-align:right}
     .tl-rowset{display:flex;flex-direction:column;gap:6px}
     .tl-rowset .line{display:grid;grid-template-columns:1fr 1fr 130px 30px;gap:8px;align-items:center}
     .tl-rowset .line.content{grid-template-columns:1fr 2fr 30px}
-    .tl-iconbtn{background:none;border:1px solid #d7dbe0;border-radius:6px;cursor:pointer;color:#a00;font-size:14px;line-height:1;padding:4px 8px}
+    .tl-iconbtn{background:none;border:1px solid var(--bd-d7dbe0);border-radius:6px;cursor:pointer;color:var(--fg-aa0000);font-size:14px;line-height:1;padding:4px 8px}
     `;
     const s = document.createElement("style");
     s.id = "tl-styles"; s.textContent = css;
@@ -349,9 +349,9 @@
     const colorLabel={kind:"Event / Campaign",goal:"Goal",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
     leg.innerHTML=`<span>Color by ${colorLabel}:</span>`+
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
-      `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:#999"></span>single-day</span>`+
-      `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#3b6d11;color:#fff;font-weight:700;font-size:10px">€</span> has budget</span>`+
-      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed #555"></span> spans beyond period</span>`:"")+
+      `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:var(--bg-999999)"></span>single-day</span>`+
+      `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px">€</span> has budget</span>`+
+      (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed var(--bd-555555)"></span> spans beyond period</span>`:"")+
       `<span class="k tl-names" role="group" aria-label="Show names"><span>Names:</span>${[["chart","On the timeline"],["list","In the list"],["both","Both"]].map(([v,l])=>`<button type="button" class="tl-nm${view.names===v?" on":""}" data-v="${v}" aria-pressed="${view.names===v}">${l}</button>`).join("")}</span>`;
     leg.querySelectorAll(".tl-nm").forEach(b=>b.onclick=()=>{ view.names=b.dataset.v; try{ localStorage.setItem(NAMES_KEY,view.names); }catch(e){} drawRows(); });
     const tab=document.getElementById("tab-timeline");
@@ -719,8 +719,8 @@
         <div><div class="lab">CustomerLink Campaign</div>${S.customerLinkOfEvent(e)?`<a href="${S.escapeHtml(S.customerLinkOfEvent(e))}" target="_blank" rel="noopener">Open in CLinks &#8599;</a>`:"-"}</div>
         <div><div class="lab">Countries</div>${S.escapeHtml(S.countryNamesOf(e.countryIds).join(", ")||"-")}</div>
       </div>
-      ${false?`<div style="margin:6px 0"><div class="lab" style="color:#888;font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
-      ${e.info?`<div style="margin:6px 0;color:#555">${S.escapeHtml(e.info)}</div>`:""}
+      ${false?`<div style="margin:6px 0"><div class="lab" style="color:var(--fg-888888);font-size:11px;text-transform:uppercase">Domains</div><div class="tl-chips">${e.domains.map(d=>`<span class="tl-chip">${S.escapeHtml(d)}</span>`).join("")}</div></div>`:""}
+      ${e.info?`<div style="margin:6px 0;color:var(--fg-555555)">${S.escapeHtml(e.info)}</div>`:""}
 
       <div class="tl-rollup">
         <div><div class="n">Budget lines</div><div class="v">${b.count}</div></div>
@@ -958,7 +958,7 @@
         <label>Existing budget lines</label>
         <div id="c-bexsel" class="chip-list" style="margin:4px 0 6px"></div>
         <input id="c-bexfilter" type="text" placeholder="Type to filter budget lines..." style="margin-bottom:6px" />
-        <div id="c-bexlist" style="max-height:180px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${existingLinesHtml}</div>
+        <div id="c-bexlist" style="max-height:180px; overflow:auto; border:1px solid var(--bd-eef0f3); border-radius:6px; padding:4px 6px;">${existingLinesHtml}</div>
         <p class="muted small">Tick the lines this campaign belongs to. A line can serve several campaigns.</p>
       </div>
       </div>
@@ -970,7 +970,7 @@
       <div class="actions sticky-actions">
         ${isEdit ? `<div class="muted small audit">${auditLine(e)}</div>` : ""}
         <button class="secondary" id="c-cancel">Cancel</button>
-        ${isEdit?'<button class="secondary" id="c-delete" style="color:#a00">Delete</button>':''}
+        ${isEdit?'<button class="secondary" id="c-delete" style="color:var(--fg-aa0000)">Delete</button>':''}
         <button class="primary" id="c-save">${isEdit?"Save":"Create"}</button>
       </div>
     `, { closeOnBackdrop:false, cls:"modal-form modal-tabbed" });
@@ -1095,7 +1095,7 @@
       });
       if(!chosen.length){ bexSel.innerHTML=`<span class="muted small">None selected yet. Tick lines below.</span>`; return; }
       bexSel.innerHTML=`<span class="muted small" style="width:100%">Selected (${chosen.length}):</span>`+chosen.map(c=>
-        `<span class="chip" data-id="${c.id}" style="background:#e8f0fe">${S.escapeHtml(c.label)}<button type="button" class="bx-remove" data-id="${c.id}" title="Remove">×</button></span>`).join("");
+        `<span class="chip" data-id="${c.id}" style="background:var(--bg-e8f0fe)">${S.escapeHtml(c.label)}<button type="button" class="bx-remove" data-id="${c.id}" title="Remove">×</button></span>`).join("");
       bexSel.querySelectorAll(".bx-remove").forEach(btn=>{
         btn.onclick=()=>{ const cb=bexListBox.querySelector(`input.bx-chk[value="${btn.dataset.id}"]`); if(cb){ cb.checked=false; renderBexSel(); } };
       });
@@ -1384,8 +1384,8 @@
     if(!countries.length){
       return `<h3 style="margin:12px 0 4px">Countries</h3><p class="muted small">No countries defined yet. An admin can add them in Settings.</p>`;
     }
-    const pill = "display:inline-flex; align-items:center; gap:5px; border:1px solid #e5e7eb; border-radius:14px; padding:3px 9px; font-size:12px; cursor:pointer; margin:2px;";
-    const gpill = "border:1px solid #cbd5e1; background:#f1f5f9; border-radius:14px; padding:3px 10px; font-size:12px; cursor:pointer; margin:2px;";
+    const pill = "display:inline-flex; align-items:center; gap:5px; border:1px solid var(--bd-e5e7eb); border-radius:14px; padding:3px 9px; font-size:12px; cursor:pointer; margin:2px;";
+    const gpill = "border:1px solid var(--bd-cbd5e1); background:var(--bg-f1f5f9); border-radius:14px; padding:3px 10px; font-size:12px; cursor:pointer; margin:2px;";
     const groupChips = groups.map(g=>`<button type="button" class="cco-group" data-ids="${(g.countryIds||[]).join(',')}" style="${gpill}" title="Tick all countries in ${S.escapeHtml(g.name)}">+ ${S.escapeHtml(g.name)}</button>`).join("");
     const boxes = countries.map(c=>`<label class="cco-item" data-name="${S.escapeHtml((c.name||'').toLowerCase())}" style="${pill}"><input type="checkbox" class="cco" value="${c.id}" ${sel.has(c.id)?"checked":""}/> ${S.escapeHtml(c.name)}${c.global?' <span class="muted small">(global)</span>':''}</label>`).join("");
     const helpers = `${groupChips}${lastCountryIds.length?`<button type="button" class="cco-last" style="${gpill}" title="Use the countries from the last event you tagged">Copy from last</button>`:''}<button type="button" class="cco-clear" style="${gpill}" title="Clear all">Clear</button>`;
@@ -1393,7 +1393,7 @@
       <h3 style="margin:12px 0 4px">Countries <span class="muted small">(who is this relevant to?)</span></h3>
       <div style="margin-bottom:6px">${helpers}</div>
       <input id="c-country-search" type="text" placeholder="Type to filter countries..." style="margin-bottom:6px" />
-      <div id="c-country-list" style="max-height:160px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${boxes}</div>`;
+      <div id="c-country-list" style="max-height:160px; overflow:auto; border:1px solid var(--bd-eef0f3); border-radius:6px; padding:4px 6px;">${boxes}</div>`;
   }
 
   // Mark a budget line as updated now by the current user (used when an event action changes its links).

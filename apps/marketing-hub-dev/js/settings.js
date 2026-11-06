@@ -439,10 +439,10 @@
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
     if (!groups.length) { host.innerHTML = "<p class='muted'>None yet.</p>"; return; }
     host.innerHTML = groups.map((g) => `
-      <div style="border:1px solid #eef0f3; border-radius:6px; padding:8px 10px; margin-bottom:8px;">
+      <div style="border:1px solid var(--bd-eef0f3); border-radius:6px; padding:8px 10px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <strong>${S.escapeHtml(g.name)}</strong>
-          <button class="link cg-del" data-id="${g.id}" style="color:#a00">Remove group</button>
+          <button class="link cg-del" data-id="${g.id}" style="color:var(--fg-aa0000)">Remove group</button>
         </div>
         <div class="chip-list" style="margin-top:6px">
           ${countries.map((c) => `<label class="chip" style="cursor:pointer"><input type="checkbox" class="cg-mem" data-gid="${g.id}" value="${c.id}" ${(g.countryIds || []).includes(c.id) ? "checked" : ""}/> ${S.escapeHtml(c.name)}</label>`).join("")}

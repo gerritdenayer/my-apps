@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Dark mode. Open the menu under your name and pick Light, Dark or Auto (follows your computer). Each person chooses for themselves, and the choice is remembered on that computer.
+
 ## [v5.2.1] - 2026-11-05 - Home cluster defaults, clearer setup pop-up
 
 ### Fixed

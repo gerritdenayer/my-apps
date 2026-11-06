@@ -186,7 +186,7 @@
       <div class="kpi-row">${kpiCards(matrix, yb)}</div>
       <div class="card">
         <div class="report-groupbar">
-          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse. <span style="color:#991b1b;font-weight:600">Red amounts</span>: actual is above forecast.</span>
+          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse. <span style="color:var(--fg-991b1b);font-weight:600">Red amounts</span>: actual is above forecast.</span>
           <span class="grow"></span>
           <button id="rg-expand" class="linkbtn">Expand all</button>
           <button id="rg-collapse" class="linkbtn">Collapse all</button>
