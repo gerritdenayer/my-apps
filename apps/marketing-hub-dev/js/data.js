@@ -1303,7 +1303,7 @@
       apCategories: ["A&P category", "A&P categories"], countryGroups: ["country group", "country groups"],
       m1Levels: ["M1 zone", "M1 zones"], yearlyBudgets: ["yearly budgets"], budgetCodes: ["budget codes"],
       svpAliases: ["SVP / vertical aliases"], adminPinHash: ["admin pin"] };
-    const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner",
+    const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner", startYear: "active from", endYear: "until",
       apCategoryId: "A&P category", activeYears: "active years", m1: "M1 zone", name: "name", role: "role", active: "active", email: "email" };
     const label = (k, n) => { const l = LABELS[k]; return l ? (n === 1 || !l[1] ? l[0] : l[1]) : k; };
     const keys = [...new Set([...Object.keys(fromS), ...Object.keys(toS)])].filter((k) => k !== "countries").sort();

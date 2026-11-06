@@ -828,6 +828,15 @@
     // Preselect canonical so duplicates map to the visible option
     populateEntityOptions(initialGroup, S.canonicalEntityId(a.entityId));
     // Changing the date can change which year's entities apply; refresh the list.
+    // SVP / vertical, A&P category and status: only those used in the line's year.
+    const yearLists = () => {
+      const st = S.state.data.settings, yr = lineYear();
+      S.yearFilterSelect(modal.querySelector("#m-svp"), st.svps, yr);
+      S.yearFilterSelect(modal.querySelector("#m-apcat"), st.apCategories, yr);
+      S.yearFilterSelect(modal.querySelector("#m-status"), st.statuses, yr);
+    };
+    yearLists();
+    modal.querySelector("#m-date").addEventListener("change", yearLists);
     modal.querySelector("#m-date").addEventListener("change", () => {
       const gSel = modal.querySelector("#m-group"), g = gSel.value;
       const list = clustersFor(lineYear());

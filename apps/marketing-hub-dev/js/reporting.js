@@ -43,7 +43,7 @@
           <label>Month</label>
           <select id="r-month">${S.monthOptions(view.month)}</select>
         </div>
-        ${S.scopeFilterHtml("r", view.scope)}
+        ${S.scopeFilterHtml("r", view.scope, null, view.year)}
         <div>
           <label>Measure</label>
           <select id="r-measure">
@@ -63,10 +63,10 @@
     root.querySelector("#t-matrix").onclick = () => { view.mode = "matrix"; renderBody(); };
     root.querySelector("#t-entity").onclick = () => { view.mode = "entity"; renderBody(); };
     root.querySelector("#t-charts").onclick = () => { view.mode = "charts"; renderBody(); };
-    root.querySelector("#r-year").onchange = (e) => { view.year = +e.target.value; renderBody(); };
+    root.querySelector("#r-year").onchange = (e) => { view.year = +e.target.value; render(); }; // the cluster and entity lists follow the year
     root.querySelector("#r-quarter").onchange = (e) => { view.quarter = e.target.value; renderBody(); };
     root.querySelector("#r-month").onchange = (e) => { view.month = e.target.value; renderBody(); };
-    S.wireScopeFilter(root, "r", view.scope, renderBody);
+    S.wireScopeFilter(root, "r", view.scope, renderBody, null, view.year);
     root.querySelector("#r-measure").onchange = (e) => { view.measure = e.target.value; renderBody(); };
     root.querySelector("#r-export").onclick = exportExcel;
 
@@ -77,6 +77,8 @@
     const data = S.state.data;
     const ys = new Set([view.year, new Date().getFullYear()]);
     data.activities.forEach((a) => { if (a.date) ys.add(new Date(a.date).getFullYear()); });
+    // Also years that only have a yearly budget so far (a new year before its first line).
+    Object.keys(data.settings.yearlyBudgets || {}).forEach((y) => { if (/^\d{4}$/.test(y)) ys.add(+y); });
     return Array.from(ys).sort().map(y => `<option ${y===view.year?"selected":""} value="${y}">${y}</option>`).join("");
   }
 
@@ -120,8 +122,12 @@
   }
 
   // Deduped entities limited to the shared M1 > Cluster > Entity scope.
+  // Entities retired for the year are left out, unless they still have a budget or lines that year.
   function reportEntities() {
-    return S.uniqueEntities().filter((e) => S.entityMatchesScope(e.id, view.scope));
+    const yb = (S.state.data.settings.yearlyBudgets || {})[view.year] || {};
+    const used = new Set((S.state.data.activities || []).filter((a) => S.inPeriod(a.date, view.year, "", "")).map((a) => S.canonicalEntityId(a.entityId)));
+    return S.uniqueEntities().filter((e) => S.entityMatchesScope(e.id, view.scope)
+      && (S.entityActiveInYear(e, view.year) || used.has(e.id) || (S.state.data.settings.entities || []).some((x) => S.canonicalEntityId(x.id) === e.id && yb[x.id])));
   }
 
   // Yearly budgets are keyed by raw entity ID, but Reporting de-duplicates entities

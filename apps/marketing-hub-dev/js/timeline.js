@@ -172,7 +172,9 @@
   // Compact outcomes block for the campaign detail modal.
   function outcomesSummary(e){
     const oc=e.outcomes||{};
-    const cells=S.OUTCOME_METRICS.filter(m=>oc[m.key]).map(m=>{
+    const mine=S.outcomeMetricsFor(e.goal).map(m=>m.key);
+    const ordered=S.OUTCOME_METRICS.slice().sort((a,b)=>(mine.includes(a.key)?0:1)-(mine.includes(b.key)?0:1));
+    const cells=ordered.filter(m=>oc[m.key]).map(m=>{
       const o=oc[m.key]||{};
       const subT=m.kind==="pa"?"p":"t";
       const tgt=+o[subT]||0, act=+o.a||0;
@@ -814,20 +816,24 @@
     // Outcomes prefill
     const oc=e.outcomes||{};
     const ov=(key,sub)=>{ const o=oc[key]||{}; return (o[sub]!==undefined&&o[sub]!=="")?o[sub]:""; };
+    // One row per metric. The goal's metrics go on top, the rest under "Other results"; changing
+    // the goal on Details moves the rows (typed numbers stay).
+    const ocRow=(m)=>{
+      const subT=m.kind==="pa"?"p":"t";
+      const ph=m.money?"EUR":"#";
+      const step=m.money?"0.01":(m.agg==="avg"?"0.1":"1");
+      const max=m.max?` max="${m.max}"`:"";
+      return `<div class="oc-row" data-oc="${m.key}"><label class="oc-lab" for="c-oc-${m.key}-a">${m.label}${m.money?' <span class="muted small">(EUR)</span>':''}${m.hint?`<span class="oc-hint">${S.escapeHtml(m.hint)}</span>`:""}</label>
+        <input id="c-oc-${m.key}-t" type="number" step="${step}" min="0"${max} placeholder="${ph}" value="${ov(m.key,subT)}" />
+        <input id="c-oc-${m.key}-a" type="number" step="${step}" min="0"${max} placeholder="${ph}" value="${ov(m.key,'a')}" /></div>`;
+    };
+    const ocHead=`<div class="oc-row oc-headrow"><div class="oc-head">Metric</div><div class="oc-head">Target / potential</div><div class="oc-head">Actual</div></div>`;
     const outcomesHtml=`
-      <h3 style="margin:14px 0 4px">Outcomes / results</h3>
-      <p class="muted small" style="margin:0 0 8px">Track planned vs achieved for this campaign. These feed the Outcomes report. Revenue uses potential vs actual.</p>
-      <div class="oc-grid">
-        <div class="oc-head">Metric</div><div class="oc-head">Target / potential</div><div class="oc-head">Actual</div>
-        ${S.OUTCOME_METRICS.map(m=>{
-          const subT=m.kind==="pa"?"p":"t";
-          const ph=m.money?"EUR":"#";
-          const step=m.money?"0.01":"1";
-          return `<label class="oc-lab">${m.label}${m.money?' <span class="muted small">(EUR)</span>':''}</label>
-            <input id="c-oc-${m.key}-t" type="number" step="${step}" min="0" placeholder="${ph}" value="${ov(m.key,subT)}" />
-            <input id="c-oc-${m.key}-a" type="number" step="${step}" min="0" placeholder="${ph}" value="${ov(m.key,'a')}" />`;
-        }).join("")}
-      </div>
+      <h3 style="margin:14px 0 4px" id="c-oc-title">Results</h3>
+      <p class="muted small" style="margin:0 0 8px" id="c-oc-intro"></p>
+      <div class="oc-grid" id="c-oc-main">${ocHead}</div>
+      <details class="oc-other" id="c-oc-otherbox"><summary id="c-oc-othersum">Other results</summary><div class="oc-grid" id="c-oc-other">${ocHead}</div></details>
+      <div class="oc-hidden hidden">${S.OUTCOME_METRICS.map(ocRow).join("")}</div>
     `;
 
     // Cluster + organising entity come from the entities hierarchy (Cluster > Entity).
@@ -1044,6 +1050,16 @@
 
     // End date can never be before the start. Picking a start fills the end with the same day
     // (when empty or earlier) and blocks earlier dates, while staying editable for multi-day items.
+    // SVP / vertical, event type, A&P category and status: only those used in the item's year.
+    const yearLists=()=>{
+      const st=S.state.data.settings, yr=evYear();
+      S.yearFilterSelect(modal.querySelector("#c-svp"), st.svps, yr);
+      S.yearFilterSelect(modal.querySelector("#c-type"), st.activityTypes, yr);
+      S.yearFilterSelect(modal.querySelector("#c-bapcat"), st.apCategories, yr);
+      S.yearFilterSelect(modal.querySelector("#c-bstatus"), st.statuses, yr);
+    };
+    yearLists();
+    modal.querySelector("#c-start").addEventListener("change", yearLists);
     const startEl=modal.querySelector("#c-start"), endEl=modal.querySelector("#c-end");
     if(startEl&&endEl){
       const syncEnd=()=>{
@@ -1115,6 +1131,27 @@
     // Default the A&P category to the chosen type's category (still editable).
     const cTypeSel=modal.querySelector("#c-type"), cApcatSel=modal.querySelector("#c-bapcat");
     const cGoalSel=modal.querySelector("#c-goal");
+    // Outcomes follow the goal: its metrics on top, the others folded under "Other results".
+    function arrangeOutcomes(){
+      const g=cGoalSel?cGoalSel.value:"";
+      const main=modal.querySelector("#c-oc-main"), other=modal.querySelector("#c-oc-other"), box=modal.querySelector("#c-oc-otherbox");
+      if(!main||!other) return;
+      const mine=new Set(S.outcomeMetricsFor(g).map(m=>m.key));
+      S.OUTCOME_METRICS.forEach(m=>{
+        const row=modal.querySelector(`.oc-row[data-oc="${m.key}"]`); if(!row) return;
+        (g ? (mine.has(m.key)?main:other) : main).appendChild(row);
+      });
+      const filled=[...other.querySelectorAll("input")].some(i=>i.value!==""&&+i.value!==0);
+      box.classList.toggle("hidden", !g);
+      if(filled) box.open=true;
+      modal.querySelector("#c-oc-othersum").textContent=filled?"Other results (some filled in)":"Other results";
+      modal.querySelector("#c-oc-title").textContent=g?`Results for ${S.goalLabel(g)}`:"Results";
+      modal.querySelector("#c-oc-intro").textContent=g
+        ? "The KPIs that fit this goal. Enter the target when you plan, the actual when it is done. They feed the Outcomes report."
+        : "Pick a goal on Details to see the KPIs that fit it. Until then all metrics are shown.";
+    }
+    arrangeOutcomes();
+    if(cGoalSel) cGoalSel.addEventListener("change", arrangeOutcomes);
     if(cTypeSel && cApcatSel) cTypeSel.addEventListener("change", ()=>{
       if(cGoalSel && cGoalSel.value && S.apCategoryForGoal(cGoalSel.value)) return; // the goal decides
       const t=S.actTypeById(cTypeSel.value); if(t && t.apCategoryId) cApcatSel.value=t.apCategoryId;

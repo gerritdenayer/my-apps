@@ -375,7 +375,11 @@ td.actions-cell { white-space: nowrap; text-align: right; }
 td.actions-cell button { margin-left: 4px; }
 
 /* Outcomes input grid (campaign editor) */
-.oc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; max-width: 640px; }
+.oc-grid { display: flex; flex-direction: column; gap: 8px; max-width: 680px; }
+.oc-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; align-items: center; }
+.oc-hint { display: block; font-size: 11px; color: var(--fg-6b7280); font-weight: 400; }
+.oc-other { margin-top: 14px; max-width: 680px; }
+.oc-other summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--fg-374151); margin-bottom: 8px; }
 .oc-grid .oc-head { font-size: 11px; font-weight: 600; color: var(--fg-374151); text-transform: uppercase; letter-spacing: .03em; }
 .oc-grid .oc-lab { margin: 0; }
 
@@ -619,3 +623,14 @@ html[data-theme="dark"] .env-banner { color: #000; }
 .rc-check.rc-off { cursor: default; }
 .rc-canvas { position: relative; height: 420px; margin-top: 6px; }
 .rc-types .seg-btn { padding: 7px 11px; }
+
+/* Outcomes per goal */
+.o-goals { margin-bottom: 12px; }
+.o-warn { background: var(--bg-fef3c7); color: var(--fg-92400e); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.o-warn .linkbtn { padding: 0 4px; }
+.o-gcard .delta { line-height: 1.5; }
+.o-gcard .linkbtn { padding: 0; font-size: 12px; }
+#tab-outcomes .o-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.chip .chip-years { font-weight: 500; font-size: 11px; opacity: .75; border-left: 1px solid var(--bd-d1d5db); margin-left: 2px; padding-left: 6px; }
+.chip .chip-years:hover { opacity: 1; text-decoration: underline; }
+.chip.chip-retired { opacity: .6; }
