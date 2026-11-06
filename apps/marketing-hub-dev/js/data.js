@@ -1696,7 +1696,9 @@
     }
     const status = setupStatus(remote);
     if (status === "same") { markSetupSynced(remote); return; }
-    if (status === "local-changes" && !admin) return; // only admins can publish the setup
+    // Only admins publish the setup. A non-admin whose copy differs (for example an older edit
+    // made before budget owners became view-only) simply takes the shared setup.
+    if (status === "local-changes" && !admin) { try { pullSetupFrom(remote); } catch (e) {} return; }
 
     const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-GB") : "unknown date";
     const who = (remote.meta && remote.meta.exportedBy) || "a teammate";

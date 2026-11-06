@@ -32,8 +32,8 @@
       <table class="help-table">
         <tr><th>Role</th><th>What you can do</th></tr>
         <tr><td>Admin</td><td>Everything, including users, publishing the setup and deleted items.</td></tr>
-        <tr><td>Budget owner</td><td>Edit budget lines and events, Budget structure, Data &amp; sharing.</td></tr>
-        <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting and Outcomes.</td></tr>
+        <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the budget structure and the entities &amp; clusters.</td></tr>
+        <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting, Outcomes and the budget structure.</td></tr>
         <tr><td>Campaigns viewer</td><td>View Campaigns &amp; events only.</td></tr>
       </table>
       <p>Your password works on every computer: it is stored, scrambled, in the shared folder. Forgot it? An admin clicks <b>Reset password</b> in Settings &gt; Users &amp; access, and you log in with 1234 again.</p>
@@ -115,7 +115,7 @@
       <p>Publish at the end of every working session, and use the same browser each time.</p>` },
 
     { id: "inbox", title: "Email inbox", tabs: [], html: `
-      <p>Events announced by email can be turned into proposals without retyping. When proposals are waiting, an orange <b>Inbox N</b> button shows in the top bar.</p>
+      <p>Events announced by email can be turned into proposals without retyping. Filling the inbox is a <b>super admin</b> option only: forward the email to the super admin, who has the proposals prepared (with Claude) and checked for duplicates. When proposals are waiting, an orange <b>Inbox N</b> button shows in the top bar for everyone who can edit campaigns.</p>
       <ul>
         <li><b>Review &amp; add</b> opens the event form already filled in. Check, complete and save: the event is added and published.</li>
         <li><b>Reject</b> drops the proposal.</li>
@@ -126,7 +126,7 @@
     { id: "settings", title: "Settings", tabs: ["settings", "budget-structure", "data", "users", "trash"], admin: true, html: `
       <table class="help-table">
         <tr><td><b>Entities &amp; clusters</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years. The active years decide which entities and clusters the forms and filters offer for a given year.</td></tr>
-        <tr><td><b>Budget structure</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Set the numbers or copy last year forward.</td></tr>
+        <tr><td><b>Budget structure</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Admins set the numbers or copy last year forward; others can view it. Non-admins also get a read-only list of the entities &amp; clusters.</td></tr>
         <tr><td><b>SVPs &amp; verticals</b></td><td>The SVPs and vertical industries used for reporting on budget lines and events. "N.A." (not applicable) is always there; add verticals such as Manufacturing or Retail as needed. Click the years on a chip to set when it is used.</td></tr>
         <tr><td><b>Event types &amp; A&amp;P</b></td><td>Event types (the means: Event, Tradeshow, ABM...) with their default A&amp;P category, and the A&amp;P categories budget lines are filed under. Each can have years (Active from / Until).</td></tr>
         <tr><td><b>Countries, Statuses</b></td><td>The other lists used in budget lines and events. Statuses can have years too.</td></tr>

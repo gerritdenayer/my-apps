@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Budget owners can now view the budget structure and the entities & clusters, but no longer change them. Only admins change the yearly budgets, budget codes and entities, because only admins publish the setup. Non-admins see a "view" label on these sections in the Settings menu.
+- Help: the email inbox is filled by the super admin only; everyone else forwards the email and reviews the proposals.
+- A non-admin whose setup differs from the shared one now takes the shared setup automatically when the app opens.
+
 ## [v5.3.0] - 2026-11-06 - Dark mode, charts, outcomes per goal, lists per year
 
 ### Added

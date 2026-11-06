@@ -339,7 +339,7 @@
   // for the pin when the user is not an admin (same rule as before).
   const SETTINGS_ITEMS = [
     { group: "Structure" },
-    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true },
+    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true, viewTab: "budget-structure", viewCap: "viewStructure" },
     { key: "budget-structure", label: "Budget structure", tab: "budget-structure", cap: "viewStructure" },
     { group: "Lists" },
     { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
@@ -356,9 +356,11 @@
   let settingsSection = null;
   function settingsItemAllowed(it, withPin) {
     const AUTH = window.MB_AUTH;
-    if (it.admin) return withPin ? true : AUTH.canSeeSettings();
+    if (it.admin) return withPin ? true : (AUTH.canSeeSettings() || (!!it.viewCap && AUTH.can(it.viewCap)));
     return AUTH.can(it.cap);
   }
+  // Non-admins with view rights see some admin sections read-only, in another panel.
+  const viewOnly = (it) => !!(it.admin && it.viewCap && !window.MB_AUTH.canSeeSettings() && window.MB_AUTH.can(it.viewCap));
   // Items this user can open right now, or after entering the pin (admin sections).
   function visibleSettingsItems() {
     const AUTH = window.MB_AUTH;
@@ -376,7 +378,8 @@
         return next && !next.group ? `<div class="sn-group">${escapeHtml(it.group)}</div>` : "";
       }
       const locked = !settingsItemAllowed(it, false);
-      return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}</button>`;
+      const ro = !locked && (viewOnly(it) || (it.key === "budget-structure" && !AUTH.canSeeSettings()));
+      return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}${ro ? '<span class="sn-ro" title="You can view this; only admins can change it">view</span>' : ""}</button>`;
     }).join("");
     nav.innerHTML = html + `<div id="sn-setup" class="sn-setup"></div>`;
     nav.querySelectorAll("button[data-sec]").forEach((b) => { b.onclick = () => openSettings(b.dataset.sec); });
@@ -419,7 +422,7 @@
       return;
     }
     settingsSection = it.key;
-    doSwitch(it.tab, it.key);
+    doSwitch(viewOnly(it) ? it.viewTab : it.tab, it.key);
   }
 
   function switchTab(name) {
@@ -462,7 +465,7 @@
     if (name === "timeline") window.MB_TIMELINE.render();
     if (name === "reporting") window.MB_REPORTING.render();
     if (name === "outcomes") window.MB_OUTCOMES.render();
-    if (name === "budget-structure") window.MB_STRUCTURE.render();
+    if (name === "budget-structure") window.MB_STRUCTURE.render(section);
     if (name === "data") window.MB_DATA.render();
     if (name === "users") window.MB_USERS.render();
     if (name === "settings") window.MB_SETTINGS.render(section);
