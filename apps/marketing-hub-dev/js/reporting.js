@@ -28,6 +28,7 @@
           <div class="report-toggle">
             <button id="t-matrix" class="${view.mode==="matrix"?"active":""}">Monthly matrix</button>
             <button id="t-entity" class="${view.mode==="entity"?"active":""}">Entity drill-down</button>
+            <button id="t-charts" class="${view.mode==="charts"?"active":""}">Charts</button>
           </div>
         </div>
         <div>
@@ -61,6 +62,7 @@
 
     root.querySelector("#t-matrix").onclick = () => { view.mode = "matrix"; renderBody(); };
     root.querySelector("#t-entity").onclick = () => { view.mode = "entity"; renderBody(); };
+    root.querySelector("#t-charts").onclick = () => { view.mode = "charts"; renderBody(); };
     root.querySelector("#r-year").onchange = (e) => { view.year = +e.target.value; renderBody(); };
     root.querySelector("#r-quarter").onchange = (e) => { view.quarter = e.target.value; renderBody(); };
     root.querySelector("#r-month").onchange = (e) => { view.month = e.target.value; renderBody(); };
@@ -140,6 +142,18 @@
 
   function renderBody() {
     const host = document.getElementById("report-body");
+    document.querySelectorAll("#tab-reporting .report-toggle button").forEach((b) => b.classList.toggle("active", b.id === "t-" + view.mode));
+    if (view.mode !== "charts" && window.MB_REPCHARTS) window.MB_REPCHARTS.destroy();
+    if (view.mode === "charts" && window.MB_REPCHARTS) {
+      const allowed = new Set(reportEntities().map((e) => e.id));
+      const measureLabel = { net: "Net", gross: "Gross", partner: "Partner" }[view.measure] || "Net";
+      window.MB_REPCHARTS.render(host, {
+        year: view.year, quarter: view.quarter, month: view.month,
+        lines: activitiesInYear().filter((a) => allowed.has(S.canonicalEntityId(a.entityId))),
+        valueOf, budgetByEntity: budgetByCanonical(view.year), measureLabel, drill: drillToBudget,
+      });
+      return;
+    }
     if (view.mode === "matrix") {
       host.innerHTML = renderMatrix();
       bindMatrix(host);
@@ -363,7 +377,7 @@
     window.MB_BUDGET.setFilters(filters);
     window.MB_APP.switchTab("budget");
     const ent = filters.entityId ? S.entityById(filters.entityId) : null;
-    const label = ent ? ent.name : "all entities";
+    const label = ent ? ent.name : (filters.group || "all entities");
     S.toast(`Filtered Budget to ${label}, ${filters.year}`, "success");
   }
 

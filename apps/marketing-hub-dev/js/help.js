@@ -76,8 +76,19 @@
       <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
-      <p>The budget by month. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
+      <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
       <p>Under the matrix, <b>By A&amp;P category</b> shows the forecast and actual per A&amp;P category for the year and scope you picked.</p>
+      <h3>Charts</h3>
+      <p>Click <b>Charts</b> at the top to build your own chart from the same filters (year, quarter, month, cluster, entity, measure).</p>
+      <ul>
+        <li><b>Quick pick</b>: ready-made charts, such as forecast vs actual by month, spend over the year vs budget, budget by cluster, or the share per A&amp;P category.</li>
+        <li><b>Chart type</b>: bar, stacked, horizontal, line, pie or doughnut.</li>
+        <li><b>Group by</b>: what the bars or slices are: month, quarter, M1 zone, cluster, entity, A&amp;P category, SVP / vertical, owner, status, vendor or budget code.</li>
+        <li><b>Split by</b>: forecast next to actual, or one color per cluster, A&amp;P category, status and so on.</li>
+        <li><b>Values</b>: forecast, actual or both. <b>Show</b> keeps the top 5, 10 or 15 and puts the rest in "Other".</li>
+        <li><b>Budget</b> adds the yearly budget (by M1 zone, cluster or entity, or spread over the months). <b>Cumulative</b> adds up the months, so you see how spending builds up against the budget.</li>
+      </ul>
+      <p>Click a bar to open those lines in Budget (when grouped by cluster or entity). The table under the chart shows the numbers. <b>Download image</b> saves the chart as a picture for a slide or an email. Your last chart is remembered on this computer.</p>
       <p><b>Export to Excel</b> downloads the year as a workbook.</p>` },
 
     { id: "outcomes", title: "Outcomes", tabs: ["outcomes"], html: `

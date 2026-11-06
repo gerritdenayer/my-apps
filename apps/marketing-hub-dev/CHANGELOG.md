@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- Reporting has a new Charts view. Pick a ready-made chart or build your own: chart type (bar, stacked, horizontal, line, pie, doughnut), group by (month, quarter, M1 zone, cluster, entity, A&P category, SVP / vertical, owner, status, vendor, budget code), split by, forecast and/or actual, budget, cumulative and top 5/10/15. A table with the numbers sits under the chart, and you can download the chart as an image.
 - Dark mode. Open the menu under your name and pick Light, Dark or Auto (follows your computer). Each person chooses for themselves, and the choice is remembered on that computer.
 
 ## [v5.2.1] - 2026-11-05 - Home cluster defaults, clearer setup pop-up

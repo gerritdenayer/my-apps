@@ -609,3 +609,13 @@ input.locked { background: var(--bg-f3f4f6); color: var(--fg-6b7280); }
 html[data-theme="dark"] img.logo-light { filter: invert(1) hue-rotate(180deg); }
 html[data-theme="dark"] .overlay { background: linear-gradient(135deg, #20160f 0%, #14161a 100%); }
 html[data-theme="dark"] .env-banner { color: #000; }
+
+/* Reporting > Charts */
+.rc-bar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 10px; }
+.rc-bar .grow { flex: 1; }
+.rc-bar select { min-width: 150px; }
+.rc-off { opacity: .45; }
+.rc-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding-bottom: 8px; cursor: pointer; }
+.rc-check.rc-off { cursor: default; }
+.rc-canvas { position: relative; height: 420px; margin-top: 6px; }
+.rc-types .seg-btn { padding: 7px 11px; }

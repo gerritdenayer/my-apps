@@ -980,6 +980,7 @@
   }
 
   function setFilters(f) {
+    view._forUser = S.state.currentUserId; // a drill-down wins over the home-cluster default
     if (f.year !== undefined) view.year = f.year;
     // Location scope (from a Reporting drill-down): resolve cluster/M1 from the entity.
     const ent = f.entityId ? S.entityById(S.canonicalEntityId(f.entityId)) : null;
