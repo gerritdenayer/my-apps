@@ -257,7 +257,7 @@
         <button class="ds-tab ${ds === "activities" ? "primary" : "secondary"}" data-ds="activities">Budget lines (${acts})</button>
         <button class="ds-tab ${ds === "events" ? "primary" : "secondary"}" data-ds="events">Events (${evs})</button>
       </div>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; padding:8px; background:#f8fafc; border:1px solid #eef0f3; border-radius:6px;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; padding:8px; background:var(--bg-f8fafc); border:1px solid var(--bd-eef0f3); border-radius:6px;">
         <span class="small"><strong id="ds-selcount">${gridState.sel.size}</strong> selected</span>
         <label class="muted small">Set</label>
         <select id="ds-field">${fields.map((f) => `<option value="${f.field}">${S.escapeHtml(f.label)}</option>`).join("")}</select>
@@ -542,7 +542,7 @@
         <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
           <button class="secondary" id="sh-bridge">Choose second folder...</button>
           <button class="primary hidden" id="sh-bridge-sync">Sync both folders now</button>
-          <button class="secondary hidden" id="sh-bridge-stop" style="color:#a00">Stop bridging</button>
+          <button class="secondary hidden" id="sh-bridge-stop" style="color:var(--fg-aa0000)">Stop bridging</button>
         </div>` : ""}
         <h3 style="margin:14px 0 6px">Setup (structure)</h3>
         <div class="actions" style="justify-content:flex-start; flex-wrap:wrap; gap:8px;">
@@ -608,7 +608,7 @@
       }
       try {
         const info = SH.fileInfo ? await SH.fileInfo(dir, file) : null;
-        if (!info) line = `<span style="color:#b45309">not found</span>`;
+        if (!info) line = `<span style="color:var(--fg-b45309)">not found</span>`;
         else {
           // Show when it was published from the app (stored in the file). The file system date
           // is when the file landed on this computer (OneDrive sync, a copy to a new folder), which
@@ -621,7 +621,7 @@
             ? ` <span class="muted" title="The date the file was copied or synced onto this computer. The publish date is what counts.">(file date on this computer ${S.escapeHtml(fmt(info.lastModified))})</span>` : "";
           line = `${main} &middot; ${Math.round(info.size / 1024)} KB${hint}`;
         }
-      } catch (e) { line = `<span style="color:#b91c1c">could not read</span>`; }
+      } catch (e) { line = `<span style="color:var(--fg-b91c1c)">could not read</span>`; }
       rows.push(`<div>${label}: <code>${S.escapeHtml(file)}</code> &middot; ${line}</div>`);
     }
     box.innerHTML = rows.join("");
@@ -651,7 +651,7 @@
     let last = null; try { last = JSON.parse(localStorage.getItem(BRIDGE_LAST_KEY) || "null"); } catch (e) {}
     const access = await SH.hasPerm(b, "readwrite");
     el.innerHTML = `Bridging with: <strong>${S.escapeHtml(b.name)}</strong>` +
-      (access ? "" : ` <span style="color:#c2410c">&middot; no access yet (click Sync both folders now)</span>`) +
+      (access ? "" : ` <span style="color:var(--fg-c2410c)">&middot; no access yet (click Sync both folders now)</span>`) +
       (last ? ` <span class="muted">&middot; last bridge sync ${S.escapeHtml(new Date(last.at).toLocaleString("en-GB"))}: ${S.escapeHtml(last.summary)}</span>` : "");
     if (chooseBtn) chooseBtn.textContent = "Change second folder...";
     [syncBtn, stopBtn].forEach((x) => x && x.classList.remove("hidden"));
@@ -792,10 +792,10 @@
     const section = (title, items, chkClass) => {
       if (!items.length) return "";
       return `<h3 style="margin:12px 0 4px; font-size:14px">${title} (${items.length})</h3>` +
-        `<div style="max-height:150px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:6px 8px;">` +
+        `<div style="max-height:150px; overflow:auto; border:1px solid var(--bd-eef0f3); border-radius:6px; padding:6px 8px;">` +
         items.map((it) => chkClass
           ? `<label style="display:flex; align-items:center; gap:8px; font-size:13px; padding:2px 0;"><input type="checkbox" class="${chkClass}" value="${it.id}" /> ${S.escapeHtml(it.name)}</label>`
-          : `<div style="font-size:13px; padding:2px 0; color:#374151;">${S.escapeHtml(it.name)}</div>`
+          : `<div style="font-size:13px; padding:2px 0; color:var(--fg-374151);">${S.escapeHtml(it.name)}</div>`
         ).join("") + `</div>`;
     };
     const warnHtml = diff.warnings.length
@@ -913,14 +913,14 @@
     return new Promise((resolve) => {
       const count = (k) => mine.filter((x) => x.kind === k).length;
       const parts = [["new", "new"], ["changed", "changed"], ["deleted", "deleted"], ["only here", "only on this computer"]].map(([k, l]) => count(k) ? `${count(k)} ${l}` : "").filter(Boolean).join(", ");
-      const list = mine.slice(0, 60).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.label)} ${x.kind}: ${S.escapeHtml(x.name || "(no name)")}</div>`).join("");
+      const list = mine.slice(0, 60).map((x) => `<div class="small" style="color:var(--fg-374151)">${S.escapeHtml(x.label)} ${x.kind}: ${S.escapeHtml(x.name || "(no name)")}</div>`).join("");
       const m = S.openModal(`
         <h2>You have unpublished changes</h2>
         <p>This computer has changes that are not in the shared folder yet (${parts}). The app normally loads the shared data when it opens, which would replace them.</p>
         <details style="margin:6px 0 10px"><summary style="cursor:pointer">Show the changes</summary><div style="max-height:180px; overflow:auto; margin-top:4px">${list}</div></details>
         <div class="actions" style="flex-wrap:wrap; gap:8px">
           <button class="secondary" id="up-later">Decide later</button>
-          <button class="secondary" id="up-discard" style="color:#a00">Discard mine, load shared</button>
+          <button class="secondary" id="up-discard" style="color:var(--fg-aa0000)">Discard mine, load shared</button>
           <button class="primary" id="up-publish">Publish my changes</button>
         </div>`, { closeOnBackdrop: false });
       const done = (v) => { S.closeModal(); resolve(v); };
@@ -940,7 +940,7 @@
     const evA = diff.events.adds.length, evU = diff.events.updates.length;
     const acA = diff.activities.adds.length, acU = diff.activities.updates.length;
     const missN = diff.events.missing.length + diff.activities.missing.length;
-    const names = (arr) => arr.slice(0, 50).map((x) => `<div class="small" style="color:#374151">${S.escapeHtml(x.name)}</div>`).join("");
+    const names = (arr) => arr.slice(0, 50).map((x) => `<div class="small" style="color:var(--fg-374151)">${S.escapeHtml(x.name)}</div>`).join("");
     const block = (title, arr) => arr.length ? `<details style="margin:4px 0"><summary style="cursor:pointer">${title} (${arr.length})</summary>${names(arr)}</details>` : "";
     const missNote = "";
     const m = S.openModal(`
@@ -1303,7 +1303,7 @@
       apCategories: ["A&P category", "A&P categories"], countryGroups: ["country group", "country groups"],
       m1Levels: ["M1 zone", "M1 zones"], yearlyBudgets: ["yearly budgets"], budgetCodes: ["budget codes"],
       svpAliases: ["SVP / vertical aliases"], adminPinHash: ["admin pin"] };
-    const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner",
+    const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner", startYear: "active from", endYear: "until",
       apCategoryId: "A&P category", activeYears: "active years", m1: "M1 zone", name: "name", role: "role", active: "active", email: "email" };
     const label = (k, n) => { const l = LABELS[k]; return l ? (n === 1 || !l[1] ? l[0] : l[1]) : k; };
     const keys = [...new Set([...Object.keys(fromS), ...Object.keys(toS)])].filter((k) => k !== "countries").sort();

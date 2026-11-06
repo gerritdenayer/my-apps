@@ -27,6 +27,14 @@
       document.addEventListener("click", closeUserMenu);
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeUserMenu(); });
     }
+    // Theme (light / dark / follow the computer), in the user menu. Charts are redrawn in the new colors.
+    const themeSeg = document.getElementById("theme-seg");
+    const markTheme = () => { if (themeSeg && window.MB_THEME) themeSeg.querySelectorAll("[data-theme-opt]").forEach((b) => b.classList.toggle("on", b.dataset.themeOpt === window.MB_THEME.get())); };
+    if (themeSeg && window.MB_THEME) {
+      themeSeg.querySelectorAll("[data-theme-opt]").forEach((b) => { b.onclick = (e) => { e.stopPropagation(); window.MB_THEME.set(b.dataset.themeOpt); }; });
+      markTheme();
+      window.addEventListener("mb-theme", () => { markTheme(); if (S.state.data) S.notify(); });
+    }
 
     // First-time setup: point this browser at the team's shared folder from the login screen.
     const connectBtn = document.getElementById("login-connect");

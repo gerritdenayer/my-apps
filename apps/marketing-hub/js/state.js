@@ -83,16 +83,30 @@
     return list;
   }
 
-  // Outcome metrics shared by the campaign editor and the Outcomes report.
-  // kind "ta" = target/actual pair; kind "pa" = potential/actual pair (revenue).
+  // Outcome metrics shared by the campaign editor and the Outcomes report. Each belongs to one
+  // or more goals: the form shows the goal's metrics first and the Outcomes report shows the goal's
+  // KPIs. kind "ta" = target / actual; "pa" = potential / actual (revenue). agg "avg" = averaged
+  // over the items that have a value (a score), otherwise summed. Older items keep their numbers.
   const OUTCOME_METRICS = [
-    { key: "engagement",    label: "Engagement",    kind: "ta", money: false },
-    { key: "attendees",     label: "Attendees",     kind: "ta", money: false },
-    { key: "registrations", label: "Registrations", kind: "ta", money: false },
-    { key: "mql",           label: "MQL",           kind: "ta", money: false },
-    { key: "sql",           label: "SQL",           kind: "ta", money: false },
-    { key: "revenue",       label: "Revenue",       kind: "pa", money: true  },
+    { key: "registrations", label: "Registrations", kind: "ta", goals: ["lead", "awareness"], hint: "People who signed up" },
+    { key: "attendees",     label: "Attended",      kind: "ta", goals: ["lead", "awareness"], hint: "People who actually came or joined" },
+    { key: "mql",           label: "MQL",           kind: "ta", goals: ["lead"], hint: "Marketing qualified leads" },
+    { key: "sql",           label: "SQL",           kind: "ta", goals: ["lead"], hint: "Leads accepted by sales" },
+    { key: "opps",          label: "Opportunities created", kind: "ta", goals: ["lead"] },
+    { key: "pipeline",      label: "Pipeline value", kind: "ta", money: true, goals: ["lead"], hint: "Value of the opportunities created" },
+    { key: "revenue",       label: "Revenue won",   kind: "pa", money: true, goals: ["lead"] },
+    { key: "reach",         label: "Reach",         kind: "ta", goals: ["awareness"], hint: "Impressions or audience reached" },
+    { key: "engagement",    label: "Engagement",    kind: "ta", goals: ["awareness"], hint: "Clicks, likes, shares, interactions" },
+    { key: "visits",        label: "Website visits", kind: "ta", goals: ["awareness"] },
+    { key: "newcontacts",   label: "New contacts",  kind: "ta", goals: ["awareness"], hint: "Contacts new to our database" },
+    { key: "accInvited",    label: "Customer accounts invited", kind: "ta", goals: ["intimacy"] },
+    { key: "accAttended",   label: "Customer accounts attending", kind: "ta", goals: ["intimacy"] },
+    { key: "seniors",       label: "Senior decision makers attending", kind: "ta", goals: ["intimacy"], hint: "C-level, VP, director" },
+    { key: "meetings",      label: "Follow-up meetings", kind: "ta", goals: ["intimacy"] },
+    { key: "satisfaction",  label: "Satisfaction (1 to 10)", kind: "ta", agg: "avg", max: 10, goals: ["intimacy"], hint: "Average survey score" },
+    { key: "influenced",    label: "Influenced pipeline", kind: "ta", money: true, goals: ["intimacy"], hint: "Upsell or renewal opportunities from these customers" },
   ];
+  function outcomeMetricsFor(goal) { return OUTCOME_METRICS.filter((m) => goal && (m.goals || []).includes(goal)); }
 
   // Schedule a save (debounced)
   function scheduleSave() {
@@ -324,6 +338,27 @@
   }
   // Is an entity in use for a given year? startYear/endYear are optional bounds (inclusive).
   // Empty year (or no bounds) means always active, so nothing is hidden unless the user sets it.
+  // Any list item (SVP / vertical, event type, A&P category, status) can have startYear / endYear,
+  // the same as entities. Forms only offer the items active in the item's year; old items keep theirs.
+  function activeInYear(it, year) { return entityActiveInYear(it, year); }
+  function yearRangeLabel(it) {
+    const s = it && it.startYear, u = it && it.endYear;
+    if (s && u) return s === u ? `${s} only` : `${s} to ${u}`;
+    if (s) return `from ${s}`;
+    if (u) return `until ${u}`;
+    return "all years";
+  }
+  // Hide the options of a <select> that are not active in that year (the selected one always stays).
+  function yearFilterSelect(sel, list, year) {
+    if (!sel) return;
+    const byId = {}; (list || []).forEach((x) => { byId[x.id] = x; });
+    [...sel.options].forEach((o) => {
+      if (!o.value) return;
+      const it = byId[o.value];
+      const off = !!it && !activeInYear(it, year) && o.value !== sel.value;
+      o.hidden = off; o.disabled = off;
+    });
+  }
   function entityActiveInYear(e, year) {
     if (!e) return false;
     if (!year) return true;
@@ -518,8 +553,8 @@
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,
     uniqueEntities, canonicalEntityId,
-    clusterList, entityListFor, entityActiveInYear, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
+    clusterList, entityListFor, entityActiveInYear, activeInYear, yearRangeLabel, yearFilterSelect, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
     openModal, closeModal, confirmDialog,
-    OUTCOME_METRICS,
+    OUTCOME_METRICS, outcomeMetricsFor,
   };
 })();

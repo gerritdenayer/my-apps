@@ -86,7 +86,7 @@
 
       <div class="card" data-sec="svps">
         <h2>SVPs &amp; verticals</h2>
-        <p class="muted small">Used for reporting: an SVP or a vertical industry per budget line and campaign / event. "N.A." (not applicable) is always in the list.</p>
+        <p class="muted small">Used for reporting: an SVP or a vertical industry per budget line and campaign / event. "N.A." (not applicable) is always in the list. Click the years on a chip to limit when it is offered in forms (for example a vertical used from 2027): older items keep theirs.</p>
         <div id="svps-list" class="chip-list"></div>
         <div class="row">
           <div><label>New SVP or vertical</label><input id="new-svp" type="text" placeholder="e.g. Manufacturing" /></div>
@@ -114,7 +114,7 @@
 
       <div class="card" data-sec="types">
         <h2>Event types &amp; A&amp;P categories</h2>
-        <p class="muted small">Event types are the means of a campaign or event (Event, Tradeshow, ABM...). A&amp;P categories are the marketing budget buckets every budget line is filed under. Each event type has a default A&amp;P category, used for a new budget line created from an event without a goal.</p>
+        <p class="muted small">Event types are the means of a campaign or event (Event, Tradeshow, ABM...). A&amp;P categories are the marketing budget buckets every budget line is filed under. Each event type has a default A&amp;P category, used for a new budget line created from an event without a goal. <b>Active from / Until</b> (and the years on each A&amp;P category chip) limit the years a type or category is offered in forms, instead of deleting it: older items keep theirs.</p>
         <h3>Event types</h3>
         <div id="types-list"></div>
         <div class="row-3">
@@ -135,6 +135,7 @@
 
       <div class="card" data-sec="statuses">
         <h2>Activity statuses</h2>
+        <p class="muted small">Click the years on a chip to limit when a status is offered in forms.</p>
         <div id="status-list" class="chip-list"></div>
         <div class="row">
           <div><label>New status</label><input id="new-status" type="text" placeholder="e.g. At risk" /></div>
@@ -439,10 +440,10 @@
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
     if (!groups.length) { host.innerHTML = "<p class='muted'>None yet.</p>"; return; }
     host.innerHTML = groups.map((g) => `
-      <div style="border:1px solid #eef0f3; border-radius:6px; padding:8px 10px; margin-bottom:8px;">
+      <div style="border:1px solid var(--bd-eef0f3); border-radius:6px; padding:8px 10px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <strong>${S.escapeHtml(g.name)}</strong>
-          <button class="link cg-del" data-id="${g.id}" style="color:#a00">Remove group</button>
+          <button class="link cg-del" data-id="${g.id}" style="color:var(--fg-aa0000)">Remove group</button>
         </div>
         <div class="chip-list" style="margin-top:6px">
           ${countries.map((c) => `<label class="chip" style="cursor:pointer"><input type="checkbox" class="cg-mem" data-gid="${g.id}" value="${c.id}" ${(g.countryIds || []).includes(c.id) ? "checked" : ""}/> ${S.escapeHtml(c.name)}</label>`).join("")}
@@ -508,12 +509,14 @@
     host.innerHTML = `
       <div class="table-wrap">
         <table>
-          <thead><tr><th class="ty-sort" data-k="name" style="cursor:pointer">Type${tArrow("name")}</th><th class="ty-sort" data-k="cat" style="cursor:pointer">A&amp;P category${tArrow("cat")}</th><th></th></tr></thead>
+          <thead><tr><th class="ty-sort" data-k="name" style="cursor:pointer">Type${tArrow("name")}</th><th class="ty-sort" data-k="cat" style="cursor:pointer">A&amp;P category${tArrow("cat")}</th><th title="First year this type is offered in forms">Active from</th><th title="Last year this type is offered in forms">Until</th><th></th></tr></thead>
           <tbody>
             ${rows.map((t) => `
               <tr data-id="${t.id}">
                 <td><input class="t-name" data-id="${t.id}" type="text" value="${S.escapeHtml(t.name)}" /></td>
                 <td><select class="t-cat" data-id="${t.id}"><option value="">Select...</option>${apCatOptions(t.apCategoryId || "")}</select></td>
+                <td><input class="t-from" data-id="${t.id}" type="number" step="1" style="width:72px" placeholder="any" value="${t.startYear || ""}" /></td>
+                <td><input class="t-until" data-id="${t.id}" type="number" step="1" style="width:72px" placeholder="open" value="${t.endYear || ""}" /></td>
                 <td class="actions-cell"><button class="danger del-type" data-id="${t.id}">Delete</button></td>
               </tr>
             `).join("")}
@@ -541,6 +544,16 @@
         if (t) { t.apCategoryId = sel.value; markDirty(); }
       };
     });
+    host.querySelectorAll(".t-from, .t-until").forEach((inp) => {
+      inp.onchange = () => {
+        const t = types.find((x) => x.id === inp.dataset.id);
+        if (!t) return;
+        const k = inp.classList.contains("t-from") ? "startYear" : "endYear";
+        const v = parseInt(inp.value, 10);
+        if (v) t[k] = v; else delete t[k];
+        markDirty();
+      };
+    });
     host.querySelectorAll(".del-type").forEach((btn) => {
       btn.onclick = async () => {
         const id = btn.dataset.id;
@@ -565,11 +578,12 @@
     const disp = items.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
     if (dir === "desc") disp.reverse();
     host.innerHTML = disp.map(it => `
-      <span class="chip" data-id="${it.id}">${S.escapeHtml(it.name)}<button title="Remove">×</button></span>
+      <span class="chip ${it.endYear && it.endYear < new Date().getFullYear() ? "chip-retired" : ""}" data-id="${it.id}">${S.escapeHtml(it.name)}<button class="chip-years" title="Set the years this is offered in forms">${S.escapeHtml(S.yearRangeLabel(it))}</button><button class="chip-del" title="Remove">×</button></span>
     `).join("");
     host.querySelectorAll(".chip").forEach((chip) => {
       const id = chip.dataset.id;
-      chip.querySelector("button").onclick = async () => {
+      chip.querySelector(".chip-years").onclick = () => editYears(items.find((x) => x.id === id), label);
+      chip.querySelector(".chip-del").onclick = async () => {
         const it = items.find((x) => x.id === id);
         const used = usageFn(id);
         const msg = (used && used.text) ? `Delete ${label} "${it.name}"? ${used.text}`
@@ -582,6 +596,25 @@
         persistAndRefresh();
       };
     });
+  }
+
+  // Active from / until for a list item. Outside those years it is not offered in new or edited
+  // forms; items that already use it keep it, and reports and filters still show it.
+  function editYears(it, label) {
+    if (!it) return;
+    const m = S.openModal(`<h2>Years for ${S.escapeHtml(label)} "${S.escapeHtml(it.name)}"</h2>
+      <p class="muted small">Forms only offer it for budget lines and events in these years. Items that already use it keep it, and reports still show it. Leave a box empty for no limit.</p>
+      <div class="row"><div><label>Active from</label><input id="yr-from" type="number" step="1" placeholder="any" value="${it.startYear || ""}" /></div>
+      <div><label>Until (last year)</label><input id="yr-until" type="number" step="1" placeholder="open" value="${it.endYear || ""}" /></div></div>
+      <div class="actions"><button class="secondary" id="yr-cancel">Cancel</button><button class="primary" id="yr-ok">Save</button></div>`);
+    m.querySelector("#yr-cancel").onclick = () => S.closeModal();
+    m.querySelector("#yr-ok").onclick = () => {
+      const f = parseInt(m.querySelector("#yr-from").value, 10), u = parseInt(m.querySelector("#yr-until").value, 10);
+      if (f && u && u < f) { S.toast("Until must be the same as or after Active from.", "error"); return; }
+      if (f) it.startYear = f; else delete it.startYear;
+      if (u) it.endYear = u; else delete it.endYear;
+      S.closeModal(); persistAndRefresh();
+    };
   }
 
   // Structural change (add/delete): update memory + mark dirty, then re-render.

@@ -1,18 +1,21 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.0] - 2026-11-06 - Dark mode, charts, outcomes per goal, lists per year
 
 ### Added
 - SVPs / verticals, event types, A&P categories and statuses can now have an Active from and Until year, like entities. Forms only offer what is active in the year of the budget line or event, and update when you change the date. Stopping something no longer means deleting it: older items keep it and reports still show it.
-- Outcomes now follow the goal of each campaign or event. The Outcomes tab in the form shows the KPIs for its goal first (Lead Generation: registrations, attended, MQL, SQL, opportunities, pipeline, revenue won; Awareness: reach, engagement, website visits, new contacts; Customer Intimacy: accounts invited and attending, senior decision makers, follow-up meetings, satisfaction, influenced pipeline). The Outcomes report has a button per goal with its own cards, table, chart and calculated KPIs such as the no-show rate, cost per MQL, engagement rate and accounts attending vs invited, plus a note for items without a goal. Existing results are kept.
-- Reporting has a new Charts view. Pick a ready-made chart or build your own: chart type (bar, stacked, horizontal, line, pie, doughnut), group by (month, quarter, M1 zone, cluster, entity, A&P category, SVP / vertical, owner, status, vendor, budget code), split by, forecast and/or actual, budget, cumulative and top 5/10/15. A table with the numbers sits under the chart, and you can download the chart as an image.
-- Dark mode. Open the menu under your name and pick Light, Dark or Auto (follows your computer). Each person chooses for themselves, and the choice is remembered on that computer.
+- Outcomes now follow the goal of each campaign or event, with KPIs such as the no-show rate, cost per MQL and accounts attending. The Outcomes tab in the form shows the KPIs for its goal first (Lead Generation: registrations, attended, MQL, SQL, opportunities, pipeline, revenue won; Awareness: reach, engagement, website visits, new contacts; Customer Intimacy: accounts invited and attending, senior decision makers, follow-up meetings, satisfaction, influenced pipeline). The Outcomes report has a button per goal with its own cards, table, chart and calculated KPIs such as the no-show rate, cost per MQL, engagement rate and accounts attending vs invited, plus a note for items without a goal. Existing results are kept.
+- Reporting has a new Charts view with ready-made charts or your own. Pick a ready-made chart or build your own: chart type (bar, stacked, horizontal, line, pie, doughnut), group by (month, quarter, M1 zone, cluster, entity, A&P category, SVP / vertical, owner, status, vendor, budget code), split by, forecast and/or actual, budget, cumulative and top 5/10/15. A table with the numbers sits under the chart, and you can download the chart as an image.
+- Dark mode: open the menu under your name and pick Light, Dark or Auto (follows your computer). Each person chooses for themselves, and the choice is remembered on that computer.
+
+### Fixed
+- Reporting and Outcomes: the cluster and entity filters now follow the selected year, so entities retired that year (such as Pan European in 2027) are no longer offered. The Reporting matrix leaves out retired entities that have no budget or lines in that year.
+- Reporting now also offers a year that only has a yearly budget so far (such as 2027 before its first budget line).
+- Clicking a bar in Reporting to open Budget no longer resets the Budget filter to your home cluster.
 
 ## [v5.2.1] - 2026-11-05 - Home cluster defaults, clearer setup pop-up
 
 ### Fixed
-- Reporting now also offers a year that only has a yearly budget so far (such as 2027 before its first budget line).
-- Reporting and Outcomes: the cluster and entity filters now follow the selected year, so entities retired that year (such as Pan European in 2027) are no longer offered. The Reporting matrix leaves out retired entities that have no budget or lines in that year.
 - The pop-up "Your setup changes are not published" no longer appears when nothing really changed. The app sorts lists A to Z when it opens, so a list published in another order (for example a new partner added at the end) looked like a change.
 
 ### Changed

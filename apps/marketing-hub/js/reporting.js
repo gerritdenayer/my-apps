@@ -28,6 +28,7 @@
           <div class="report-toggle">
             <button id="t-matrix" class="${view.mode==="matrix"?"active":""}">Monthly matrix</button>
             <button id="t-entity" class="${view.mode==="entity"?"active":""}">Entity drill-down</button>
+            <button id="t-charts" class="${view.mode==="charts"?"active":""}">Charts</button>
           </div>
         </div>
         <div>
@@ -42,7 +43,7 @@
           <label>Month</label>
           <select id="r-month">${S.monthOptions(view.month)}</select>
         </div>
-        ${S.scopeFilterHtml("r", view.scope)}
+        ${S.scopeFilterHtml("r", view.scope, null, view.year)}
         <div>
           <label>Measure</label>
           <select id="r-measure">
@@ -61,10 +62,11 @@
 
     root.querySelector("#t-matrix").onclick = () => { view.mode = "matrix"; renderBody(); };
     root.querySelector("#t-entity").onclick = () => { view.mode = "entity"; renderBody(); };
-    root.querySelector("#r-year").onchange = (e) => { view.year = +e.target.value; renderBody(); };
+    root.querySelector("#t-charts").onclick = () => { view.mode = "charts"; renderBody(); };
+    root.querySelector("#r-year").onchange = (e) => { view.year = +e.target.value; render(); }; // the cluster and entity lists follow the year
     root.querySelector("#r-quarter").onchange = (e) => { view.quarter = e.target.value; renderBody(); };
     root.querySelector("#r-month").onchange = (e) => { view.month = e.target.value; renderBody(); };
-    S.wireScopeFilter(root, "r", view.scope, renderBody);
+    S.wireScopeFilter(root, "r", view.scope, renderBody, null, view.year);
     root.querySelector("#r-measure").onchange = (e) => { view.measure = e.target.value; renderBody(); };
     root.querySelector("#r-export").onclick = exportExcel;
 
@@ -75,6 +77,8 @@
     const data = S.state.data;
     const ys = new Set([view.year, new Date().getFullYear()]);
     data.activities.forEach((a) => { if (a.date) ys.add(new Date(a.date).getFullYear()); });
+    // Also years that only have a yearly budget so far (a new year before its first line).
+    Object.keys(data.settings.yearlyBudgets || {}).forEach((y) => { if (/^\d{4}$/.test(y)) ys.add(+y); });
     return Array.from(ys).sort().map(y => `<option ${y===view.year?"selected":""} value="${y}">${y}</option>`).join("");
   }
 
@@ -118,8 +122,12 @@
   }
 
   // Deduped entities limited to the shared M1 > Cluster > Entity scope.
+  // Entities retired for the year are left out, unless they still have a budget or lines that year.
   function reportEntities() {
-    return S.uniqueEntities().filter((e) => S.entityMatchesScope(e.id, view.scope));
+    const yb = (S.state.data.settings.yearlyBudgets || {})[view.year] || {};
+    const used = new Set((S.state.data.activities || []).filter((a) => S.inPeriod(a.date, view.year, "", "")).map((a) => S.canonicalEntityId(a.entityId)));
+    return S.uniqueEntities().filter((e) => S.entityMatchesScope(e.id, view.scope)
+      && (S.entityActiveInYear(e, view.year) || used.has(e.id) || (S.state.data.settings.entities || []).some((x) => S.canonicalEntityId(x.id) === e.id && yb[x.id])));
   }
 
   // Yearly budgets are keyed by raw entity ID, but Reporting de-duplicates entities
@@ -140,6 +148,18 @@
 
   function renderBody() {
     const host = document.getElementById("report-body");
+    document.querySelectorAll("#tab-reporting .report-toggle button").forEach((b) => b.classList.toggle("active", b.id === "t-" + view.mode));
+    if (view.mode !== "charts" && window.MB_REPCHARTS) window.MB_REPCHARTS.destroy();
+    if (view.mode === "charts" && window.MB_REPCHARTS) {
+      const allowed = new Set(reportEntities().map((e) => e.id));
+      const measureLabel = { net: "Net", gross: "Gross", partner: "Partner" }[view.measure] || "Net";
+      window.MB_REPCHARTS.render(host, {
+        year: view.year, quarter: view.quarter, month: view.month,
+        lines: activitiesInYear().filter((a) => allowed.has(S.canonicalEntityId(a.entityId))),
+        valueOf, budgetByEntity: budgetByCanonical(view.year), measureLabel, drill: drillToBudget,
+      });
+      return;
+    }
     if (view.mode === "matrix") {
       host.innerHTML = renderMatrix();
       bindMatrix(host);
@@ -186,7 +206,7 @@
       <div class="kpi-row">${kpiCards(matrix, yb)}</div>
       <div class="card">
         <div class="report-groupbar">
-          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse. <span style="color:#991b1b;font-weight:600">Red amounts</span>: actual is above forecast.</span>
+          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse. <span style="color:var(--fg-991b1b);font-weight:600">Red amounts</span>: actual is above forecast.</span>
           <span class="grow"></span>
           <button id="rg-expand" class="linkbtn">Expand all</button>
           <button id="rg-collapse" class="linkbtn">Collapse all</button>
@@ -363,7 +383,7 @@
     window.MB_BUDGET.setFilters(filters);
     window.MB_APP.switchTab("budget");
     const ent = filters.entityId ? S.entityById(filters.entityId) : null;
-    const label = ent ? ent.name : "all entities";
+    const label = ent ? ent.name : (filters.group || "all entities");
     S.toast(`Filtered Budget to ${label}, ${filters.year}`, "success");
   }
 

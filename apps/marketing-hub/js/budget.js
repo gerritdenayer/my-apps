@@ -159,7 +159,7 @@
         <div style="position:relative">
           <label>&nbsp;</label>
           <button id="bc-cols-btn" class="secondary" type="button">Columns</button>
-          <div id="bc-cols-panel" style="display:none; position:absolute; right:0; top:100%; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:75vh; overflow:auto; min-width:260px;">
+          <div id="bc-cols-panel" style="display:none; position:absolute; right:0; top:100%; z-index:50; background:var(--bg-ffffff); border:1px solid var(--bd-d1d5db); border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:75vh; overflow:auto; min-width:260px;">
             <div class="muted small" style="margin-bottom:6px">Show and order columns (drag, or use the arrows). Tip: click a column header to sort or filter.</div>
             ${orderedCols().filter(c => c.key !== "actions").map((c, i, arr) => `<div class="bc-col-row" draggable="true" data-key="${c.key}" style="display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;cursor:grab;">
               <span class="muted" title="Drag to move" style="user-select:none">&#8942;&#8942;</span>
@@ -167,7 +167,7 @@
               <button type="button" class="icon bc-col-up" data-key="${c.key}" title="Move left" ${i === 0 ? "disabled" : ""} style="padding:0 5px">&#9650;</button>
               <button type="button" class="icon bc-col-down" data-key="${c.key}" title="Move right" ${i === arr.length - 1 ? "disabled" : ""} style="padding:0 5px">&#9660;</button>
             </div>`).join("")}
-            <div style="margin-top:8px; border-top:1px solid #eef0f3; padding-top:6px"><button type="button" class="link" id="bc-col-reset" style="padding:0">Reset column order</button></div>
+            <div style="margin-top:8px; border-top:1px solid var(--bd-eef0f3); padding-top:6px"><button type="button" class="link" id="bc-col-reset" style="padding:0">Reset column order</button></div>
           </div>
         </div>
         <div>
@@ -184,7 +184,7 @@
                 ${orderedCols().map(c => {
                   const sortable = c.key !== "actions";
                   const filtered = sortable && view.colFilters[c.key];
-                  return `<th class="bc-${c.key}${c.num ? " num" : ""}" data-col="${c.key}"${sortable ? ` data-sort="${c.key}"` : ""}>${S.escapeHtml(c.label)}${sortable ? sortArrow(c.key) : ""}${filtered ? ' <span title="Filtered" style="color:#0a7d33">&#9873;</span>' : ""}<span class="col-resize"></span></th>`;
+                  return `<th class="bc-${c.key}${c.num ? " num" : ""}" data-col="${c.key}"${sortable ? ` data-sort="${c.key}"` : ""}>${S.escapeHtml(c.label)}${sortable ? sortArrow(c.key) : ""}${filtered ? ' <span title="Filtered" style="color:var(--fg-0a7d33)">&#9873;</span>' : ""}<span class="col-resize"></span></th>`;
                 }).join("")}
               </tr>
             </thead>
@@ -471,7 +471,7 @@
         <div><div class="bsum-l">Left after actual</div><div class="bsum-v">${S.fmtMoney(leftA)}</div></div>
       </div>
       <div class="bsum-bar" title="${pct}% of the budget is planned"><div class="bsum-fill ${over ? "neg" : ""}" style="width:${barW}%"></div></div>
-      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${view.year}${over ? " &middot; <strong style=\"color:#b91c1c\">over budget</strong>" : ""}</div>
+      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${view.year}${over ? " &middot; <strong style=\"color:var(--fg-b91c1c)\">over budget</strong>" : ""}</div>
       ${codeShareHtml(code, cid)}
     </div>`;
   }
@@ -543,7 +543,7 @@
         <div><div class="bsum-l">Left after actual</div><div class="bsum-v">${S.fmtMoney(leftA)}</div></div>
       </div>
       <div class="bsum-bar"><div class="bsum-fill ${over ? "neg" : ""}" style="width:${Math.max(0, Math.min(100, pct))}%"></div></div>
-      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${yr}${overCodes ? ` &middot; <strong style="color:#b91c1c">${overCodes} budget code${overCodes === 1 ? "" : "s"} over budget</strong>` : ""}${noBudget ? ` &middot; ${noBudget} with spend but no budget` : ""}${noEnt ? ` &middot; ${S.fmtMoney(noEnt)} planned on lines without an entity` : ""}</div>
+      <div class="muted small">${pct}% of the budget is planned &middot; ${n} budget line${n === 1 ? "" : "s"} in ${yr}${overCodes ? ` &middot; <strong style="color:var(--fg-b91c1c)">${overCodes} budget code${overCodes === 1 ? "" : "s"} over budget</strong>` : ""}${noBudget ? ` &middot; ${noBudget} with spend but no budget` : ""}${noEnt ? ` &middot; ${S.fmtMoney(noEnt)} planned on lines without an entity` : ""}</div>
       <details class="bsum-details"${open ? " open" : ""}><summary>Per budget code (${rows.length})</summary>${table}</details>
     </div>`;
     const det = host.querySelector(".bsum-details");
@@ -637,7 +637,7 @@
       } catch (err) {
         console.error("Row render failed for activity", a, err);
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td colspan="${COLUMNS.length}" style="background:#fee2e2; color:#991b1b;">Error rendering "${S.escapeHtml(a.name || a.id)}": ${S.escapeHtml(err.message)}</td></tr>`);
+          `<tr><td colspan="${COLUMNS.length}" style="background:var(--bg-fee2e2); color:var(--fg-991b1b);">Error rendering "${S.escapeHtml(a.name || a.id)}": ${S.escapeHtml(err.message)}</td></tr>`);
       }
     });
 
@@ -828,6 +828,15 @@
     // Preselect canonical so duplicates map to the visible option
     populateEntityOptions(initialGroup, S.canonicalEntityId(a.entityId));
     // Changing the date can change which year's entities apply; refresh the list.
+    // SVP / vertical, A&P category and status: only those used in the line's year.
+    const yearLists = () => {
+      const st = S.state.data.settings, yr = lineYear();
+      S.yearFilterSelect(modal.querySelector("#m-svp"), st.svps, yr);
+      S.yearFilterSelect(modal.querySelector("#m-apcat"), st.apCategories, yr);
+      S.yearFilterSelect(modal.querySelector("#m-status"), st.statuses, yr);
+    };
+    yearLists();
+    modal.querySelector("#m-date").addEventListener("change", yearLists);
     modal.querySelector("#m-date").addEventListener("change", () => {
       const gSel = modal.querySelector("#m-group"), g = gSel.value;
       const list = clustersFor(lineYear());
@@ -980,6 +989,7 @@
   }
 
   function setFilters(f) {
+    view._forUser = S.state.currentUserId; // a drill-down wins over the home-cluster default
     if (f.year !== undefined) view.year = f.year;
     // Location scope (from a Reporting drill-down): resolve cluster/M1 from the entity.
     const ent = f.entityId ? S.entityById(S.canonicalEntityId(f.entityId)) : null;
@@ -1036,13 +1046,13 @@
     const cur = view.colFilters[key] || { op: "", value: "" };
     const menu = document.createElement("div");
     menu.className = "hdr-menu-pop";
-    menu.style.cssText = "position:fixed; z-index:1000; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.16); padding:8px; min-width:236px; font-size:13px;";
+    menu.style.cssText = "position:fixed; z-index:1000; background:var(--bg-ffffff); border:1px solid var(--bd-cbd5e1); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.16); padding:8px; min-width:236px; font-size:13px;";
     menu.innerHTML = `
       <div style="display:flex; gap:6px; margin-bottom:6px;">
         <button class="secondary hm-asc" style="flex:1">&#9650; Sort A&rarr;Z</button>
         <button class="secondary hm-desc" style="flex:1">&#9660; Sort Z&rarr;A</button>
       </div>
-      <div style="border-top:1px solid #eef0f3; margin:6px 0; padding-top:6px;">
+      <div style="border-top:1px solid var(--bd-eef0f3); margin:6px 0; padding-top:6px;">
         <div class="muted small" style="margin-bottom:4px">Filter: ${S.escapeHtml(col.label || "")}</div>
         <select class="hm-op" style="width:100%">
           <option value="">(no filter)</option>
@@ -1072,7 +1082,7 @@
       if (op === "in") {
         const vals = distinctValues(key);
         const sel = new Set(cur.op === "in" && Array.isArray(cur.value) ? cur.value.map(String) : []);
-        valWrap.innerHTML = `<div style="max-height:220px; overflow:auto; border:1px solid #eef0f3; border-radius:6px; padding:4px 6px;">${vals.map((v) =>
+        valWrap.innerHTML = `<div style="max-height:220px; overflow:auto; border:1px solid var(--bd-eef0f3); border-radius:6px; padding:4px 6px;">${vals.map((v) =>
           `<label style="display:flex; align-items:center; gap:6px; margin:0; padding:2px 0; font-size:13px; font-weight:400; cursor:pointer;"><input type="checkbox" class="hm-in" value="${S.escapeHtml(String(v))}" ${sel.has(String(v)) ? "checked" : ""}/> ${S.escapeHtml(String(v))}</label>`).join("")}</div>`;
       } else if (op === "eq" || op === "ne") {
         const vals = distinctValues(key);
