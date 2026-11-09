@@ -634,3 +634,12 @@ html[data-theme="dark"] .env-banner { color: #000; }
 .chip .chip-years { font-weight: 500; font-size: 11px; opacity: .75; border-left: 1px solid var(--bd-d1d5db); margin-left: 2px; padding-left: 6px; }
 .chip .chip-years:hover { opacity: 1; text-decoration: underline; }
 .chip.chip-retired { opacity: .6; }
+#settings-nav button .sn-ro { margin-left: auto; font-size: 10px; font-weight: 600; color: var(--fg-6b7280); border: 1px solid var(--bd-d1d5db); border-radius: 8px; padding: 0 6px; }
+#tab-budget-structure .bs-ro { align-self: center; }
+#tab-budget-structure tr.bs-retired td { opacity: .5; }
+/* Super admin: viewing as another user */
+.viewas-banner { background: var(--bg-1f2937); color: var(--fg-ffffff); text-align: center; padding: 7px 12px; font-size: 13px; position: sticky; top: 56px; z-index: 9; }
+.viewas-banner button { margin-left: 10px; background: var(--bg-ff6a00); color: var(--fg-ffffff); border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 600; }
+.va-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow: auto; }
+.va-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; background: var(--bg-ffffff); border: 1px solid var(--bd-e5e7eb); border-radius: 6px; padding: 8px 10px; }
+.va-item:hover { background: var(--bg-f3f4f6); }

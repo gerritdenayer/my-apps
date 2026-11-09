@@ -5,8 +5,18 @@
   const API = window.MB_API;
   let editingUserId = null; // which user's name is being edited inline
 
+  // A super admin manages super admins. While there is none yet, an admin may name the first one.
+  const iAmSuper = () => {
+    const A = window.MB_AUTH;
+    if (A && A.isSuperAdmin && A.isSuperAdmin()) return true;
+    const anySuper = (S.state.data.settings.users || []).some((u) => u.role === "super_admin");
+    const me = A && A.realUser ? A.realUser() : null;
+    return !anySuper && !!me && me.role === "admin";
+  };
+  // Only a super admin can make someone super admin (or change a super admin's role).
   function roleOptions(selected) {
-    const order = (window.MB_AUTH && window.MB_AUTH.ROLE_ORDER) || ["admin", "budget_owner", "marketing_user", "viewer"];
+    const order = ((window.MB_AUTH && window.MB_AUTH.ROLE_ORDER) || ["admin", "budget_owner", "marketing_user", "viewer"])
+      .filter((r) => r !== "super_admin" || iAmSuper() || selected === "super_admin");
     return order.map((r) => {
       const label = window.MB_AUTH ? window.MB_AUTH.roleLabel(r) : r;
       return `<option ${selected === r ? "selected" : ""} value="${r}">${S.escapeHtml(label)}</option>`;
@@ -91,13 +101,13 @@
                 <td>${editingUserId === u.id
                   ? `<input class="u-name" type="text" value="${S.escapeHtml(u.name)}" />`
                   : S.escapeHtml(u.name)}</td>
-                <td><select class="u-role" data-id="${u.id}">${roleOptions(u.role || "admin")}</select></td>
+                <td><select class="u-role" data-id="${u.id}" ${u.role === "super_admin" && !iAmSuper() ? 'disabled title="Only a super admin can change this"' : ""}>${roleOptions(u.role || "admin")}</select></td>
                 <td><select class="u-home" data-id="${u.id}">${homeCountryOptions(u.homeCountryId || "")}</select></td>
                 <td><select class="u-cluster" data-id="${u.id}" title="The Budget tab opens filtered on this cluster for this user">${homeClusterOptions(u.homeCluster || "")}</select></td>
                 <td>${u.active === false ? `<span class="muted">Inactive</span>` : "Active"}</td>
                 <td class="actions-cell">${editingUserId === u.id
                   ? `<button class="primary save-name" data-id="${u.id}">Save</button> <button class="secondary cancel-name">Cancel</button>`
-                  : `<button class="secondary edit-name" data-id="${u.id}">Edit name</button> <button class="secondary toggle-active" data-id="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button> <button class="secondary reset-pw" data-id="${u.id}">Reset password</button> <button class="danger del-user" data-id="${u.id}">Delete</button>`}</td>
+                  : (u.role === "super_admin" && !iAmSuper()) ? `<span class="muted small">Only a super admin can change this user</span>` : `<button class="secondary edit-name" data-id="${u.id}">Edit name</button> <button class="secondary toggle-active" data-id="${u.id}">${u.active === false ? "Activate" : "Deactivate"}</button> <button class="secondary reset-pw" data-id="${u.id}">Reset password</button> <button class="danger del-user" data-id="${u.id}">Delete</button>`}</td>
               </tr>
             `).join("")}
           </tbody>

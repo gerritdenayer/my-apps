@@ -117,7 +117,7 @@
   }
 
   function apply(p) {
-    const d = S.state.data, now = new Date().toISOString(), me = S.state.currentUserId || "";
+    const d = S.state.data, now = new Date().toISOString(), me = S.actorId() || "";
     const touched = new Set();
     p.steps.forEach((st) => {
       const list = st.kind === "line" ? d.activities : d.events;

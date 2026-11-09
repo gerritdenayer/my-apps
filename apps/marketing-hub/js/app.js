@@ -81,6 +81,9 @@
       btn.onclick = () => switchTab(btn.dataset.tab);
     });
 
+    const vaBtn = document.getElementById("viewas-btn"), vbBtn = document.getElementById("viewback-btn");
+    if (vaBtn) vaBtn.onclick = () => { closeUserMenu(); pickViewAs(); };
+    if (vbBtn) vbBtn.onclick = () => { closeUserMenu(); stopViewAs(); };
     const lockBtn = document.getElementById("lock-btn");
     if (lockBtn) lockBtn.onclick = () => {
       const um = document.getElementById("user-menu"); if (um) um.classList.add("hidden");
@@ -272,14 +275,74 @@
 
   function finishLogin(user) {
     S.state.currentUserId = user.id;
+    S.state.realUserId = null;
     localStorage.setItem(LS_USER, user.id);
     try { localStorage.setItem("mb_last_user", user.id); } catch (e) {}
-    document.getElementById("current-user").textContent = user.name || "Unknown";
-    const ini = document.getElementById("user-initials");
-    if (ini) ini.textContent = String(user.name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    refreshUserHeader();
     const passEl = document.getElementById("login-pass");
     if (passEl) passEl.value = "";
     showApp();
+  }
+
+  // Name, initials, role badge, the "View as" menu items and the banner, for the profile shown.
+  function refreshUserHeader() {
+    const AUTH = window.MB_AUTH;
+    const user = S.userById(S.state.currentUserId) || {};
+    document.getElementById("current-user").textContent = user.name || "Unknown";
+    const ini = document.getElementById("user-initials");
+    if (ini) ini.textContent = String(user.name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    const sup = AUTH.isSuperAdmin(), imp = AUTH.isImpersonating();
+    const va = document.getElementById("viewas-btn"), vb = document.getElementById("viewback-btn");
+    if (va) va.classList.toggle("hidden", !sup);
+    if (vb) vb.classList.toggle("hidden", !imp);
+    const banner = document.getElementById("viewas-banner");
+    if (banner) {
+      banner.classList.toggle("hidden", !imp);
+      document.body.classList.toggle("viewing-as", imp);
+      if (imp) {
+        const real = AUTH.realUser() || {};
+        banner.innerHTML = `Viewing as <b>${escapeHtml(user.name || "")}</b> (${escapeHtml(AUTH.roleLabel(user.role || "admin"))}). You see what they see; anything you change is recorded as ${escapeHtml(real.name || "you")}. <button type="button" id="viewas-back">Back to my own profile</button>`;
+        banner.querySelector("#viewas-back").onclick = () => stopViewAs();
+      }
+    }
+  }
+
+  // Super admin: switch to another user's profile without their password, and back.
+  function startViewAs(userId) {
+    const AUTH = window.MB_AUTH;
+    if (!AUTH.isSuperAdmin()) return;
+    const realId = S.state.realUserId || S.state.currentUserId;
+    if (userId === realId) return stopViewAs();
+    S.state.realUserId = realId;
+    S.state.currentUserId = userId;
+    AUTH.resetSession(); // a pin unlock never carries over to another profile
+    refreshUserHeader();
+    showApp();
+    S.toast(`Viewing as ${(S.userById(userId) || {}).name || "user"}`, "success");
+  }
+  function stopViewAs() {
+    if (!S.state.realUserId) return;
+    S.state.currentUserId = S.state.realUserId;
+    S.state.realUserId = null;
+    window.MB_AUTH.resetSession();
+    refreshUserHeader();
+    showApp();
+    S.toast("Back to your own profile", "success");
+  }
+  function pickViewAs() {
+    const realId = S.state.realUserId || S.state.currentUserId;
+    const users = (S.state.data.settings.users || []).filter((u) => u.active !== false && u.id !== realId)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
+    const AUTH = window.MB_AUTH;
+    const m = S.openModal(`<h2>View as another user</h2>
+      <p class="muted small">See the app exactly as this person does (their tabs, rights and home cluster), without their password. Anything you change is still recorded under your own name. Use "Back to my own profile" to return.</p>
+      <input id="va-q" type="text" placeholder="Type to filter..." style="margin-bottom:8px" />
+      <div id="va-list" class="va-list">${users.map((u) => `<button type="button" class="va-item" data-id="${u.id}"><span>${escapeHtml(u.name)}</span><span class="muted small">${escapeHtml(AUTH.roleLabel(u.role || "admin"))}${u.homeCluster ? " · " + escapeHtml(u.homeCluster) : ""}</span></button>`).join("")}</div>
+      <div class="actions"><button class="secondary" id="va-cancel">Cancel</button></div>`);
+    const q = m.querySelector("#va-q"); q.focus();
+    q.oninput = () => { const t = q.value.trim().toLowerCase(); m.querySelectorAll(".va-item").forEach((b) => { b.style.display = b.textContent.toLowerCase().includes(t) ? "" : "none"; }); };
+    m.querySelector("#va-cancel").onclick = S.closeModal;
+    m.querySelectorAll(".va-item").forEach((b) => { b.onclick = () => { S.closeModal(); startViewAs(b.dataset.id); }; });
   }
 
   // Ask the user to set a new password. isNew tags a brand-new account vs a forced change.
@@ -314,6 +377,9 @@
   function onLogout() {
     localStorage.removeItem(LS_USER);
     S.state.currentUserId = null;
+    S.state.realUserId = null;
+    document.body.classList.remove("viewing-as");
+    const vb = document.getElementById("viewas-banner"); if (vb) vb.classList.add("hidden");
     window.MB_AUTH.resetSession();
     document.getElementById("login-overlay").classList.remove("hidden");
     document.getElementById("app-header").classList.add("hidden");
@@ -339,7 +405,7 @@
   // for the pin when the user is not an admin (same rule as before).
   const SETTINGS_ITEMS = [
     { group: "Structure" },
-    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true },
+    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true, viewTab: "budget-structure", viewCap: "viewStructure" },
     { key: "budget-structure", label: "Budget structure", tab: "budget-structure", cap: "viewStructure" },
     { group: "Lists" },
     { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
@@ -356,9 +422,11 @@
   let settingsSection = null;
   function settingsItemAllowed(it, withPin) {
     const AUTH = window.MB_AUTH;
-    if (it.admin) return withPin ? true : AUTH.canSeeSettings();
+    if (it.admin) return withPin ? true : (AUTH.canSeeSettings() || (!!it.viewCap && AUTH.can(it.viewCap)));
     return AUTH.can(it.cap);
   }
+  // Non-admins with view rights see some admin sections read-only, in another panel.
+  const viewOnly = (it) => !!(it.admin && it.viewCap && !window.MB_AUTH.canSeeSettings() && window.MB_AUTH.can(it.viewCap));
   // Items this user can open right now, or after entering the pin (admin sections).
   function visibleSettingsItems() {
     const AUTH = window.MB_AUTH;
@@ -376,7 +444,8 @@
         return next && !next.group ? `<div class="sn-group">${escapeHtml(it.group)}</div>` : "";
       }
       const locked = !settingsItemAllowed(it, false);
-      return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}</button>`;
+      const ro = !locked && (viewOnly(it) || (it.key === "budget-structure" && !AUTH.canSeeSettings()));
+      return `<button type="button" data-sec="${it.key}" class="${it.key === settingsSection ? "active" : ""}">${escapeHtml(it.label)}${locked ? '<span class="sn-lock" title="Admin pin needed">&#128274;</span>' : ""}${ro ? '<span class="sn-ro" title="You can view this; only admins can change it">view</span>' : ""}</button>`;
     }).join("");
     nav.innerHTML = html + `<div id="sn-setup" class="sn-setup"></div>`;
     nav.querySelectorAll("button[data-sec]").forEach((b) => { b.onclick = () => openSettings(b.dataset.sec); });
@@ -419,7 +488,7 @@
       return;
     }
     settingsSection = it.key;
-    doSwitch(it.tab, it.key);
+    doSwitch(viewOnly(it) ? it.viewTab : it.tab, it.key);
   }
 
   function switchTab(name) {
@@ -462,7 +531,7 @@
     if (name === "timeline") window.MB_TIMELINE.render();
     if (name === "reporting") window.MB_REPORTING.render();
     if (name === "outcomes") window.MB_OUTCOMES.render();
-    if (name === "budget-structure") window.MB_STRUCTURE.render();
+    if (name === "budget-structure") window.MB_STRUCTURE.render(section);
     if (name === "data") window.MB_DATA.render();
     if (name === "users") window.MB_USERS.render();
     if (name === "settings") window.MB_SETTINGS.render(section);

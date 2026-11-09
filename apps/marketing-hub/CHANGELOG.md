@@ -1,5 +1,15 @@
 # Changelog
 
+## [v5.3.1] - 2026-11-09 - Super admin role, view-only structure for budget owners
+
+### Added
+- New role: super admin. A super admin can do everything an admin can, and can view the app as any colleague without their password (menu under your name > View as another user). A bar at the top shows whose profile you are viewing, with a button back to your own. Changes made while viewing are recorded under the super admin's own name. Only a super admin can make someone super admin or change a super admin's account.
+
+### Changed
+- Budget owners can now view the budget structure and the entities & clusters, but no longer change them. Only admins change the yearly budgets, budget codes and entities, because only admins publish the setup. Non-admins see a "view" label on these sections in the Settings menu.
+- The email inbox is filled by the super admin only. Everyone else forwards the email and reviews the proposals under Inbox N.
+- A non-admin whose setup differs from the shared one now takes the shared setup automatically when the app opens.
+
 ## [v5.3.0] - 2026-11-06 - Dark mode, charts, outcomes per goal, lists per year
 
 ### Added

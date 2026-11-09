@@ -85,13 +85,13 @@
       if (!row) return;
       bin[kind] = bin[kind].filter((x) => x.id !== id);
       const links = row._links || [];
-      const r = { ...row, updatedAt: now, updatedBy: S.state.currentUserId || row.updatedBy };
+      const r = { ...row, updatedAt: now, updatedBy: S.actorId() || row.updatedBy };
       delete r.deletedAt; delete r.deletedBy; delete r._links;
       (data[kind] = data[kind] || []).push(r);
       // An event gets its budget line links back, when those lines still exist.
       if (kind === "events") links.forEach((aid) => {
         const a = (data.activities || []).find((x) => x.id === aid);
-        if (a && !(a.eventIds || []).includes(id)) { a.eventIds = [...(a.eventIds || []), id]; a.updatedAt = now; a.updatedBy = S.state.currentUserId || a.updatedBy; }
+        if (a && !(a.eventIds || []).includes(id)) { a.eventIds = [...(a.eventIds || []), id]; a.updatedAt = now; a.updatedBy = S.actorId() || a.updatedBy; }
       });
       n++;
     });

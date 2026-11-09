@@ -110,7 +110,7 @@
     if (!it) return false;
     it.status = status;
     it.decidedAt = new Date().toISOString();
-    it.decidedBy = ((S.userById && S.userById(S.state.currentUserId)) || {}).name || "";
+    it.decidedBy = ((S.userById && S.userById(S.actorId())) || {}).name || "";
     if (eventId) it.eventId = eventId;
     await SH().writeJson(d, FILE, f);
     cache = f;

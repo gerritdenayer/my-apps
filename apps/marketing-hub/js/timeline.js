@@ -786,7 +786,7 @@
       entityId:"", cluster:"", ownerId:"", campaignCode:"", svpId:"", campaignId:"",
       domains:[], scope:[], info:"",
       partners:[], content:[], outcomes:{},
-      createdBy:S.state.currentUserId, createdAt:new Date().toISOString(),
+      createdBy:S.actorId(), createdAt:new Date().toISOString(),
       ...(opts.preset||{}),
     };
     if(!isEdit) delete e._bmode;
@@ -1303,7 +1303,7 @@
         const isNewLine=!line;
         if(isNewLine){
           line={ id:API.uid(), eventIds:[], svpId:"", apCategoryId:"", vendor:"", poNumber:"", notes:"",
-                 createdBy:S.state.currentUserId, createdAt:new Date().toISOString() };
+                 createdBy:S.actorId(), createdAt:new Date().toISOString() };
           (data.activities=data.activities||[]).push(line);
           primaryId=line.id;
         }
@@ -1321,7 +1321,7 @@
         // Stamp the managed line's update only if it already existed and its content changed.
         delete line.activityTypeId; // budget lines carry the A&P category, not a type
         if(!isNewLine && contentSig(line)!==beforeSig){
-          line.updatedBy=S.state.currentUserId; line.updatedAt=new Date().toISOString();
+          line.updatedBy=S.actorId(); line.updatedAt=new Date().toISOString();
         }
       } else if(bmode==="existing"){
         // Link this campaign into the selected existing lines; unlink from any deselected.
@@ -1397,7 +1397,7 @@
       // Stamp "updated by/on" only when the campaign content really changed (not a no-op save).
       let updated=base;
       if(isEdit && contentSig(base)!==contentSig(e)){
-        updated={ ...base, updatedBy:S.state.currentUserId, updatedAt:new Date().toISOString() };
+        updated={ ...base, updatedBy:S.actorId(), updatedAt:new Date().toISOString() };
       }
       if(isEdit){ const idx=data.events.findIndex(x=>x.id===id); data.events[idx]=updated; }
       else data.events.push(updated);
@@ -1434,7 +1434,7 @@
   }
 
   // Mark a budget line as updated now by the current user (used when an event action changes its links).
-  function stampUpdated(a){ a.updatedBy=S.state.currentUserId; a.updatedAt=new Date().toISOString(); }
+  function stampUpdated(a){ a.updatedBy=S.actorId(); a.updatedAt=new Date().toISOString(); }
 
   // Signature of a record's content, ignoring audit fields, to tell a real edit from a no-op save.
   function contentSig(o){

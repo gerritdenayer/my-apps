@@ -693,7 +693,7 @@
       forecastPartner: 0,
       actualGross: 0,
       actualPartner: 0,
-      createdBy: S.state.currentUserId,
+      createdBy: S.actorId(),
       createdAt: new Date().toISOString(),
       ...(preset || {}),
     };
@@ -941,7 +941,7 @@
       // line does not count as an update).
       let updated = base;
       if (isEdit && contentSig(base) !== contentSig(a)) {
-        updated = { ...base, updatedBy: S.state.currentUserId, updatedAt: new Date().toISOString() };
+        updated = { ...base, updatedBy: S.actorId(), updatedAt: new Date().toISOString() };
       }
 
       if (!updated.customerLinkUrl) delete updated.customerLinkUrl;
@@ -982,7 +982,7 @@
       const content = S.contentWithLink(ev.content, url, oldUrl);
       if (content.length !== (ev.content || []).length || JSON.stringify(content) !== JSON.stringify(ev.content || [])) { ev.content = content; changed = true; }
       if (!changed) return;
-      ev.updatedBy = S.state.currentUserId; ev.updatedAt = new Date().toISOString();
+      ev.updatedBy = S.actorId(); ev.updatedAt = new Date().toISOString();
       n++;
     });
     return n;

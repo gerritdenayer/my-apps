@@ -3,7 +3,7 @@
 // here and copy a previous year forward.
 (function () {
   const S = window.MB_STATE;
-  const view = { year: new Date().getFullYear(), editing: false };
+  const view = { year: new Date().getFullYear(), editing: false, section: "budget-structure" };
 
   function ensureStyles() {
     if (document.getElementById("bs-styles")) return;
@@ -41,12 +41,16 @@
   const m1Key = (e) => (e.m1 || "").trim() || "(no zone)";
   const clKey = (e) => (e.group || "").trim() || "(no cluster)";
 
-  function render() {
+  function render(section) {
     ensureStyles();
+    if (section) view.section = section;
     const root = document.getElementById("tab-budget-structure");
     const data = S.state.data;
     if (!data) { root.innerHTML = ""; return; }
-    const canEdit = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
+    if (view.section === "entities") return renderEntitiesReadOnly(root, data);
+    // Only admins (or someone who unlocked admin settings with the pin) change yearly budgets:
+    // they are part of the setup, which only admins publish. Everyone else can view.
+    const canEdit = !window.MB_AUTH || window.MB_AUTH.canSeeSettings();
     const allEnts = data.settings.entities || [];
     // Only show entities that are in use for the selected year (year-aware structure).
     const ents = allEnts.filter((e) => S.entityActiveInYear(e, view.year));
@@ -67,6 +71,7 @@
           ? `<div><button id="bs-done" class="primary">Done editing</button></div>
              <div><button id="bs-copy" class="secondary">Copy from ${view.year - 1}</button></div>`
           : `<div><button id="bs-edit" class="secondary">Edit budgets</button></div>`) : ""}
+        ${canEdit ? "" : `<div class="muted small bs-ro">View only. Ask an admin to change the yearly budgets or budget codes.</div>`}
         <div class="bs-total">Total budget ${view.year}: <strong id="bs-grand">${S.fmtMoney(grand)}</strong></div>
       </div>
     `;
@@ -167,6 +172,30 @@
         recalc(root);
       };
     });
+  }
+
+  // Read-only view of the entity structure for non-admins (budget owners, marketing users).
+  function renderEntitiesReadOnly(root, data) {
+    const ents = (data.settings.entities || []).slice().sort((a, b) =>
+      (m1Key(a) + clKey(a) + a.name).localeCompare(m1Key(b) + clKey(b) + b.name, undefined, { sensitivity: "base" }));
+    const bc = ((data.settings.budgetCodes || {})[view.year]) || {};
+    const owner = (id) => { const u = id ? S.userById(id) : null; return u ? u.name : ""; };
+    const years = (e) => S.yearRangeLabel ? S.yearRangeLabel(e) : "";
+    root.innerHTML = `
+      <div class="bs-toolbar">
+        <div><label>Budget code year</label><select id="bs-year">${yearOptions()}</select></div>
+        <div class="muted small bs-ro">View only. Ask an admin to add or change an entity, its cluster or its codes.</div>
+      </div>
+      <div class="card"><h2 style="margin:0 0 4px">Entities &amp; clusters</h2>
+        <p class="muted small" style="margin:0 0 10px">Every entity with its cluster, M1 zone, default owner, budget code for ${view.year} and the years it is in use. Entities not in use in ${view.year} are greyed out.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Entity</th><th>Cluster</th><th>M1 zone</th><th>Default owner</th><th>Budget code (${view.year})</th><th>In use</th></tr></thead>
+          <tbody>${ents.map((e) => `<tr class="${S.entityActiveInYear(e, view.year) ? "" : "bs-retired"}">
+            <td>${S.escapeHtml(e.name)}</td><td>${S.escapeHtml(e.group || "")}</td><td>${S.escapeHtml(e.m1 || "")}</td>
+            <td>${S.escapeHtml(owner(e.defaultOwnerId))}</td><td>${S.escapeHtml(bc[e.id] || "")}</td><td>${S.escapeHtml(years(e))}</td></tr>`).join("")}</tbody>
+        </table></div></div>`;
+    const y = root.querySelector("#bs-year");
+    if (y) y.onchange = (ev) => { view.year = +ev.target.value; render(); };
   }
 
   window.MB_STRUCTURE = { render };

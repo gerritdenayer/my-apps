@@ -7,12 +7,13 @@
   const GOD_HASH = "1b36148adee576051b9c4aa28c9d6eb0c28c80dfb0462d77537b564dc2dde693";
 
   const ROLES = {
+    super_admin:    { label: "Super admin",    caps: { viewBudget: 1, editBudget: 1, viewTimeline: 1, editCampaign: 1, viewReporting: 1, viewOutcomes: 1, viewStructure: 1, importExport: 1, settingsTab: 1 } },
     admin:          { label: "Admin",          caps: { viewBudget: 1, editBudget: 1, viewTimeline: 1, editCampaign: 1, viewReporting: 1, viewOutcomes: 1, viewStructure: 1, importExport: 1, settingsTab: 1 } },
     budget_owner:   { label: "Budget owner",   caps: { viewBudget: 1, editBudget: 1, viewTimeline: 1, editCampaign: 1, viewReporting: 1, viewOutcomes: 1, viewStructure: 1, importExport: 1 } },
     marketing_user: { label: "Marketing user", caps: { viewBudget: 1, viewTimeline: 1, editCampaign: 1, viewReporting: 1, viewOutcomes: 1, viewStructure: 1 } },
     viewer:         { label: "Campaigns viewer", caps: { viewTimeline: 1 } },
   };
-  const ROLE_ORDER = ["admin", "budget_owner", "marketing_user", "viewer"];
+  const ROLE_ORDER = ["super_admin", "admin", "budget_owner", "marketing_user", "viewer"];
   const TAB_CAP = { budget: "viewBudget", timeline: "viewTimeline", reporting: "viewReporting", outcomes: "viewOutcomes", "budget-structure": "viewStructure", data: "importExport" };
 
   const authState = { settingsUnlocked: false };
@@ -31,8 +32,16 @@
   }
   function roleLabel(r) { return (ROLES[r] || {}).label || r; }
   function can(cap) { const caps = (ROLES[role()] || ROLES.viewer).caps; return !!caps[cap]; }
-  function canSeeSettings() { return role() === "admin" || authState.settingsUnlocked; }
-  function canSeeUsers() { return role() === "admin" || authState.settingsUnlocked; }
+  const isAdminRole = (r) => r === "admin" || r === "super_admin";
+  function canSeeSettings() { return isAdminRole(role()) || authState.settingsUnlocked; }
+  function canSeeUsers() { return isAdminRole(role()) || authState.settingsUnlocked; }
+  // The person really logged in (not the one a super admin is viewing as).
+  function realUser() {
+    const id = S.state.realUserId || S.state.currentUserId;
+    return (S.state.data.settings.users || []).find((u) => u.id === id) || null;
+  }
+  function isSuperAdmin() { const u = realUser(); return !!u && u.role === "super_admin"; }
+  function isImpersonating() { return !!S.state.realUserId && S.state.realUserId !== S.state.currentUserId; }
   function isUnlocked() { return authState.settingsUnlocked; }
   function resetSession() { authState.settingsUnlocked = false; }
 
@@ -148,7 +157,7 @@
   }
 
   window.MB_AUTH = {
-    ROLES, ROLE_ORDER, role, roleLabel, can, canSeeSettings, isUnlocked,
+    ROLES, ROLE_ORDER, role, roleLabel, can, canSeeSettings, isUnlocked, realUser, isSuperAdmin, isImpersonating,
     applyTabVisibility, firstAllowedTab, promptPin, verifyPin, setAdminPin,
     resetSession, currentUser, canSeeUsers,
     DEFAULT_PASSWORD, setUserPassword, resetUserPassword, verifyUserPassword,
