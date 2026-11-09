@@ -2,12 +2,17 @@
 (function () {
   const state = {
     data: null,
-    currentUserId: null,
+    currentUserId: null,   // the profile the app shows (a super admin may be viewing as someone else)
+    realUserId: null,      // set only while a super admin views as someone else: who is really logged in
     saving: false,
     saveTimer: null,
     dirty: false,
     listeners: [],
   };
+
+  // Who really makes a change: the logged-in person, even while a super admin views as someone else.
+  // Used for every "created / updated / deleted by" stamp, so the audit trail stays true.
+  function actorId() { return state.realUserId || state.currentUserId; }
 
   // Subscribe to data changes
   function subscribe(fn) {
@@ -529,7 +534,7 @@
   }
   function moveToBin(kind, row, extra) {
     const bin = ensureBin();
-    const r = { ...row, ...(extra || {}), deletedAt: new Date().toISOString(), deletedBy: state.currentUserId || "" };
+    const r = { ...row, ...(extra || {}), deletedAt: new Date().toISOString(), deletedBy: actorId() || "" };
     bin[kind] = bin[kind].filter((x) => x.id !== row.id);
     bin[kind].push(r);
   }
@@ -555,6 +560,6 @@
     uniqueEntities, canonicalEntityId,
     clusterList, entityListFor, entityActiveInYear, activeInYear, yearRangeLabel, yearFilterSelect, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
     openModal, closeModal, confirmDialog,
-    OUTCOME_METRICS, outcomeMetricsFor,
+    OUTCOME_METRICS, outcomeMetricsFor, actorId,
   };
 })();

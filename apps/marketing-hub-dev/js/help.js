@@ -18,6 +18,8 @@
         <li>Pick your name and type <b>1234</b>. The app then asks you to choose your own password.</li>
       </ol>
       <p>Your name is not in the list? Ask an admin to add you and publish the setup, then connect again.</p>
+      <h3>View as another user (super admin)</h3>
+      <p>A super admin can open the menu under their name and pick <b>View as another user</b>. The app then shows that person's profile: their tabs, their rights and their home cluster, without asking for their password. A dark bar at the top says whose profile you are viewing. Anything you change while viewing is recorded under your own name, so the history stays true. Click <b>Back to my own profile</b> in the bar or the menu to return. Reloading the page or Switch user also ends it.</p>
       <h4>The top bar</h4>
       <table class="help-table">
         <tr><td><b>Inbox N</b></td><td>Events proposed from emails, waiting for your review.</td></tr>
@@ -25,12 +27,13 @@
         <tr><td><b>Shared &middot; 3 changes to publish</b> and <b>Publish</b></td><td>You have changes your colleagues cannot see yet. Click <b>Publish</b> right next to it.</td></tr>
         <tr><td><b>No access</b>, <b>Folder not found</b>, <b>Local only</b></td><td>You are not on the shared data. Click the pill to fix it before you edit.</td></tr>
         <tr><td>Clock icon</td><td>Hover to see when your data and the shared files were last updated.</td></tr>
-        <tr><td>Your name</td><td>Opens a small menu: pick a <b>Theme</b> (Light, Dark, or Auto to follow your computer), unlock admin settings with the pin, or <b>Switch user</b> to log out. The theme is remembered on this computer.</td></tr>
+        <tr><td>Your name</td><td>Opens a small menu: pick a <b>Theme</b> (Light, Dark, or Auto to follow your computer), unlock admin settings with the pin, or <b>Switch user</b> to log out. The theme is remembered on this computer. A super admin also sees <b>View as another user</b> here.</td></tr>
       </table>` },
 
     { id: "roles", title: "Roles and passwords", tabs: [], html: `
       <table class="help-table">
         <tr><th>Role</th><th>What you can do</th></tr>
+        <tr><td>Super admin</td><td>Everything an admin can do, plus <b>View as another user</b>: see the app as any colleague, without their password. Only a super admin can make someone super admin (while there is none yet, an admin can name the first one in Users &amp; access). The email inbox is filled by the super admin.</td></tr>
         <tr><td>Admin</td><td>Everything, including users, publishing the setup and deleted items.</td></tr>
         <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the budget structure and the entities &amp; clusters.</td></tr>
         <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting, Outcomes and the budget structure.</td></tr>

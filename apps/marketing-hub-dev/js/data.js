@@ -33,7 +33,7 @@
     if (window.MB_CLEANUP) window.MB_CLEANUP.wire(root);
     const fileInput = root.querySelector("#dm-file-input");
     const exporterName = () => {
-      const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
+      const u = (S.state.data.settings.users || []).find((x) => x.id === S.actorId());
       return u ? u.name : "";
     };
     const today = () => new Date().toISOString().slice(0, 10);
@@ -315,7 +315,7 @@
       if ((row[field] || "") === (value || "")) return;
       row[field] = value;
       if (ds === "events" && field === "entityId") { const ent = S.entityById(value); row.cluster = ent ? (ent.group || "") : ""; }
-      row.updatedBy = S.state.currentUserId; row.updatedAt = new Date().toISOString();
+      row.updatedBy = S.actorId(); row.updatedAt = new Date().toISOString();
       n++;
     });
     if (!n) { S.toast("No change (rows already had that value).", "error"); return; }
@@ -560,7 +560,7 @@
   }
 
   function shareUserName() {
-    const u = (S.state.data.settings.users || []).find((x) => x.id === S.state.currentUserId);
+    const u = (S.state.data.settings.users || []).find((x) => x.id === S.actorId());
     return u ? u.name : "";
   }
 

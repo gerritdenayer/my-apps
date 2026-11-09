@@ -349,7 +349,7 @@
         forecastPartner: 0,
         actualGross: 0,
         actualPartner: 0,
-        createdBy: S.state.currentUserId,
+        createdBy: S.actorId(),
         createdAt: new Date().toISOString(),
       });
       created++;
