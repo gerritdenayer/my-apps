@@ -1,0 +1,29 @@
+{
+  "opmerking": "Normen om te slagen voor de baantest. Enkel de AGS telt (score per hole geplafonneerd op gewoon double bogey, want geen ontvangen slagen zonder handicap index): geslaagd als de AGS niet hoger is dan max_ags voor dat geslacht/die ronde.",
+  "regels": [
+    {
+      "id": "baantest_heren_uit",
+      "geslacht": "M",
+      "ronde": "uit",
+      "max_ags": 53
+    },
+    {
+      "id": "baantest_heren_in",
+      "geslacht": "M",
+      "ronde": "in",
+      "max_ags": 52
+    },
+    {
+      "id": "baantest_dames_uit",
+      "geslacht": "V",
+      "ronde": "uit",
+      "max_ags": 55
+    },
+    {
+      "id": "baantest_dames_in",
+      "geslacht": "V",
+      "ronde": "in",
+      "max_ags": 55
+    }
+  ]
+}

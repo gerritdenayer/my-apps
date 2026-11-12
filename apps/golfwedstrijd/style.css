@@ -1,0 +1,379 @@
+:root {
+  --bg: #eaf4fa;
+  --card: #ffffff;
+  --border: #cbe1ec;
+  --border-strong: #8fb9cf;
+  --text: #10263b;
+  --text-muted: #4c6a80;
+  --accent: #045f7a;
+  --accent-bg: #ddf0f8;
+  --danger: #a3372a;
+  --danger-bg: #fbe9e6;
+  --radius: 8px;
+  font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+header h1 {
+  font-size: 18px;
+  margin: 0;
+  font-weight: 600;
+}
+
+header .baannaam {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+nav {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+nav button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+nav button.actief {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+main {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.paneel { display: none; }
+.paneel.actief { display: block; }
+
+.kaart {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.kaart h2 {
+  font-size: 15px;
+  margin: 0 0 14px;
+  font-weight: 600;
+}
+
+.kaart p.uitleg {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: -6px 0 14px;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+input[type=text], input[type=number], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 14px;
+  background: #fff;
+  color: var(--text);
+}
+
+.veldgroep {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+button.knop {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button.knop.secundair {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+button.knop.gevaar {
+  background: #fff;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+button.knop:hover { opacity: 0.9; }
+button.knop:disabled {
+  background: var(--border-strong);
+  color: #fff;
+  cursor: not-allowed;
+}
+button.knop:disabled:hover { opacity: 1; }
+button.knop-icoon {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+button.knop-icoon:hover { opacity: 0.9; }
+button.knop-icoon.opmerking-actief {
+  background: #fbe7c6;
+  border-color: #7a4a02;
+  color: #7a4a02;
+}
+
+table.scoretabel {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+table.scoretabel th, table.scoretabel td {
+  border: 1px solid var(--border);
+  padding: 6px 4px;
+  text-align: center;
+}
+table.scoretabel th { background: #e3f1f8; font-weight: 600; }
+table.scoretabel tr:nth-child(even) td { background: #f5fafd; }
+table.scoretabel td.label { text-align: left; color: var(--text-muted); font-weight: 500; background: #eef7fb; }
+table.scoretabel td.totaal, table.scoretabel th.totaal {
+  font-weight: 600;
+  background: #eef7fb;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text);
+}
+table.scoretabel tr:nth-child(even) td.totaal { background: #e3f1f8; }
+table.scoretabel input {
+  width: 40px;
+  text-align: center;
+  padding: 4px;
+}
+.scroll-x { overflow-x: auto; }
+
+table.lijst {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+table.lijst th, table.lijst td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+table.lijst th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+table.lijst td.num, table.lijst th.num { text-align: right; }
+table.lijst tr.klikbare-rij:hover td { background: var(--accent-bg); }
+
+table.form-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.form-tabel th, table.form-tabel td {
+  padding: 6px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+table.form-tabel th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+table.form-tabel input, table.form-tabel select { padding: 6px 8px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.badge.grijs { background: #e4edf3; color: var(--text-muted); }
+.badge.baantest { background: #fbe7c6; color: #7a4a02; }
+.badge.front { background: #dbeafe; color: #1e40af; font-weight: 600; }
+.badge.back { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+
+.spelerlijst-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.spelerlijst-item:hover {
+  background: var(--accent-bg);
+}
+.spelerlijst-item:last-child { border-bottom: none; }
+.spelerlijst-item .naam { font-weight: 600; }
+.spelerlijst-item .details { color: var(--text-muted); font-size: 12px; }
+
+.naam-klikbaar {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+}
+.naam-klikbaar:hover { text-decoration-color: var(--accent); }
+
+.groep-kop {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin: 20px 0 8px;
+}
+.groep-kop:first-child { margin-top: 0; }
+.groep-aantal { font-weight: 400; color: var(--text-muted); }
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.tabs button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tabs button.actief {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.tab-aantal { opacity: 0.7; font-weight: 400; }
+
+/* Zelfde look als .tabs button, maar met CSS grid i.p.v. flex: elke knop krijgt een expliciete
+   grid-column/grid-row inline (zie renderRanglijst), zodat knoppen in dezelfde kolom (bv. "Reeks 1
+   Heren" boven "Reeks 1 Dames") automatisch even breed en uitgelijnd staan. */
+.tabs-grid {
+  display: grid;
+  grid-auto-columns: max-content;
+  column-gap: 6px;
+  row-gap: 6px;
+  margin-bottom: 14px;
+}
+.tabs-grid button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tabs-grid button.actief {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.melding {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.melding.ok { background: var(--accent-bg); color: var(--accent); }
+.melding.fout { background: var(--danger-bg); color: var(--danger); }
+
+.rij-knoppen { display: flex; gap: 8px; align-items: center; }
+
+.stroke-stip {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin: 0 1px;
+  vertical-align: middle;
+}
+
+footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 20px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(16, 38, 59, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-kaart {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}

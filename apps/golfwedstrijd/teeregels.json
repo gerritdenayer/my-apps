@@ -1,0 +1,23 @@
+{
+  "opmerking": "Standaard tee per handicapband. Van hoog naar laag doorlopen: de eerste regel waarvoor de handicap index boven de ondergrens ligt, bepaalt de tee.",
+  "regels": [
+    {
+      "id": "teeregel_1",
+      "ondergrens_hcp": 45,
+      "tee_dames": "Roze",
+      "tee_heren": "Roze"
+    },
+    {
+      "id": "teeregel_2",
+      "ondergrens_hcp": 40,
+      "tee_dames": "Roze",
+      "tee_heren": "Oranje"
+    },
+    {
+      "id": "teeregel_3",
+      "ondergrens_hcp": -99,
+      "tee_dames": "Oranje",
+      "tee_heren": "Blauw"
+    }
+  ]
+}

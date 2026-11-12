@@ -1,0 +1,11 @@
+{
+  "opmerking": "Vooraf ingestelde opmerkingen die je per speler kan kiezen in Wedstrijdoverzicht. 'Andere...' staat daar altijd apart bij als vaste keuze en hoeft hier niet in te staan.",
+  "lijst": [
+    "Speelt buiten wedstrijd",
+    "Verlaat de wedstrijd vroegtijdig",
+    "Nieuwe speler, extra begeleiding",
+    "Speelt van Front Tee's",
+    "Speelt van Back Tee's",
+    "Handicap Controleren !"
+  ]
+}

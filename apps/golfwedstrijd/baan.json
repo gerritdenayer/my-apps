@@ -1,0 +1,57 @@
+{
+  "naam": "Brabantse Golf",
+  "holes": [
+    { "nummer": 1,  "par": 4, "si_heren": 9,  "si_dames": 11, "afstand_m": { "wit": 393, "geel": 380, "blauw": 341, "rood": 331, "oranje": 255, "roze": 180 } },
+    { "nummer": 2,  "par": 5, "si_heren": 5,  "si_dames": 5,  "afstand_m": { "wit": 553, "geel": 482, "blauw": 455, "rood": 410, "oranje": 322, "roze": 276 } },
+    { "nummer": 3,  "par": 4, "si_heren": 1,  "si_dames": 1,  "afstand_m": { "wit": 370, "geel": 337, "blauw": 333, "rood": 288, "oranje": 240, "roze": 190 } },
+    { "nummer": 4,  "par": 4, "si_heren": 3,  "si_dames": 3,  "afstand_m": { "wit": 297, "geel": 297, "blauw": 281, "rood": 199, "oranje": 195, "roze": 150 } },
+    { "nummer": 5,  "par": 4, "si_heren": 13, "si_dames": 13, "afstand_m": { "wit": 293, "geel": 278, "blauw": 250, "rood": 208, "oranje": 185, "roze": 147 } },
+    { "nummer": 6,  "par": 4, "si_heren": 15, "si_dames": 17, "afstand_m": { "wit": 309, "geel": 309, "blauw": 265, "rood": 244, "oranje": 201, "roze": 162 } },
+    { "nummer": 7,  "par": 3, "si_heren": 17, "si_dames": 15, "afstand_m": { "wit": 159, "geel": 145, "blauw": 126, "rood": 122, "oranje": 83,  "roze": 56  } },
+    { "nummer": 8,  "par": 4, "si_heren": 11, "si_dames": 9,  "afstand_m": { "wit": 320, "geel": 310, "blauw": 299, "rood": 245, "oranje": 215, "roze": 175 } },
+    { "nummer": 9,  "par": 4, "si_heren": 7,  "si_dames": 7,  "afstand_m": { "wit": 347, "geel": 331, "blauw": 285, "rood": 240, "oranje": 240, "roze": 195 } },
+    { "nummer": 10, "par": 5, "si_heren": 8,  "si_dames": 4,  "afstand_m": { "wit": 451, "geel": 451, "blauw": 427, "rood": 370, "oranje": 340, "roze": 325 } },
+    { "nummer": 11, "par": 4, "si_heren": 2,  "si_dames": 2,  "afstand_m": { "wit": 398, "geel": 391, "blauw": 359, "rood": 285, "oranje": 255, "roze": 195 } },
+    { "nummer": 12, "par": 3, "si_heren": 16, "si_dames": 16, "afstand_m": { "wit": 154, "geel": 151, "blauw": 144, "rood": 137, "oranje": 116, "roze": 93  } },
+    { "nummer": 13, "par": 5, "si_heren": 4,  "si_dames": 6,  "afstand_m": { "wit": 546, "geel": 502, "blauw": 464, "rood": 424, "oranje": 370, "roze": 297 } },
+    { "nummer": 14, "par": 3, "si_heren": 18, "si_dames": 18, "afstand_m": { "wit": 127, "geel": 127, "blauw": 122, "rood": 122, "oranje": 87,  "roze": 70  } },
+    { "nummer": 15, "par": 4, "si_heren": 6,  "si_dames": 8,  "afstand_m": { "wit": 348, "geel": 318, "blauw": 301, "rood": 250, "oranje": 215, "roze": 165 } },
+    { "nummer": 16, "par": 4, "si_heren": 14, "si_dames": 14, "afstand_m": { "wit": 275, "geel": 261, "blauw": 255, "rood": 240, "oranje": 175, "roze": 123 } },
+    { "nummer": 17, "par": 4, "si_heren": 10, "si_dames": 10, "afstand_m": { "wit": 306, "geel": 306, "blauw": 299, "rood": 265, "oranje": 202, "roze": 180 } },
+    { "nummer": 18, "par": 4, "si_heren": 12, "si_dames": 12, "afstand_m": { "wit": 289, "geel": 276, "blauw": 252, "rood": 212, "oranje": 212, "roze": 160 } }
+  ],
+  "tees": [
+    {
+      "naam": "Wit",
+      "heren":  { "cr_18": 71.5, "slope_18": 127, "cr_uit": 36.4, "slope_uit": 131, "cr_in": 35.2, "slope_in": 123 },
+      "dames":  null
+    },
+    {
+      "naam": "Geel",
+      "heren":  { "cr_18": 70.0, "slope_18": 125, "cr_uit": 35.5, "slope_uit": 130, "cr_in": 34.5, "slope_in": 120 },
+      "dames":  { "cr_18": 75.6, "slope_18": 135, "cr_uit": 38.5, "slope_uit": 141, "cr_in": 37.2, "slope_in": 128 }
+    },
+    {
+      "naam": "Blauw",
+      "heren":  { "cr_18": 68.2, "slope_18": 120, "cr_uit": 34.6, "slope_uit": 122, "cr_in": 33.6, "slope_in": 118 },
+      "dames":  { "cr_18": 73.7, "slope_18": 128, "cr_uit": 37.4, "slope_uit": 131, "cr_in": 36.4, "slope_in": 125 }
+    },
+    {
+      "naam": "Rood",
+      "heren":  { "cr_18": 64.9, "slope_18": 114, "cr_uit": 32.9, "slope_uit": 115, "cr_in": 32.1, "slope_in": 112 },
+      "dames":  { "cr_18": 69.5, "slope_18": 121, "cr_uit": 35.2, "slope_uit": 121, "cr_in": 34.4, "slope_in": 122 }
+    },
+    {
+      "naam": "Oranje",
+      "heren":  { "cr_18": 61.5, "slope_18": 107, "cr_uit": 31.1, "slope_uit": 108, "cr_in": 30.4, "slope_in": 105 },
+      "dames":  { "cr_18": 65.4, "slope_18": 111, "cr_uit": 33.0, "slope_uit": 112, "cr_in": 32.4, "slope_in": 110 }
+    },
+    {
+      "naam": "Roze",
+      "heren":  { "cr_18": 57.7, "slope_18": 99,  "cr_uit": 29.1, "slope_uit": 100, "cr_in": 28.6, "slope_in": 98  },
+      "dames":  { "cr_18": 60.7, "slope_18": 102, "cr_uit": 30.6, "slope_uit": 101, "cr_in": 30.1, "slope_in": 103 }
+    }
+  ],
+  "par_totaal": 72,
+  "bron": "Course Handicap Table en scorekaart Brabantse Golf, geprint 31-03-25. Cijfers na een update van de club kunnen wijzigen, controleer periodiek."
+}

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golfwedstrijd scoring</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sticky-header">
+  <header>
+    <div>
+      <h1>Golfwedstrijd scoring <span class="badge grijs" id="versieLabel" style="vertical-align:middle;"></span></h1>
+      <div class="baannaam" id="baannaamLabel"></div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <div class="baannaam" id="huidige-wedstrijd-label"></div>
+        <button class="knop-icoon" id="wijzig-datum-knop" onclick="wijzigWedstrijdDatum()" title="Datum van de wedstrijd wijzigen" aria-label="Datum van de wedstrijd wijzigen" style="width:20px; height:20px;"></button>
+      </div>
+    </div>
+    <div class="rij-knoppen" style="align-items:flex-end;">
+      <button class="knop secundair" onclick="bewaarWedstrijd()">Bewaar wedstrijd</button>
+      <button class="knop secundair" onclick="opentLaadPopup()">Laad wedstrijd</button>
+      <button class="knop secundair" onclick="nieuweWedstrijd()">Nieuwe wedstrijd</button>
+      <button class="knop secundair" onclick="nieuwSeizoenStarten()">Nieuw seizoen starten</button>
+      <button class="knop gevaar" id="afsluit-knop" onclick="sluitWedstrijdAf()">Wedstrijd afsluiten</button>
+    </div>
+  </header>
+
+  <nav>
+    <button data-paneel="spelers" class="actief" onclick="toonPaneel('spelers')">Spelers</button>
+    <button data-paneel="overzicht" onclick="toonPaneel('overzicht')">Wedstrijdoverzicht</button>
+    <button data-paneel="score" onclick="toonPaneel('score')">Score invoeren</button>
+    <button data-paneel="ranglijst" onclick="toonPaneel('ranglijst')">Ranglijst</button>
+    <button data-paneel="instellingen" onclick="toonPaneel('instellingen')">Instellingen</button>
+  </nav>
+</div>
+
+<div id="laad-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="margin:0;">Wedstrijd laden</h2>
+      <button class="knop secundair" onclick="sluitLaadPopup()">Sluiten</button>
+    </div>
+    <div id="laad-lijst-zone"></div>
+    <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Of kies een bestand van je computer
+        <input type="file" accept=".json" style="display:none" onchange="importeerAlles(event)">
+      </label>
+    </div>
+  </div>
+</div>
+
+<div id="opmerking-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="margin:0;">Opmerking voor <span id="opmerking-modal-naam"></span></h2>
+      <button class="knop secundair" onclick="sluitOpmerkingModal()">Sluiten</button>
+    </div>
+    <div id="opmerking-modal-inhoud"></div>
+  </div>
+</div>
+
+<div id="naam-hernoem-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="margin:0;">Naam aanpassen</h2>
+      <button class="knop secundair" onclick="sluitNaamHernoemModal()">Sluiten</button>
+    </div>
+    <div id="naam-hernoem-formulier">
+      <p class="uitleg">Verbetert een schrijffout in de naam van <strong id="naam-hernoem-huidige"></strong>. De nieuwe naam wordt overal aangepast: de gekende-spelerslijst, de huidige wedstrijd (als deze speler daarin meespeelt), historiek.json en alle bewaarde wedstrijdbestanden van dit seizoen.</p>
+      <label for="naam-hernoem-input">Correcte naam</label>
+      <input type="text" id="naam-hernoem-input">
+      <div class="rij-knoppen" style="margin-top:16px;">
+        <button class="knop" onclick="bevestigNaamHernoemen()">Overal aanpassen</button>
+        <button class="knop secundair" onclick="sluitNaamHernoemModal()">Annuleren</button>
+      </div>
+    </div>
+    <div id="naam-hernoem-resultaat" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="flight-bewerk-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="margin:0;" id="flight-bewerk-titel">Flight aanpassen</h2>
+      <button class="knop secundair" onclick="sluitFlightBewerkenModal()">Sluiten</button>
+    </div>
+    <p class="uitleg">Past de hele flight in 1 keer aan: alle spelers in deze flight krijgen het ingestelde flight-nummer en startuur. Kies bij "Ronde" enkel iets anders dan "Niet wijzigen" als je de hele flight van front naar back (of omgekeerd) wil laten schuiven - dat maakt de scorekaart leeg voor wie al scores had ingevuld.</p>
+    <div class="veldgroep">
+      <div>
+        <label for="flight-bewerk-nummer">Flight nummer</label>
+        <div class="rij-knoppen" style="gap:4px;">
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkNummer(-1)" title="Vorig nummer" aria-label="Vorig nummer">&minus;</button>
+          <input type="text" id="flight-bewerk-nummer" style="text-align:center; width:44px; flex:none;">
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkNummer(1)" title="Volgend nummer" aria-label="Volgend nummer">+</button>
+        </div>
+      </div>
+      <div>
+        <label for="flight-bewerk-startuur">Startuur</label>
+        <div class="rij-knoppen" style="gap:4px;">
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkStartuur(-10)" title="10 minuten vroeger" aria-label="10 minuten vroeger" style="width:34px;">-10</button>
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkStartuur(-1)" title="1 minuut vroeger" aria-label="1 minuut vroeger">&minus;</button>
+          <input type="text" id="flight-bewerk-startuur" onchange="valideerFlightBewerkStartuurInvoer()" style="text-align:center; width:64px; flex:none;">
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkStartuur(1)" title="1 minuut later" aria-label="1 minuut later">+</button>
+          <button type="button" class="knop-icoon" onclick="wijzigFlightBewerkStartuur(10)" title="10 minuten later" aria-label="10 minuten later" style="width:34px;">+10</button>
+        </div>
+      </div>
+      <div>
+        <label for="flight-bewerk-ronde">Ronde</label>
+        <select id="flight-bewerk-ronde">
+          <option value="__ongewijzigd__">Niet wijzigen</option>
+          <option value="18">18 holes</option>
+          <option value="uit">9 holes - uit (front)</option>
+          <option value="in">9 holes - in (back)</option>
+        </select>
+      </div>
+    </div>
+    <div class="rij-knoppen" style="margin-top:16px;">
+      <button class="knop" onclick="bevestigFlightBewerken()">Bewaren</button>
+      <button class="knop secundair" onclick="sluitFlightBewerkenModal()">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<div id="opmerking-waarschuwing-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h2 style="margin:0;">Opmerking</h2>
+    </div>
+    <p><strong id="opmerking-waarschuwing-naam"></strong>: <span id="opmerking-waarschuwing-tekst"></span></p>
+    <div class="rij-knoppen" style="margin-top:16px; justify-content:flex-end;">
+      <button class="knop" onclick="sluitOpmerkingWaarschuwing()">OK</button>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <div id="melding-zone"></div>
+  <div id="wedstrijd-afgesloten-melding" class="melding fout" style="display:none; margin-bottom:14px;">Deze wedstrijd is afgesloten. Spelers en scores kunnen niet meer aangepast worden. Start een nieuwe wedstrijd of laad een (andere) wedstrijd om verder te werken.</div>
+
+  <!-- SPELERS -->
+  <section class="paneel actief" id="paneel-spelers">
+    <div class="kaart">
+      <h2 id="spelerform-titel">Nieuwe speler toevoegen</h2>
+      <div id="spelerform-bewerk-melding" class="melding ok" style="display:none;">Je past een bestaande speler aan.</div>
+      <div class="veldgroep">
+        <div>
+          <label for="in-naam">Naam</label>
+          <input type="text" id="in-naam" placeholder="Voor- en achternaam" list="bekende-spelers-lijst" autocomplete="off">
+          <datalist id="bekende-spelers-lijst"></datalist>
+        </div>
+        <div>
+          <label for="in-geslacht">Geslacht</label>
+          <select id="in-geslacht">
+            <option value="M">Heer</option>
+            <option value="V">Dame</option>
+          </select>
+        </div>
+        <div>
+          <label for="in-hcp">Handicap index</label>
+          <input type="number" id="in-hcp" step="0.1" placeholder="bv. 14.2">
+        </div>
+        <div>
+          <label for="in-baantest">Baantest</label>
+          <div style="padding-top:8px;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text); cursor:pointer; font-weight:400;">
+              <input type="checkbox" id="in-baantest" onchange="baantestToggle()" style="width:auto;">
+              speelt zonder HCP
+            </label>
+          </div>
+        </div>
+        <div>
+          <label for="in-tee">Afslagplaats (tee)</label>
+          <select id="in-tee"></select>
+        </div>
+        <div>
+          <label for="in-ronde">Ronde</label>
+          <select id="in-ronde">
+            <option value="18">18 holes</option>
+            <option value="uit" selected>9 holes - uit (1-9)</option>
+            <option value="in">9 holes - in (10-18)</option>
+          </select>
+        </div>
+        <div>
+          <label>Reeks</label>
+          <div id="in-reeks-preview" style="padding:8px 0;"><span style="color:var(--text-muted);">-</span></div>
+        </div>
+      </div>
+      <div id="preview-cat" class="melding ok" style="display:none;"></div>
+      <div class="rij-knoppen">
+        <button class="knop" id="spelerform-knop" onclick="voegSpelerToe()">Speler toevoegen</button>
+        <button class="knop secundair" id="spelerform-annuleer" onclick="annuleerSpelerBewerken()" style="display:none;">Annuleren</button>
+      </div>
+    </div>
+
+    <div class="kaart">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <h2 style="margin:0;">Deelnemers (<span id="aantal-spelers">0</span>)</h2>
+        <input type="text" id="speler-zoek" placeholder="Zoek op naam..." style="width:auto; max-width:220px;" oninput="spelerZoekGewijzigd(this.value)">
+      </div>
+      <p class="uitleg">Categorie en course handicap worden automatisch berekend op basis van handicap index, tee en geslacht.</p>
+      <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+        <input type="checkbox" id="spelers-groeperen" onchange="toggleSpelersGroeperen(this.checked)" style="width:auto;">
+        Groeperen per reeks
+      </label>
+      <div id="spelerlijst"></div>
+    </div>
+  </section>
+
+  <!-- SCORE INVOEREN (hole per hole + quickscore samen) -->
+  <section class="paneel" id="paneel-score">
+    <div class="kaart">
+      <h2>Score invoeren</h2>
+      <div class="veldgroep">
+        <div>
+          <label for="score-speler">Speler</label>
+          <select id="score-speler" onchange="scoreSpelerGewijzigd()" onmousedown="scoreSpelerFocusEersteBijOpenen()"></select>
+        </div>
+      </div>
+
+      <div id="iedereen-bevestigd-zone"></div>
+
+      <div id="speler-info-zone"></div>
+
+      <div id="score-samenvatting-zone"></div>
+
+      <div style="display:flex; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div style="flex:1 1 240px;">
+          <label for="quick-input">Quickscore (snel invullen, optioneel)</label>
+          <input type="text" id="quick-input" placeholder="bv. 564543*10549463584458" oninput="quickInvoerGewijzigd()">
+        </div>
+        <div style="flex:1 1 220px;">
+          <label style="visibility:hidden;">&nbsp;</label>
+          <div id="score-bevestig-zone"></div>
+        </div>
+      </div>
+      <div id="quick-fout" class="melding fout" style="display:none;"></div>
+
+      <div id="invoer-hole-zone" class="scroll-x" style="margin-top:14px;"></div>
+
+      <p class="uitleg" style="margin-top:10px;">Eén cijfer per hole, na elkaar. Voor 10 slagen of meer: zet een * of een + voor de 2 cijfers, bv. *10 of +10. Vult de tabel hierboven meteen aan; je kan elke hole ook gewoon los aanpassen.</p>
+    </div>
+  </section>
+
+  <!-- RANGLIJST -->
+  <section class="paneel" id="paneel-ranglijst">
+    <div class="kaart">
+      <h2>Ranglijst</h2>
+
+      <div class="tabs">
+        <button id="rang-modus-huidig" class="actief" onclick="kiesRanglijstModus('huidig')">Deze wedstrijd</button>
+        <button id="rang-modus-alle" onclick="kiesRanglijstModus('alle')">Alle wedstrijden</button>
+        <button id="rang-modus-criterium" onclick="kiesRanglijstModus('criterium')">Criterium</button>
+      </div>
+
+      <div id="ranglijst-huidige-zone">
+        <div class="veldgroep">
+          <div>
+            <label for="rang-methode">Rangschikken op</label>
+            <select id="rang-methode" onchange="renderRanglijst()">
+              <option value="netto">Netto slagen (stroke play)</option>
+              <option value="stableford">Stableford punten</option>
+              <option value="ags">AGS (aangepaste brutoscore)</option>
+              <option value="ans" selected>ANS (aangepaste nettoscore)</option>
+              <option value="bruto">Bruto slagen</option>
+            </select>
+          </div>
+        </div>
+        <div id="rang-tabs"></div>
+        <div id="rang-tabel-zone" class="scroll-x"></div>
+      </div>
+
+      <div id="ranglijst-alle-zone" style="display:none;"></div>
+
+      <div id="ranglijst-criterium-zone" style="display:none;">
+        <p class="uitleg">Puntenklassement per reeks: de winnaar van een wedstrijd binnen een reeks krijgt 10 punten, de 2e 9, en zo verder tot 0. Bij een gelijke ANS beslist countback (ANS-9, dan ANS-6, dan ANS-3, dan de laatste hole, dan de laagste handicap index), zodat elk puntencijfer maar 1x toegekend wordt - geen gedeelde punten meer. Dit geldt enkel voor wedstrijden gespeeld met deze app (volledige hole-per-hole data nodig voor de countback); de geïmporteerde historiek van voor deze app heeft haar eigen, al vastliggende punten. Deze punten worden opgeteld over alle wedstrijden heen.</p>
+        <div class="rij-knoppen" style="margin-bottom:14px;">
+          <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+            Historiek.json rechtstreeks kiezen (als er geen mapvenster verscheen)
+            <input type="file" accept=".json" style="display:none" onchange="importeerHistoriekDirect(event)">
+          </label>
+        </div>
+        <div id="criterium-tabs"></div>
+        <div class="veldgroep" id="criterium-periode-zone" style="max-width:260px;"></div>
+        <div id="criterium-tabel-zone"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEDSTRIJDOVERZICHT -->
+  <section class="paneel" id="paneel-overzicht">
+    <div class="kaart">
+      <h2>Wedstrijdoverzicht</h2>
+      <p class="uitleg">Alle spelers van deze wedstrijd, gegroepeerd per flight, met hun geslacht, handicap, course handicap, tee, ronde, reeks en startuur. Spelers zonder flight staan hieronder apart (standaard gesorteerd op tijdstip van inschrijving, klik op "Naam", "HCP" of "Ingeschreven" om anders te sorteren). Vink de spelers aan die samen starten, kies een flight-nummer en een startuur, en klik op "Flight toewijzen". Klik op de kop van een reeds geconfigureerde flight om die in 1 keer aan te passen (startuur, flight-nummer, of de hele flight van front naar back laten schuiven). Binnen een flight toont het vinkje per speler of die zijn score al volledig heeft ingevuld; zodra iedereen in een flight klaar is, wordt die flight vergrendeld (andere tint, geen aanpassingen meer mogelijk).</p>
+
+      <div style="display:flex; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:14px;">
+        <div>
+          <label for="in-nieuwe-flight-nummer">Flight nummer</label>
+          <div class="rij-knoppen" style="gap:4px;">
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-min" onclick="wijzigNieuweFlightNummer(-1)" title="Vorig nummer" aria-label="Vorig nummer">&minus;</button>
+            <input type="text" id="in-nieuwe-flight-nummer" readonly style="text-align:center; width:44px; flex:none;">
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-plus" onclick="wijzigNieuweFlightNummer(1)" title="Volgend nummer" aria-label="Volgend nummer">+</button>
+          </div>
+        </div>
+        <div>
+          <label for="in-nieuwe-flight-startuur">Startuur</label>
+          <div class="rij-knoppen" style="gap:4px;">
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-startuur-min10" onclick="wijzigNieuweFlightStartuur(-10)" title="10 minuten vroeger" aria-label="10 minuten vroeger" style="width:34px;">-10</button>
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-startuur-min" onclick="wijzigNieuweFlightStartuur(-1)" title="1 minuut vroeger" aria-label="1 minuut vroeger">&minus;</button>
+            <input type="text" id="in-nieuwe-flight-startuur" onchange="valideerNieuweFlightStartuurInvoer()" style="text-align:center; width:64px; flex:none;">
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-startuur-plus" onclick="wijzigNieuweFlightStartuur(1)" title="1 minuut later" aria-label="1 minuut later">+</button>
+            <button type="button" class="knop-icoon" id="in-nieuwe-flight-startuur-plus10" onclick="wijzigNieuweFlightStartuur(10)" title="10 minuten later" aria-label="10 minuten later" style="width:34px;">+10</button>
+          </div>
+        </div>
+        <div>
+          <button class="knop" id="overzicht-toewijs-knop" onclick="wijsFlightToe()">Flight toewijzen</button>
+        </div>
+        <div style="margin-left:auto;">
+          <button type="button" class="knop secundair" id="overzicht-sorteer-knop" onclick="wisselFlightVolgorde()">Flights: laag naar hoog</button>
+        </div>
+      </div>
+
+      <div class="scroll-x" id="overzicht-zone"></div>
+    </div>
+  </section>
+
+  <!-- INSTELLINGEN -->
+  <section class="paneel" id="paneel-instellingen">
+    <div class="kaart">
+      <h2>Bewaarmap</h2>
+      <p class="uitleg">De map op deze computer waar wedstrijden, de spelerslijst (spelers.json), categorieën, tee-regels en baangegevens bewaard en geladen worden. Wordt onthouden in deze browser tot je hier een andere map kiest. Let op: elke laptop/browser onthoudt zijn eigen map apart, kies dus op elk toestel dezelfde (gesynchroniseerde) map om verschillen te vermijden.</p>
+      <div id="map-instelling-zone"><p class="uitleg">Bezig met ophalen...</p></div>
+      <button class="knop secundair" onclick="kiesWedstrijdMapHandmatig()" style="margin-top:10px;">Map kiezen / wijzigen</button>
+    </div>
+
+    <div class="kaart">
+      <h2>Seizoen</h2>
+      <p class="uitleg">De app wordt per speelseizoen gebruikt: wedstrijdbestanden, de gekende-spelerslijst en de Criterium/Alle-wedstrijden-tellingen horen bij 1 seizoen en staan in een eigen submap van de bewaarmap. Start hierboven "Nieuw seizoen starten" om met een lege ranglijst en Criterium te beginnen; oude seizoenen blijven gewoon in hun eigen map staan.</p>
+      <div id="seizoen-huidig-zone"><p class="uitleg">Bezig met ophalen...</p></div>
+      <button class="knop secundair" onclick="toonBeschikbareSeizoenen()" style="margin-top:10px;">Toon beschikbare seizoenen</button>
+      <div id="seizoen-lijst-zone" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Categorieën (reeksen)</h2>
+      <p class="uitleg">Deze lijst bepaalt hoe spelers automatisch in een reeks worden ingedeeld op basis van hun handicap index. Pas categorieen.json aan en laad die hier opnieuw in.</p>
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Categorieën laden vanuit JSON-bestand
+        <input type="file" accept=".json" style="display:none" onchange="importeerCategorieen(event)">
+      </label>
+      <div id="categorie-tabel-zone" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Standaard tee per handicap</h2>
+      <p class="uitleg">Bepaalt welke tee automatisch voorgesteld wordt bij het toevoegen van een speler, op basis van handicap index en geslacht. Kan altijd manueel aangepast worden bij het toevoegen zelf. Pas de grenzen hier aan als de club ze wijzigt (bv. volgend seizoen).</p>
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Tee-regels laden vanuit JSON-bestand
+        <input type="file" accept=".json" style="display:none" onchange="importeerTeeregelen(event)">
+      </label>
+      <div id="teeregels-tabel-zone" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Baantest-normen</h2>
+      <p class="uitleg">Spelers zonder handicap index ("Baantest" aangevinkt bij Speler toevoegen) spelen buiten de competitie en worden beoordeeld op hun AGS (score per hole geplafonneerd op gewoon double bogey, geen ontvangen slagen). Hieronder de norm per geslacht en ronde waarmee ze slagen; pas aan indien de club de normen wijzigt.</p>
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Baantest-normen laden vanuit JSON-bestand
+        <input type="file" accept=".json" style="display:none" onchange="importeerBaantestregelen(event)">
+      </label>
+      <div id="baantestregels-tabel-zone" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Opmerkingen</h2>
+      <p class="uitleg">Deze lijst bepaalt welke opmerkingen je kan kiezen bij een speler in Wedstrijdoverzicht. "Andere..." staat daar altijd apart bij, waarmee je zelf iets kan intypen. Zodra je nadien de score van die speler invoert, verschijnt de opmerking als waarschuwing.</p>
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Opmerkingen laden vanuit JSON-bestand
+        <input type="file" accept=".json" style="display:none" onchange="importeerOpmerkingen(event)">
+      </label>
+      <div id="opmerkingen-tabel-zone" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Gekende spelers (naam-suggesties)</h2>
+      <p class="uitleg">Wordt automatisch aangevuld met naam en geslacht (nooit de handicap) telkens je een speler toevoegt, en bewaard in spelers.json in de submap van het huidige seizoen. Blijft staan als je een nieuwe wedstrijd start, maar begint wel opnieuw (leeg, of hergebruikt/geimporteerd) bij "Nieuw seizoen starten". Staat een naam er verkeerd in (schrijffout)? Klik op "Toon lijst" en dan op "Aanpassen" naast de speler: de correctie wordt dan meteen overal doorgevoerd (huidige wedstrijd, historiek en alle bewaarde wedstrijdbestanden van dit seizoen), zodat de speler niet per ongeluk dubbel meetelt in het Criterium.</p>
+      <p class="uitleg" id="ledenlijst-teller">Nog niet geladen.</p>
+      <div class="rij-knoppen">
+        <button class="knop secundair" onclick="verversBekendeSpelers()">Opnieuw inladen</button>
+        <label class="knop secundair" style="cursor:pointer;">
+          Laden vanuit JSON-bestand
+          <input type="file" accept=".json" style="display:none" onchange="importeerLedenlijst(event)">
+        </label>
+        <button class="knop secundair" id="ledenlijst-toon-knop" onclick="toggleLedenlijstTonen()" style="display:none;">Toon lijst</button>
+      </div>
+      <div id="ledenlijst-tabel-zone" style="display:none; margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Baangegevens</h2>
+      <p class="uitleg">Par, stroke index en tee-gegevens van de baan. Pas baan.json aan en laad die hier opnieuw in als de club de gegevens wijzigt.</p>
+      <label class="knop secundair" style="display:inline-block; cursor:pointer;">
+        Baangegevens laden vanuit JSON-bestand
+        <input type="file" accept=".json" style="display:none" onchange="importeerBaan(event)">
+      </label>
+      <div class="scroll-x" id="baan-tabel-zone" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="kaart">
+      <h2>Alles wissen</h2>
+      <p class="uitleg">Verwijdert spelers en scores van de huidige wedstrijd. Hetzelfde als de knop "Nieuwe wedstrijd" bovenaan, behalve dat die ook meteen de datum op vandaag zet. Categorieën, tee-regels, baangegevens en je gekende-spelerslijst (voor naam-suggesties) blijven altijd staan.</p>
+      <button class="knop gevaar" id="wis-wedstrijd-knop" onclick="wisWedstrijd()">Spelers en scores wissen</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>Gegevens worden lokaal in je browser bewaard. Gebruik "Bewaar wedstrijd" om een JSON-bestand te bewaren als back-up.</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

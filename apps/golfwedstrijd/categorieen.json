@@ -1,0 +1,61 @@
+{
+  "opmerking": "Deze lijst bepaalt hoe spelers automatisch in een reeks worden ingedeeld op basis van hun handicap index.",
+  "reeksen": [
+    {
+      "id": "reeks1_heren",
+      "naam": "Reeks 1",
+      "geslacht": "M",
+      "hcp_min": 0,
+      "hcp_max": 40
+    },
+    {
+      "id": "reeks2_heren",
+      "naam": "Reeks 2",
+      "geslacht": "M",
+      "hcp_min": 40.1,
+      "hcp_max": 45
+    },
+    {
+      "id": "reeks3_heren",
+      "naam": "Reeks 3",
+      "geslacht": "M",
+      "hcp_min": 45.1,
+      "hcp_max": 50
+    },
+    {
+      "id": "bga_heren",
+      "naam": "Reeks 4",
+      "geslacht": "M",
+      "hcp_min": 50.1,
+      "hcp_max": 54
+    },
+    {
+      "id": "reeks1_dames",
+      "naam": "Reeks 1",
+      "geslacht": "V",
+      "hcp_min": 0,
+      "hcp_max": 40
+    },
+    {
+      "id": "reeks2_dames",
+      "naam": "Reeks 2",
+      "geslacht": "V",
+      "hcp_min": 40.1,
+      "hcp_max": 45
+    },
+    {
+      "id": "reeks3_dames",
+      "naam": "Reeks 3",
+      "geslacht": "V",
+      "hcp_min": 45.1,
+      "hcp_max": 50
+    },
+    {
+      "id": "bga_dames",
+      "naam": "Reeks 4",
+      "geslacht": "V",
+      "hcp_min": 50.1,
+      "hcp_max": 54
+    }
+  ]
+}
