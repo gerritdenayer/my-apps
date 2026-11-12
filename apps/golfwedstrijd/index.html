@@ -283,6 +283,7 @@
             <input type="file" accept=".json" style="display:none" onchange="importeerHistoriekDirect(event)">
           </label>
         </div>
+        <div id="criterium-bron-zone"></div>
         <div id="criterium-tabs"></div>
         <div class="veldgroep" id="criterium-periode-zone" style="max-width:260px;"></div>
         <div id="criterium-tabel-zone"></div>
@@ -334,6 +335,24 @@
       <p class="uitleg">De map op deze computer waar wedstrijden, de spelerslijst (spelers.json), categorieën, tee-regels en baangegevens bewaard en geladen worden. Wordt onthouden in deze browser tot je hier een andere map kiest. Let op: elke laptop/browser onthoudt zijn eigen map apart, kies dus op elk toestel dezelfde (gesynchroniseerde) map om verschillen te vermijden.</p>
       <div id="map-instelling-zone"><p class="uitleg">Bezig met ophalen...</p></div>
       <button class="knop secundair" onclick="kiesWedstrijdMapHandmatig()" style="margin-top:10px;">Map kiezen / wijzigen</button>
+    </div>
+
+    <div class="kaart">
+      <h2>GitHub back-up</h2>
+      <p class="uitleg">Stuurt de wedstrijdbestanden, spelerslijst en historiek van het huidige seizoen naar GitHub, zodat iemand op een andere computer de resultaten kan bekijken zonder zelf een map te moeten kiezen. Enkel nodig op de computer die scoort; op een kijk-computer kan je dit negeren, "Alle wedstrijden" en "Criterium" tonen daar automatisch de laatste back-up. Je moet hiervoor online zijn.</p>
+      <div id="github-pat-zone" style="margin-top:10px;">
+        <label for="in-github-pat">GitHub toegangscode (enkel op deze computer nodig, 1 keer)</label>
+        <input type="password" id="in-github-pat" autocomplete="off" placeholder="github_pat_...">
+        <div class="rij-knoppen" style="margin-top:6px;">
+          <button class="knop secundair" onclick="bewaarGithubPatUI()">Code bewaren</button>
+          <button class="knop secundair" onclick="wisGithubPatUI()">Code verwijderen</button>
+        </div>
+      </div>
+      <div id="github-status-zone" style="margin-top:12px;"><p class="uitleg">Bezig met ophalen...</p></div>
+      <div class="rij-knoppen" style="margin-top:10px;">
+        <button class="knop" id="github-backup-knop" onclick="maakGithubBackup()">Back-up maken</button>
+        <button class="knop secundair" id="github-ophalen-knop" onclick="haalGithubBackupOp()">Ophalen van GitHub</button>
+      </div>
     </div>
 
     <div class="kaart">
