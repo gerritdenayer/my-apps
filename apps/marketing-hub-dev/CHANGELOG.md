@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- SVP and vertical are now two separate fields. A budget line or campaign / event can have an SVP (such as Data & AI) and a vertical (such as BFSI) at the same time. Settings > SVPs & verticals has two lists, each with Active from / Until years and N.A., and an arrow to move an item to the other list. The forms, the Budget table columns, Campaigns & events (Group by, Color by and More filters), Download agenda (lanes and details), Reporting charts, Outcomes, the Excel exports, the email inbox and Bulk import all show both. Existing data moves over by itself the first time the app opens: BFSI and Manufacturing become verticals, the rest stay SVPs, and N.A. stays N.A. in both. Nothing is lost.
+- Settings menu: the first group is now called Budget structure, with Entities setup and Budget under it (before: Entities & clusters and Budget structure).
+
 ## [v5.3.1] - 2026-11-09 - Super admin role, view-only structure for budget owners
 
 ### Added

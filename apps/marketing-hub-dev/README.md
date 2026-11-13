@@ -19,8 +19,8 @@ Each person has their own local dataset. To move data around:
 - **Export** (Settings → Data management → Export to JSON file)
   Downloads `marketing-budget-YYYY-MM-DD.json` with the full current dataset.
 - **Merge** (Settings → Data management → Merge JSON file)
-  Pick a JSON file. Activities, entities, SVPs, types, statuses, users, yearly budgets and budget codes from that file are added to your dataset.
-  - Lookups (entities, SVPs, types, statuses, users) are matched by name, so duplicates are not created.
+  Pick a JSON file. Activities, entities, SVPs, verticals, types, statuses, users, yearly budgets and budget codes from that file are added to your dataset.
+  - Lookups (entities, SVPs, verticals, types, statuses, users) are matched by name, so duplicates are not created.
   - Activities are matched by ID; existing IDs are skipped.
   - Yearly budgets and budget codes are added only when the local data has no value yet for that year/entity.
 - **Replace** (Settings → Data management → Replace with JSON file)
@@ -31,11 +31,11 @@ Tip: keep your exports next to `index.html` so the JSON file lives alongside the
 
 ## Tabs
 
-- **Budget:** all budget lines. Filter by year, group, entity, SVP, type, status, owner, or free text search. Sort by any column. Add / edit / copy / delete budget lines.
+- **Budget:** all budget lines. Filter by year, group, entity, SVP, vertical, type, status, owner, or free text search. Sort by any column. Add / edit / copy / delete budget lines.
 - **Campaigns & Timeline:** a visual Gantt of campaigns and events. Add or edit a campaign, link it to the budget (pick an organising entity to create a linked budget line), record partners and content, and capture outcomes (engagement, attendees, registrations, MQL, SQL, revenue).
 - **Reporting:** monthly matrix per entity with forecast and actual side by side, with yearly budget and variance. Groups are collapsible. Entity drill-down with chart. Export to Excel.
-- **Outcomes:** results combined with budget. Group by Group, Entity, SVP, Month or Quarter; filter by group, entity, SVP, kind and year. Shows outcome totals (actual vs target), revenue, spend, and efficiency (cost per MQL/SQL/attendee, revenue ROI). KPI cards, chart, Excel export.
-- **Settings:** manage entities and groups (with collapsible per-group budgets), SVPs, activity types, statuses, users, yearly budgets and budget codes, plus the Data management section described above. Bulk import from any Excel file is also here.
+- **Outcomes:** results combined with budget. Group by Group, Entity, SVP, Vertical, Month or Quarter; filter by group, entity, SVP, vertical, kind and year. Shows outcome totals (actual vs target), revenue, spend, and efficiency (cost per MQL/SQL/attendee, revenue ROI). KPI cards, chart, Excel export.
+- **Settings:** manage entities and groups (with collapsible per-group budgets), SVPs, verticals, activity types, statuses, users, yearly budgets and budget codes, plus the Data management section described above. Bulk import from any Excel file is also here.
 
 ## File map
 
@@ -104,7 +104,7 @@ Events can be proposed from emails. Claude reads the email and adds a proposal t
 who can edit campaigns. "Review & add" opens the normal event form, pre-filled; saving it adds the
 event and publishes it. "Reject" drops it. Nothing reaches the real data without a person saving it.
 
-File format (names, not ids: the app matches them to entities, users, SVPs, countries and campaigns,
+File format (names, not ids: the app matches them to entities, users, SVPs, verticals, countries and campaigns,
 and warns when a name is not found):
 
 ```json
@@ -124,6 +124,7 @@ and warns when a name is not found):
         "entity": "Belgium",
         "owner": "Gerrit Denayer",
         "svp": "Data & AI",
+        "vertical": "BFSI",
         "campaign": "",
         "countries": ["Belgium"],
         "partners": [{ "name": "Microsoft", "role": "Co-host", "coFunding": 0 }],
@@ -134,6 +135,9 @@ and warns when a name is not found):
   ]
 }
 ```
+
+`svp` and `vertical` are separate (both optional). Older proposals with only `svp` still work:
+when that name is a vertical, the app uses it as the vertical.
 
 Status becomes `accepted` (with `eventId`) or `rejected`, with `decidedBy` and `decidedAt`.
 

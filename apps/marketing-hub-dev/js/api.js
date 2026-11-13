@@ -32,7 +32,8 @@
         ],
         m1Levels: M1_SEED.slice(),
         apCategories: apCats,
-        svps: [{ id: uid(), name: "None" }, { id: uid(), name: "All" }],
+        svps: [{ id: uid(), name: "N.A." }],
+        verticals: [{ id: uid(), name: "N.A." }],
         activityTypes: [
           { id: uid(), name: "Event", apCategoryId: catId("Enhance market awareness and perception") },
           { id: uid(), name: "Digital campaign", apCategoryId: catId("Lead generation campaigns") },
@@ -143,9 +144,19 @@
     const c = {}; Object.keys(o).forEach((k) => { if (!skip[k]) c[k] = o[k]; });
     return JSON.stringify(c, Object.keys(c).sort());
   }
+  // Rows saved by an older version have only svpId (the old combined SVP / vertical field). Move
+  // them to svpId + verticalId using the current setup, so they compare and merge cleanly.
+  function migrateIncomingRows(current, incoming) {
+    if (!(window.MB_STATE && window.MB_STATE.normalizeSvpVerticals) || !current || !current.settings) return incoming;
+    const tmp = { settings: JSON.parse(JSON.stringify(current.settings)),
+      activities: JSON.parse(JSON.stringify(incoming.activities || [])), events: JSON.parse(JSON.stringify(incoming.events || [])) };
+    window.MB_STATE.normalizeSvpVerticals(tmp);
+    return { ...incoming, activities: tmp.activities, events: tmp.events };
+  }
   // Compare current data with an incoming budget+events file. Returns adds / updates / missing
   // per list, plus warnings for incoming items that reference an entity or owner you do not have.
   function diffBudgetEvents(current, incoming) {
+    incoming = migrateIncomingRows(current, incoming);
     const entIds = new Set((current.settings.entities || []).map((e) => e.id));
     const userIds = new Set((current.settings.users || []).map((u) => u.id));
     const res = { warnings: [] };
@@ -174,6 +185,7 @@
   // delete the chosen missing ids. opts = { delEventIds, delActIds, skipUpdates }.
   function applyBudgetEventsMerge(current, incoming, opts) {
     opts = opts || {};
+    incoming = migrateIncomingRows(current, incoming);
     const result = JSON.parse(JSON.stringify(current));
     function merge(key, delSet) {
       const incById = Object.fromEntries((incoming[key] || []).map((x) => [x.id, x]));
@@ -188,8 +200,9 @@
     }
     merge("events", opts.delEventIds);
     merge("activities", opts.delActIds);
-    // A setup published by an older version may still have "All" / "None": fold them into N.A.
-    if (window.MB_STATE && window.MB_STATE.normalizeSvps) window.MB_STATE.normalizeSvps(result.settings);
+    // A setup or rows from an older version may still have "All" / "None" or the old combined
+    // SVP / vertical list: fold them into N.A. and split SVPs from verticals.
+    if (window.MB_STATE && window.MB_STATE.normalizeSvpVerticals) window.MB_STATE.normalizeSvpVerticals(result);
     result.meta = { ...(result.meta || {}), lastUpdated: new Date().toISOString() };
     return result;
   }
@@ -207,6 +220,7 @@
         if (l.pwChangedAt) u.pwChangedAt = l.pwChangedAt; else delete u.pwChangedAt;
       }
     });
+    if (window.MB_STATE && window.MB_STATE.normalizeSvpVerticals) window.MB_STATE.normalizeSvpVerticals(result);
     result.meta = { ...(result.meta || {}), lastUpdated: new Date().toISOString() };
     return result;
   }
@@ -217,9 +231,14 @@
   // Yearly budgets and codes are added only where no existing value exists for that year+entity.
   function mergeData(existing, incoming) {
     const result = JSON.parse(JSON.stringify(existing));
+    // A file from an older version has one combined SVP / vertical list: split it first (on a copy).
+    incoming = JSON.parse(JSON.stringify(incoming || {}));
+    incoming.settings = incoming.settings || {};
+    if (window.MB_STATE && window.MB_STATE.normalizeSvpVerticals) window.MB_STATE.normalizeSvpVerticals(incoming);
     result.settings = result.settings || {};
     result.settings.entities = result.settings.entities || [];
     result.settings.svps = result.settings.svps || [];
+    result.settings.verticals = result.settings.verticals || [];
     result.settings.activityTypes = result.settings.activityTypes || [];
     result.settings.statuses = result.settings.statuses || [];
     result.settings.users = result.settings.users || [];
@@ -231,7 +250,7 @@
     result.settings.apCategories = result.settings.apCategories || [];
     result.settings.m1Levels = result.settings.m1Levels || [];
 
-    const stats = { entities: 0, svps: 0, types: 0, statuses: 0, users: 0, activities: 0, events: 0, budgets: 0, codes: 0, skipped: 0 };
+    const stats = { entities: 0, svps: 0, verticals: 0, types: 0, statuses: 0, users: 0, activities: 0, events: 0, budgets: 0, codes: 0, skipped: 0 };
 
     const findByName = (list, name) => {
       const key = (name || "").trim().toLowerCase();
@@ -240,7 +259,7 @@
     };
 
     // Build ID maps: incoming ID → local canonical ID
-    const idMap = { entity: {}, svp: {}, type: {}, status: {}, user: {} };
+    const idMap = { entity: {}, svp: {}, vertical: {}, type: {}, status: {}, user: {} };
 
     function mergeList(localList, incomingList, idMapBucket, statsKey, extraDefaults) {
       (incomingList || []).forEach((item) => {
@@ -259,6 +278,7 @@
 
     mergeList(result.settings.entities, incoming.settings.entities, idMap.entity, "entities");
     mergeList(result.settings.svps, incoming.settings.svps, idMap.svp, "svps");
+    mergeList(result.settings.verticals, incoming.settings.verticals, idMap.vertical, "verticals");
     // New name-lists (no id remap needed elsewhere): A&P categories
     mergeList(result.settings.apCategories, (incoming.settings || {}).apCategories, {}, "skipped");
     ((incoming.settings || {}).m1Levels || []).forEach((m) => {
@@ -303,6 +323,7 @@
         ...a,
         entityId: idMap.entity[a.entityId] || a.entityId,
         svpId: idMap.svp[a.svpId] || a.svpId,
+        verticalId: idMap.vertical[a.verticalId] || a.verticalId || "",
         activityTypeId: idMap.type[a.activityTypeId] || a.activityTypeId,
         statusId: idMap.status[a.statusId] || a.statusId,
         ownerId: idMap.user[a.ownerId] || a.ownerId,

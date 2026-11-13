@@ -35,7 +35,7 @@
         <tr><th>Role</th><th>What you can do</th></tr>
         <tr><td>Super admin</td><td>Everything an admin can do, plus <b>View as another user</b>: see the app as any colleague, without their password. Only a super admin can make someone super admin (while there is none yet, an admin can name the first one in Users &amp; access). The email inbox is filled by the super admin.</td></tr>
         <tr><td>Admin</td><td>Everything, including users, publishing the setup and deleted items.</td></tr>
-        <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the budget structure and the entities &amp; clusters.</td></tr>
+        <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the Budget structure section: the entities setup and the budget.</td></tr>
         <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting, Outcomes and the budget structure.</td></tr>
         <tr><td>Campaigns viewer</td><td>View Campaigns &amp; events only.</td></tr>
       </table>
@@ -45,7 +45,7 @@
     { id: "budget", title: "Budget", tabs: ["budget"], html: `
       <p>The Budget tab lists every budget line: one cost on one date for one entity. It opens on the current year and on your home cluster, if an admin set one.</p>
       <h4>Filters and columns</h4>
-      <p>Pick the year with the year buttons, then a cluster and entity, or type in Search. Month and M1 zone are under <b>More filters</b> (the number on it tells how many of those are set). Click a column header to sort or filter that column, Excel-style. <b>Columns</b> chooses which columns show and in what order: by default you see date, name (with A&amp;P category and vendor under it), entity, status, owner and the net amounts; quarter, budget code, SVP / vertical, A&amp;P category, gross and partner amounts and the rest can be switched on there.</p>
+      <p>Pick the year with the year buttons, then a cluster and entity, or type in Search. Month and M1 zone are under <b>More filters</b> (the number on it tells how many of those are set). Click a column header to sort or filter that column, Excel-style. <b>Columns</b> chooses which columns show and in what order: by default you see date, name (with A&amp;P category and vendor under it), entity, status, owner and the net amounts; quarter, budget code, SVP, vertical, A&amp;P category, gross and partner amounts and the rest can be switched on there.</p>
       <h4>Budget left</h4>
       <p>The card above the table shows the yearly budget, planned (forecast net), spent (actual net), left after planned and left after actual. Pick one entity to see its budget code; open <b>Per budget code</b> to see every code in your selection. Red means over budget. The card always covers the whole year: quarter, month and search do not change it.</p>
       <h4>Adding a line</h4>
@@ -58,11 +58,11 @@
       <p>The agenda as a timeline: a bar per campaign or event, a diamond for single-day items, a green euro badge when it has a budget line.</p>
       <p>A <b>campaign</b> is an umbrella; an <b>event</b> has a date and usually a place, and can be part of a campaign.</p>
       <h4>View</h4>
-      <p>The tab opens on your home cluster, if an admin set one, so you see all events of your cluster. Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view. Click a bar, a name or a row to open its card.</p>
+      <p>The tab opens on your home cluster, if an admin set one, so you see all events of your cluster. Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, SVP, vertical, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view, for example by SVP or vertical. Click a bar, a name or a row to open its card.</p>
       <p><b>Names</b> (right above the timeline) chooses where the names show: <b>On the timeline</b>, next to each bar or diamond with the entity in the left column (the classic look, as in the presentations), <b>In the list</b>, in the left column with the entity and dates under each name, or <b>Both</b>. Your choice is remembered.</p>
       <h4>The form</h4>
       <table class="help-table">
-        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP / vertical, goal, event type, part of campaign, campaign code, notes, countries.</td></tr>
+        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP, vertical, goal, event type, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
         <tr><td><b>Budget</b></td><td>The budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
         <tr><td><b>Outcomes</b></td><td>Target and actual for the KPIs that fit the goal you picked on Details. Other results are folded under "Other results".</td></tr>
@@ -74,7 +74,7 @@
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
       <p><b>Download agenda</b> makes one roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
-      <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP / vertical or one lane), the order of the lanes and of the items, and up to three details per item (dates, type, owner, entity, cluster, countries, campaign, partners), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
+      <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP, vertical, goal or one lane), the order of the lanes and of the items, and up to three details per item (dates, goal, type, owner, entity, cluster, countries, campaign, partners, SVP, vertical), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
       <p>When everything does not fit on one slide, you get as many slides as needed. Lanes are kept together on a slide; a lane too big for one slide continues on the next, marked "(cont.)". The pop-up tells you how many slides you will get, and each slide shows its number at the bottom.</p>
       <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
@@ -86,7 +86,7 @@
       <ul>
         <li><b>Quick pick</b>: ready-made charts, such as forecast vs actual by month, spend over the year vs budget, budget by cluster, or the share per A&amp;P category.</li>
         <li><b>Chart type</b>: bar, stacked, horizontal, line, pie or doughnut.</li>
-        <li><b>Group by</b>: what the bars or slices are: month, quarter, M1 zone, cluster, entity, A&amp;P category, SVP / vertical, owner, status, vendor or budget code.</li>
+        <li><b>Group by</b>: what the bars or slices are: month, quarter, M1 zone, cluster, entity, A&amp;P category, SVP, vertical, owner, status, vendor or budget code.</li>
         <li><b>Split by</b>: forecast next to actual, or one color per cluster, A&amp;P category, status and so on.</li>
         <li><b>Values</b>: forecast, actual or both. <b>Show</b> keeps the top 5, 10 or 15 and puts the rest in "Other".</li>
         <li><b>Budget</b> adds the yearly budget (by M1 zone, cluster or entity, or spread over the months). <b>Cumulative</b> adds up the months, so you see how spending builds up against the budget.</li>
@@ -103,7 +103,7 @@
         <tr><td><b>Awareness</b></td><td>Reach, engagement, website visits, new contacts (and registrations / attended for events)</td><td>Engagement rate, cost per 1,000 reached, cost per new contact, no-show rate</td></tr>
         <tr><td><b>Customer Intimacy</b></td><td>Customer accounts invited and attending, senior decision makers attending, follow-up meetings, satisfaction (1 to 10), influenced pipeline</td><td>Accounts attending vs invited, cost per attending account, meetings per item, influenced pipeline per € spent</td></tr>
       </table>
-      <p>The buttons at the top pick a goal. <b>All goals</b> shows one card per goal; click Open to see its KPIs, table and chart. A yellow note tells you how many items have no goal yet; <b>Show them</b> lists them so you can add one. Group by M1 zone, cluster, entity, SVP / vertical, goal, month or quarter, and pick what the chart shows.</p>
+      <p>The buttons at the top pick a goal. <b>All goals</b> shows one card per goal; click Open to see its KPIs, table and chart. A yellow note tells you how many items have no goal yet; <b>Show them</b> lists them so you can add one. Filter on SVP or vertical, and group by M1 zone, cluster, entity, SVP, vertical, goal, month or quarter, and pick what the chart shows.</p>
       <p>Rates and costs only count the items that have the numbers they need. For example, the no-show rate only uses items with both registrations and attended filled in. Satisfaction is an average, not a total.</p>
       <p>Outcomes is only as good as what is filled in: enter actuals after each event and link the right budget lines.</p>` },
 
@@ -128,19 +128,19 @@
 
     { id: "settings", title: "Settings", tabs: ["settings", "budget-structure", "data", "users", "trash"], admin: true, html: `
       <table class="help-table">
-        <tr><td><b>Entities &amp; clusters</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years. The active years decide which entities and clusters the forms and filters offer for a given year.</td></tr>
-        <tr><td><b>Budget structure</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Admins set the numbers or copy last year forward; others can view it. Non-admins also get a read-only list of the entities &amp; clusters.</td></tr>
-        <tr><td><b>SVPs &amp; verticals</b></td><td>The SVPs and vertical industries used for reporting on budget lines and events. "N.A." (not applicable) is always there; add verticals such as Manufacturing or Retail as needed. Click the years on a chip to set when it is used.</td></tr>
+        <tr><td><b>Budget structure &gt; Entities setup</b></td><td>Entities with their cluster, M1 zone, default owner, budget code per year and active years. The active years decide which entities and clusters the forms and filters offer for a given year.</td></tr>
+        <tr><td><b>Budget structure &gt; Budget</b></td><td>M1 zone &gt; cluster &gt; entity with each yearly budget. Admins set the numbers or copy last year forward; others can view it. Non-admins also get a read-only view of the entities setup.</td></tr>
+        <tr><td><b>SVPs &amp; verticals</b></td><td>Two lists used for reporting on budget lines and events: <b>SVPs</b> (such as Data &amp; AI or Customer Experience) and <b>Verticals</b>, the industries (such as BFSI or Manufacturing). A budget line or event can have one of each. "N.A." (not applicable) is always in both lists. Click the years on a chip to set when it is used. If an item is in the wrong list, click its arrow to move it: the budget lines and events that use it move with it.</td></tr>
         <tr><td><b>Event types &amp; A&amp;P</b></td><td>Event types (the means: Event, Tradeshow, ABM...) with their default A&amp;P category, and the A&amp;P categories budget lines are filed under. Each can have years (Active from / Until).</td></tr>
         <tr><td><b>Countries, Statuses</b></td><td>The other lists used in budget lines and events. Statuses can have years too.</td></tr>
         <tr><td><b>Users &amp; access</b></td><td>Add users, set role and home cluster, deactivate, reset a password to 1234. Also the admin pin.</td></tr>
         <tr><td><b>Data &amp; sharing</b></td><td>The shared folder, publish setup and budget &amp; events, file dates, backups and Excel exports, the second folder (bridge).</td></tr>
-        <tr><td><b>One-time cleanup</b> (in Data &amp; sharing)</td><td>Tidies the 2026 test-year data once: goals on events, old event types replaced, hidden domain tags turned into SVP / vertical where possible. Preview first, then Apply, then publish the setup and your budget &amp; events.</td></tr>
+        <tr><td><b>One-time cleanup</b> (in Data &amp; sharing)</td><td>Tidies the 2026 test-year data once: goals on events, old event types replaced, hidden domain tags turned into an SVP or vertical where possible. Preview first, then Apply, then publish the setup and your budget &amp; events.</td></tr>
         <tr><td><b>Bulk import</b></td><td>Load budget lines from an Excel file: pick the sheet, map the columns, check, import.</td></tr>
         <tr><td><b>Deleted items</b></td><td>Restore deleted lines and events, or delete them for good.</td></tr>
       </table>
       <h3>Lists per year</h3>
-      <p>Entities, SVPs / verticals, event types, A&amp;P categories and statuses can each have an <b>Active from</b> and <b>Until</b> year. A form only offers what is active in the year of the budget line or event (its date), and the lists update when you change the date. Something that stops is not deleted: items that already use it keep it, and reports and filters still show it. So to stop using a vertical or type from 2027, set Until to 2026 instead of deleting it.</p>
+      <p>Entities, SVPs, verticals, event types, A&amp;P categories and statuses can each have an <b>Active from</b> and <b>Until</b> year. A form only offers what is active in the year of the budget line or event (its date), and the lists update when you change the date. Something that stops is not deleted: items that already use it keep it, and reports and filters still show it. So to stop using a vertical or type from 2027, set Until to 2026 instead of deleting it.</p>
       <p>Reporting and Outcomes follow the year too: their cluster and entity lists only show what is active in the year you picked, plus anything that still has budget or lines that year.</p>
       <p>Setup changes are saved on your computer first. The bottom of the Settings menu shows when they are not published yet, with a <b>Publish setup</b> button.</p>
       <p><b>Adding a colleague:</b> add them in Users &amp; access, publish the setup, and tell them to connect to the shared folder and log in with 1234. When someone leaves, deactivate rather than delete.</p>` },

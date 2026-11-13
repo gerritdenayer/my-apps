@@ -60,8 +60,13 @@
     if (p.entity && !ent) warn.push(`Entity "${p.entity}" not found: pick it in the form.`);
     const owner = byName(set.users, p.owner);
     if (p.owner && !owner) warn.push(`Owner "${p.owner}" is not a user: pick an owner in the form.`);
-    const svp = byName(set.svps, p.svp);
-    if (p.svp && !svp) warn.push(`SVP / vertical "${p.svp}" not found.`);
+    // SVP and vertical are separate fields. Older proposals had one "svp" field that could hold a
+    // vertical: when that name is a vertical, it is used as the vertical.
+    let svp = byName(set.svps, p.svp);
+    let vert = byName(set.verticals, p.vertical);
+    if (p.svp && !svp && !p.vertical) { vert = byName(set.verticals, p.svp); }
+    if (p.svp && !svp && !vert) warn.push(`SVP "${p.svp}" not found.`);
+    if (p.vertical && !vert) warn.push(`Vertical "${p.vertical}" not found.`);
     const camp = byName((D.events || []).filter((x) => x.kind === "Campaign"), p.campaign);
     if (p.campaign && !camp) warn.push(`Campaign "${p.campaign}" not found.`);
     const countryIds = [], missingC = [];
@@ -79,6 +84,7 @@
       cluster: ent ? (ent.group || "") : (p.cluster || ""),
       ownerId: owner ? owner.id : (S.state.currentUserId || ""),
       svpId: svp ? svp.id : "",
+      verticalId: vert ? vert.id : "",
       campaignId: camp ? camp.id : "",
       campaignCode: p.campaignCode || "",
       countryIds,

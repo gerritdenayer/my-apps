@@ -14,7 +14,7 @@
 //     (taken from its type when it was inherited), then the type is removed from the line.
 //     The old types and the types that are really goals are deleted from the setup when no
 //     campaign or event uses them any more.
-//  4. Events with no SVP / vertical and exactly one old "Domains" tag that matches an SVP /
+//  4. Events with no SVP or vertical and exactly one old "Domains" tag that matches an SVP or
 //     vertical name get that value. Then the hidden "domains" and "scope" fields are removed.
 //  5. Rows still pointing at the old "None" SVP point at N.A. directly.
 // Everything it changes is stamped as updated (by the admin, now), so the shared-folder merge
@@ -36,7 +36,7 @@
     (S.GOALS || []).forEach((g) => { const ap = S.apCategoryForGoal(g.key); if (ap) apGoal[ap] = g.key; });
     const steps = [];
     const evs = d.events || [], acts = d.activities || [];
-    const svps = set.svps || [];
+    const svps = set.svps || [], verts = set.verticals || [];
     const aliases = set.svpAliases || {};
 
     // 1 + 2: goals on events
@@ -88,23 +88,25 @@
         what: apN ? `A&P category ${apN} (was set by its type)` : "Activity type removed; please pick an A&P category",
         fix: (x) => { if (!x.apCategoryId && ap) x.apCategoryId = ap; delete x.activityTypeId; } });
     });
-    // 4: domains -> SVP / vertical, then drop the old fields
+    // 4: domains -> SVP or vertical, then drop the old fields
     evs.forEach((e) => {
       const doms = Array.isArray(e.domains) ? e.domains : [];
       const hasOld = doms.length || (Array.isArray(e.scope) && e.scope.length) || "domains" in e || "scope" in e;
       if (!hasOld) return;
-      let svpTxt = "";
-      if (!e.svpId && doms.length === 1) {
-        const m = svps.find((s) => low(s.name) === low(doms[0]));
-        if (m) svpTxt = m.id;
+      let svpTxt = "", vertTxt = "";
+      if (doms.length === 1) {
+        const m = !e.svpId && svps.find((s) => low(s.name) === low(doms[0]));
+        const v = !e.verticalId && verts.find((s) => low(s.name) === low(doms[0]));
+        if (m) svpTxt = m.id; else if (v) vertTxt = v.id;
       }
-      steps.push({ kind: "event", id: e.id, name: e.name, quiet: !svpTxt,
-        what: svpTxt ? `SVP / vertical ${(svps.find((s) => s.id === svpTxt) || {}).name} (from its old domain tag)` : "Old domain tags removed",
-        fix: (x) => { if (svpTxt && !x.svpId) x.svpId = svpTxt; delete x.domains; delete x.scope; } });
+      const nm = svpTxt ? `SVP ${(svps.find((s) => s.id === svpTxt) || {}).name}` : vertTxt ? `Vertical ${(verts.find((s) => s.id === vertTxt) || {}).name}` : "";
+      steps.push({ kind: "event", id: e.id, name: e.name, quiet: !nm,
+        what: nm ? `${nm} (from its old domain tag)` : "Old domain tags removed",
+        fix: (x) => { if (svpTxt && !x.svpId) x.svpId = svpTxt; if (vertTxt && !x.verticalId) x.verticalId = vertTxt; delete x.domains; delete x.scope; } });
     });
     // 5: rows on an old SVP id
     [["line", acts], ["event", evs]].forEach(([k, list]) => list.forEach((r) => {
-      if (r.svpId && aliases[r.svpId]) steps.push({ kind: k, id: r.id, name: r.name, quiet: true, what: "SVP / vertical None → N.A.", fix: (x) => { x.svpId = aliases[x.svpId]; } });
+      if (r.svpId && aliases[r.svpId]) steps.push({ kind: k, id: r.id, name: r.name, quiet: true, what: "SVP None → N.A.", fix: (x) => { x.svpId = aliases[x.svpId]; } });
     }));
     // Types to delete: the two old ones, and the goal-named ones that no event uses after this.
     const evTypeAfter = new Set(evs.map((e) => {
@@ -139,7 +141,7 @@
     if (!(window.MB_AUTH && window.MB_AUTH.canSeeSettings && window.MB_AUTH.canSeeSettings())) return "";
     return `<div class="card" id="cu-card">
       <h2>One-time cleanup: 2026 test year</h2>
-      <p class="muted small">Moves 2026 values to the fields the app now uses (goals, event types, A&amp;P categories on budget lines, SVP / vertical) and removes what is no longer used (activity types on budget lines, old and goal-named types, hidden domain tags). Preview first; nothing changes until you click Apply. Afterwards, publish the setup and your budget &amp; events.</p>
+      <p class="muted small">Moves 2026 values to the fields the app now uses (goals, event types, A&amp;P categories on budget lines, SVP or vertical) and removes what is no longer used (activity types on budget lines, old and goal-named types, hidden domain tags). Preview first; nothing changes until you click Apply. Afterwards, publish the setup and your budget &amp; events.</p>
       <div style="display:flex;gap:8px;margin-top:8px"><button class="secondary" id="cu-preview" type="button">Preview cleanup</button></div>
       <div id="cu-out" style="margin-top:10px"></div>
     </div>`;
