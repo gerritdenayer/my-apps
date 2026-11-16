@@ -79,7 +79,8 @@
       <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
-      <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
+      <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner. The entity view drills into one cluster or entity.</p>
+      <p><b>Forecast and actual.</b> Each entity and cluster has three rows: <i>Forecast</i> (grey, in italics), <b>Actual</b> (in bold) and <b>Difference</b> (actual minus forecast). The difference is red with a + when you spent more than forecast, and green with a − when you spent less. It only counts months that have an actual, so months not booked yet do not show as "under forecast". An actual above its forecast also gets a light red background. Untick <b>Show difference</b> to hide that row; the app remembers your choice on that computer. The entity drill-down and the Excel export have the difference too.</p>
       <p>Under the matrix, <b>By A&amp;P category</b> shows the forecast and actual per A&amp;P category for the year and scope you picked.</p>
       <h3>Charts</h3>
       <p>Click <b>Charts</b> at the top to build your own chart from the same filters (year, quarter, month, cluster, entity, measure).</p>

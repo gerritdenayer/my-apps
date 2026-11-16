@@ -12,7 +12,30 @@
     showActual: true,       // matrix only, toggles between forecast and actual layer
     chart: null,
     collapsedGroups: null,  // Set of group names collapsed in the matrix (null = not yet initialized)
+    showDiff: (() => { try { return localStorage.getItem("mb_rep_showdiff") !== "0"; } catch (e) { return true; } })(),
   };
+
+  // Difference = actual - forecast, only for months that have an actual (a month with no actual
+  // yet is not "under forecast", it is just not booked). Returns 12 values (null = no actual) + total.
+  function diffOf(fArr, aArr) {
+    const d = aArr.map((a, i) => a ? a - (fArr[i] || 0) : null);
+    return { months: d, total: d.reduce((s, x) => s + (x || 0), 0), any: d.some((x) => x !== null) };
+  }
+  function fmtDiff(v) {
+    if (v === null) return "<span class='muted'>-</span>";
+    if (!v) return S.fmtMoney(0);
+    return (v > 0 ? "+" : "−") + S.fmtMoney(Math.abs(v));
+  }
+  function diffClass(v) { return v > 0 ? "diff-over" : v < 0 ? "diff-under" : ""; }
+  function diffRow(cls, label, fArr, aArr, extraAttrs) {
+    const d = diffOf(fArr, aArr);
+    return `<tr class="${cls} diff-row"${extraAttrs || ""}>
+      ${label}<td class="layer-diff" title="Actual minus forecast, for the months that have an actual">Difference</td>
+      ${d.months.map((v) => `<td class="num ${v === null ? "" : diffClass(v)}">${fmtDiff(v)}</td>`).join("")}
+      <td class="num ${diffClass(d.total)}"><strong>${d.any ? fmtDiff(d.total) : "<span class='muted'>-</span>"}</strong></td>
+      <td class="num"></td>
+    </tr>`;
+  }
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -206,8 +229,10 @@
       <div class="kpi-row">${kpiCards(matrix, yb)}</div>
       <div class="card">
         <div class="report-groupbar">
-          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse. <span style="color:var(--fg-991b1b);font-weight:600">Red amounts</span>: actual is above forecast.</span>
+          <span class="muted small">Grouped by cluster. Click a cluster to expand or collapse.
+            <span class="rep-legend"><span class="lg-f">Forecast</span> <span class="lg-a">Actual</span> <span class="diff-over">+ over forecast</span> <span class="diff-under">− under forecast</span></span></span>
           <span class="grow"></span>
+          <label class="inline-check small"><input type="checkbox" id="rg-diff" ${view.showDiff ? "checked" : ""}/> Show difference</label>
           <button id="rg-expand" class="linkbtn">Expand all</button>
           <button id="rg-collapse" class="linkbtn">Collapse all</button>
         </div>
@@ -235,6 +260,7 @@
 
       // Build entity detail rows first so the group header can show subtotals.
       let entityRows = "";
+      const rs = view.showDiff ? 3 : 2;   // rows per entity / cluster / total
       ents.forEach((e) => {
         const r = matrix[e.id];
         const totalF = r.forecast.reduce((s, x) => s + x, 0);
@@ -246,15 +272,15 @@
 
         entityRows += `
           <tr class="clickable-row entity-row" data-entity-id="${e.id}" title="Click to see these budget lines in Budget">
-            <td rowspan="2" class="entity-name">${S.escapeHtml(e.name)}</td>
-            <td class="muted">Forecast</td>
-            ${r.forecast.map(v => `<td class="num">${v ? S.fmtMoney(v) : "<span class='muted'>-</span>"}</td>`).join("")}
-            <td class="num"><strong>${S.fmtMoney(totalF)}</strong></td>
-            <td class="num" rowspan="2">${S.fmtMoney(budget)}</td>
+            <td rowspan="${rs}" class="entity-name">${S.escapeHtml(e.name)}</td>
+            <td class="layer-f">Forecast</td>
+            ${r.forecast.map(v => `<td class="num layer-f">${v ? S.fmtMoney(v) : "<span class='muted'>-</span>"}</td>`).join("")}
+            <td class="num layer-f"><strong>${S.fmtMoney(totalF)}</strong></td>
+            <td class="num" rowspan="${rs}">${S.fmtMoney(budget)}</td>
             <td class="num ${varianceCellClass(budget, totalF)}">${variance(budget, totalF)}</td>
           </tr>
-          <tr class="clickable-row entity-row" data-entity-id="${e.id}" title="Click to see these budget lines in Budget">
-            <td>Actual</td>
+          <tr class="clickable-row entity-row layer-a-row" data-entity-id="${e.id}" title="Click to see these budget lines in Budget">
+            <td class="layer-a">Actual</td>
             ${r.actual.map((v, i) => {
               const over = v > (r.forecast[i] || 0) && v > 0;
               return `<td class="num ${over ? "over-forecast" : ""}">${v ? S.fmtMoney(v) : "<span class='muted'>-</span>"}</td>`;
@@ -262,6 +288,7 @@
             <td class="num ${totalA > totalF ? "over-forecast" : ""}"><strong>${S.fmtMoney(totalA)}</strong></td>
             <td class="num ${varianceCellClass(budget, totalA)}">${variance(budget, totalA)}</td>
           </tr>
+          ${view.showDiff ? diffRow("clickable-row entity-row", "", r.forecast, r.actual, ` data-entity-id="${e.id}" title="Click to see these budget lines in Budget"`) : ""}
         `;
       });
 
@@ -273,15 +300,15 @@
       // Clickable group header carrying the group subtotals.
       html += `
         <tr class="group-row group-toggle" data-group="${S.escapeHtml(groupName)}" title="Click to expand or collapse">
-          <td rowspan="2"><span class="caret">${caret}</span> ${S.escapeHtml(groupName)} <span class="muted small">(${ents.length})</span></td>
-          <td>Forecast</td>
-          ${groupF.map(v => `<td class="num">${S.fmtMoney(v)}</td>`).join("")}
-          <td class="num">${S.fmtMoney(groupFY)}</td>
-          <td class="num" rowspan="2">${S.fmtMoney(groupB)}</td>
+          <td rowspan="${rs}"><span class="caret">${caret}</span> ${S.escapeHtml(groupName)} <span class="muted small">(${ents.length})</span></td>
+          <td class="layer-f">Forecast</td>
+          ${groupF.map(v => `<td class="num layer-f">${S.fmtMoney(v)}</td>`).join("")}
+          <td class="num layer-f">${S.fmtMoney(groupFY)}</td>
+          <td class="num" rowspan="${rs}">${S.fmtMoney(groupB)}</td>
           <td class="num ${varianceCellClass(groupB, groupFY)}">${variance(groupB, groupFY)}</td>
         </tr>
         <tr class="group-row group-toggle" data-group="${S.escapeHtml(groupName)}" title="Click to expand or collapse">
-          <td>Actual</td>
+          <td class="layer-a">Actual</td>
           ${groupA.map((v, i) => {
             const over = v > (groupF[i] || 0) && v > 0;
             return `<td class="num ${over ? "over-forecast" : ""}">${S.fmtMoney(v)}</td>`;
@@ -289,24 +316,26 @@
           <td class="num ${groupAY > groupFY ? "over-forecast" : ""}">${S.fmtMoney(groupAY)}</td>
           <td class="num ${varianceCellClass(groupB, groupAY)}">${variance(groupB, groupAY)}</td>
         </tr>
+        ${view.showDiff ? diffRow("group-row group-toggle", "", groupF, groupA, ` data-group="${S.escapeHtml(groupName)}" title="Click to expand or collapse"`) : ""}
       `;
       if (!collapsed) html += entityRows;
     });
 
     const gFY = gF.reduce((s, x) => s + x, 0);
     const gAY = gA.reduce((s, x) => s + x, 0);
+    const rsT = view.showDiff ? 3 : 2;
     html += `
         <tr class="total-row">
           <td>Grand total</td>
-          <td>Forecast</td>
-          ${gF.map(v => `<td class="num">${S.fmtMoney(v)}</td>`).join("")}
-          <td class="num">${S.fmtMoney(gFY)}</td>
-          <td class="num" rowspan="2">${S.fmtMoney(gB)}</td>
+          <td class="layer-f">Forecast</td>
+          ${gF.map(v => `<td class="num layer-f">${S.fmtMoney(v)}</td>`).join("")}
+          <td class="num layer-f">${S.fmtMoney(gFY)}</td>
+          <td class="num" rowspan="${rsT}">${S.fmtMoney(gB)}</td>
           <td class="num ${varianceCellClass(gB, gFY)}">${variance(gB, gFY)}</td>
         </tr>
         <tr class="total-row">
           <td></td>
-          <td>Actual</td>
+          <td class="layer-a">Actual</td>
           ${gA.map((v, i) => {
             const over = v > (gF[i] || 0) && v > 0;
             return `<td class="num ${over ? "over-forecast" : ""}">${S.fmtMoney(v)}</td>`;
@@ -314,6 +343,7 @@
           <td class="num ${gAY > gFY ? "over-forecast" : ""}">${S.fmtMoney(gAY)}</td>
           <td class="num ${varianceCellClass(gB, gAY)}">${variance(gB, gAY)}</td>
         </tr>
+        ${view.showDiff ? diffRow("total-row", "<td></td>", gF, gA) : ""}
       </tbody>
           </table>
         </div>
@@ -369,6 +399,8 @@
         renderBody();
       };
     });
+    const dt = document.getElementById("rg-diff");
+    if (dt) dt.onchange = () => { view.showDiff = dt.checked; try { localStorage.setItem("mb_rep_showdiff", dt.checked ? "1" : "0"); } catch (e) {} renderBody(); };
     const exp = document.getElementById("rg-expand");
     const col = document.getElementById("rg-collapse");
     if (exp) exp.onclick = () => { view.collapsedGroups = new Set(); renderBody(); };
@@ -442,6 +474,7 @@
         <td>${S.escapeHtml(e.name)}</td>
         <td class="num">${S.fmtMoney(tf)}</td>
         <td class="num ${ta > tf ? "over-forecast" : ""}">${S.fmtMoney(ta)}</td>
+        ${(() => { const d = diffOf(r.forecast, r.actual); return `<td class="num ${diffClass(d.total)}">${d.any ? fmtDiff(d.total) : "<span class='muted'>-</span>"}</td>`; })()}
         <td class="num">${S.fmtMoney(b)}</td>
         <td class="num ${varianceCellClass(b, ta)}">${variance(b, ta)}</td>
       </tr>`;
@@ -456,10 +489,10 @@
         ${ents.length === 0 ? `<p class="muted">No entities in this cluster.</p>` : `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Entity</th><th class="num">Forecast YTD</th><th class="num">Actual YTD</th><th class="num">Yearly budget</th><th class="num">Variance</th></tr></thead>
+            <thead><tr><th>Entity</th><th class="num">Forecast YTD</th><th class="num">Actual YTD</th><th class="num" title="Actual minus forecast, for the months that have an actual">Difference</th><th class="num">Yearly budget</th><th class="num">Variance</th></tr></thead>
             <tbody>
               ${rows}
-              <tr class="total-row"><td>Total</td><td class="num">${S.fmtMoney(totalF)}</td><td class="num">${S.fmtMoney(totalA)}</td><td class="num">${S.fmtMoney(totalB)}</td><td class="num ${varianceCellClass(totalB, totalA)}">${variance(totalB, totalA)}</td></tr>
+              <tr class="total-row"><td>Total</td><td class="num">${S.fmtMoney(totalF)}</td><td class="num">${S.fmtMoney(totalA)}</td>${(() => { const d = diffOf(monthF, monthA); return `<td class="num ${diffClass(d.total)}">${d.any ? fmtDiff(d.total) : "-"}</td>`; })()}<td class="num">${S.fmtMoney(totalB)}</td><td class="num ${varianceCellClass(totalB, totalA)}">${variance(totalB, totalA)}</td></tr>
             </tbody>
           </table>
         </div>`}
@@ -632,6 +665,8 @@
       const budget = yb[e.id] || 0;
       matRows.push([e.group || "", e.name, "Forecast", ...r.forecast, totalF, budget, budget - totalF]);
       matRows.push([e.group || "", e.name, "Actual", ...r.actual, totalA, budget, budget - totalA]);
+      const d = diffOf(r.forecast, r.actual);
+      matRows.push([e.group || "", e.name, "Difference (actual - forecast)", ...d.months.map((v) => v === null ? "" : v), d.any ? d.total : "", "", ""]);
     });
     const ws2 = XLSX.utils.aoa_to_sheet(matRows);
     XLSX.utils.book_append_sheet(wb, ws2, "Monthly matrix");

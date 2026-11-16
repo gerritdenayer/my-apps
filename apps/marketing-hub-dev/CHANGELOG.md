@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Reporting shows the gap between forecast and actual more clearly. The monthly matrix has a Difference row (actual minus forecast) for each entity, cluster and the grand total: red with a + when spending is above forecast, green with a − when it is below. Forecast is now grey and in italics, actual in bold, and an actual above forecast gets a light red background. Only months with an actual count, so months not booked yet do not look like savings. Untick "Show difference" to hide the row. The entity drill-down has a Difference column, and the Excel export a Difference row.
+
 ## [v5.3.2] - 2026-11-16 - SVP and vertical as separate fields
 
 ### Changed

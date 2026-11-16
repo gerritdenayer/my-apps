@@ -91,6 +91,8 @@
   --fg-b91c1c: #b91c1c;
   --fg-c2410c: #c2410c;
   --fg-fecaca: #fecaca;
+  --fg-d1d5db: #d1d5db;
+  --fg-bbf7d0: #bbf7d0;
   --fg-ff6a00: #ff6a00;
   --fg-ffffff: #ffffff;
 }
@@ -184,6 +186,8 @@ html[data-theme="dark"] {
   --fg-b91c1c: #e69393;
   --fg-c2410c: #eea88b;
   --fg-fecaca: #fecaca;
+  --fg-d1d5db: #d1d5db;
+  --fg-bbf7d0: #bbf7d0;
   --fg-ff6a00: #ff6a00;
   --fg-ffffff: #ffffff;
 }
@@ -645,3 +649,25 @@ html[data-theme="dark"] .env-banner { color: #000; }
 .va-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow: auto; }
 .va-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; background: var(--bg-ffffff); border: 1px solid var(--bd-e5e7eb); border-radius: 6px; padding: 8px 10px; }
 .va-item:hover { background: var(--bg-f3f4f6); }
+
+/* Reporting matrix: forecast vs actual. Forecast is the lighter, italic layer; actual is the solid
+   one; the Difference row (actual - forecast) is red when over forecast, green when under. */
+#tab-reporting td.layer-f { color: var(--fg-6b7280); font-style: italic; }
+#tab-reporting td.layer-a { font-weight: 600; }
+#tab-reporting tr.layer-a-row td.num { font-weight: 500; }
+#tab-reporting td.over-forecast { background: var(--bg-fef2f2); }
+#tab-reporting .diff-row td { font-size: 12px; border-bottom: 2px solid var(--bd-e5e7eb); }
+#tab-reporting td.layer-diff { color: var(--fg-6b7280); }
+#tab-reporting .diff-over { color: var(--fg-991b1b); font-weight: 600; }
+#tab-reporting .diff-under { color: var(--fg-166534); font-weight: 600; }
+#tab-reporting .total-row td.layer-f { color: var(--fg-d1d5db); }
+#tab-reporting .total-row td.over-forecast { background: transparent; }
+#tab-reporting .total-row .diff-over { color: var(--fg-fecaca); }
+#tab-reporting .total-row .diff-under { color: var(--fg-bbf7d0); }
+#tab-reporting .total-row td.layer-diff { color: var(--fg-d1d5db); }
+.rep-legend { margin-left: 10px; display: inline-flex; gap: 10px; align-items: center; }
+.rep-legend .lg-f { color: var(--fg-6b7280); font-style: italic; }
+.rep-legend .lg-a { font-weight: 600; color: var(--fg-1a1a1a); }
+
+.report-groupbar .inline-check { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 0 0; font-weight: 400; cursor: pointer; }
+.report-groupbar .inline-check input { width: auto; margin: 0; }
