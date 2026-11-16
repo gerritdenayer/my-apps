@@ -9,7 +9,7 @@
     root.innerHTML = `
       <div class="card">
         <h2>Data management</h2>
-        <p class="muted small">Data lives in this browser. The setup (entities, clusters, M1, types, SVPs, statuses, users, yearly budgets, codes) is best owned by the admin and shared as one file. Budget and events are exchanged and merged between people. Every export is stamped with who made it and when.</p>
+        <p class="muted small">Data lives in this browser. The setup (entities, clusters, M1, types, SVPs, verticals, statuses, users, yearly budgets, codes) is best owned by the admin and shared as one file. Budget and events are exchanged and merged between people. Every export is stamped with who made it and when.</p>
         <h3 style="margin-bottom:6px">Export</h3>
         <div class="actions" style="justify-content:flex-start; flex-wrap: wrap; gap: 8px;">
           <button class="primary" id="dm-export-all">Export everything (backup)</button>
@@ -62,6 +62,7 @@
         if (kind === "budget-events") return mergeBudgetEventsFile(incoming, file.name);
         const choice = await fullFileChoice(file.name);
         if (choice === "replace") {
+          S.normalizeSvpVerticals(incoming);
           S.state.data = incoming; S.scheduleSave(); S.notify();
           S.toast("All data replaced", "success");
         } else if (choice === "setup") {
@@ -135,13 +136,13 @@
       const e = S.entityById(a.entityId) || {};
       return [a.date || "", a.name || "", e.group || "", e.name || "",
         ((S.apCategoryForActivity(a) || {}).name || ap(a.apCategoryId)),
-        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "",
+        (S.statusById(a.statusId) || {}).name || "", (S.svpById(a.svpId) || {}).name || "", (S.verticalById(a.verticalId) || {}).name || "",
         (S.userById(a.ownerId) || {}).name || "", a.vendor || "", a.poNumber || "",
         a.forecastGross || 0, a.forecastPartner || 0, (a.forecastGross || 0) - (a.forecastPartner || 0),
         a.actualGross || 0, a.actualPartner || 0, (a.actualGross || 0) - (a.actualPartner || 0), a.notes || ""];
     });
     writeSheet("budget-lines", "Budget lines",
-      ["Date", "Expenditure or Activity", "Cluster", "Entity", "A&P category", "Status", "SVP / vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
+      ["Date", "Expenditure or Activity", "Cluster", "Entity", "A&P category", "Status", "SVP", "Vertical", "Owner", "Vendor", "PO number", "Forecast gross", "Forecast partner", "Forecast net", "Actual gross", "Actual partner", "Actual net", "Notes"],
       rows);
   }
   function exportEventsXlsx(year, quarters) {
@@ -151,11 +152,11 @@
       const en = S.entityById(e.entityId) || {};
       return [e.start || "", e.end || "", e.name || "", e.kind || "Event",
         S.goalLabel(e.goal), (S.actTypeById(e.activityTypeId) || {}).name || "", en.group || "", en.name || "",
-        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", campN(e),
+        (S.userById(e.ownerId) || {}).name || "", (S.svpById(e.svpId) || {}).name || "", (S.verticalById(e.verticalId) || {}).name || "", campN(e),
         S.countryNamesOf(e.countryIds).join(", "), e.campaignCode || "", e.info || ""];
     });
     writeSheet("campaigns-events", "Events",
-      ["Start", "End", "Name", "Kind", "Goal", "Activity type", "Cluster", "Entity", "Owner", "SVP / vertical", "Campaign", "Countries", "Campaign code", "Notes"],
+      ["Start", "End", "Name", "Kind", "Goal", "Activity type", "Cluster", "Entity", "Owner", "SVP", "Vertical", "Campaign", "Countries", "Campaign code", "Notes"],
       rows);
   }
 
@@ -175,6 +176,7 @@
     const D = S.state.data;
     const entN = (id) => (S.entityById(id) || {}).name || "";
     const svpN = (id) => (S.svpById(id) || {}).name || "";
+    const vertN = (id) => (S.verticalById(id) || {}).name || "";
     const typeN = (id) => (S.actTypeById(id) || {}).name || "";
     const statN = (id) => (S.statusById(id) || {}).name || "";
     const userN = (id) => (S.userById(id) || {}).name || "";
@@ -183,7 +185,8 @@
       { key: "date", label: "Date", text: (a) => a.date || "", sort: (a) => a.date || "" },
       { key: "name", label: "Name", text: (a) => a.name || "", sort: (a) => (a.name || "").toLowerCase() },
       { key: "entity", label: "Entity", text: (a) => entN(a.entityId), sort: (a) => entN(a.entityId).toLowerCase() },
-      { key: "svp", label: "SVP / vertical", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
+      { key: "svp", label: "SVP", text: (a) => svpN(a.svpId), sort: (a) => svpN(a.svpId).toLowerCase() },
+      { key: "vertical", label: "Vertical", text: (a) => vertN(a.verticalId), sort: (a) => vertN(a.verticalId).toLowerCase() },
       { key: "apcat", label: "A&P category", text: (a) => (S.apCategoryForActivity(a) || {}).name || "", sort: (a) => ((S.apCategoryForActivity(a) || {}).name || "").toLowerCase() },
       { key: "status", label: "Status", text: (a) => statN(a.statusId), sort: (a) => statN(a.statusId).toLowerCase() },
       { key: "owner", label: "Owner", text: (a) => userN(a.ownerId), sort: (a) => userN(a.ownerId).toLowerCase() },
@@ -197,7 +200,8 @@
       { key: "entity", label: "Entity", text: (e) => entN(e.entityId), sort: (e) => entN(e.entityId).toLowerCase() },
       { key: "type", label: "Type", text: (e) => typeN(e.activityTypeId), sort: (e) => typeN(e.activityTypeId).toLowerCase() },
       { key: "owner", label: "Owner", text: (e) => userN(e.ownerId), sort: (e) => userN(e.ownerId).toLowerCase() },
-      { key: "svp", label: "SVP / vertical", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
+      { key: "svp", label: "SVP", text: (e) => svpN(e.svpId), sort: (e) => svpN(e.svpId).toLowerCase() },
+      { key: "vertical", label: "Vertical", text: (e) => vertN(e.verticalId), sort: (e) => vertN(e.verticalId).toLowerCase() },
       { key: "campaign", label: "Campaign", text: (e) => campN(e), sort: (e) => campN(e).toLowerCase() },
       { key: "countries", label: "Countries", text: (e) => S.countryNamesOf(e.countryIds).join(", "), sort: (e) => S.countryNamesOf(e.countryIds).join(", ").toLowerCase() },
     ];
@@ -210,7 +214,8 @@
     if (ds === "activities") return [
       { field: "statusId", label: "Status", opts: () => opt(D.settings.statuses || []) },
       { field: "ownerId", label: "Owner", opts: users },
-      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
+      { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
+      { field: "verticalId", label: "Vertical", opts: () => opt(D.settings.verticals || []) },
       { field: "apCategoryId", label: "A&P category", opts: () => opt(D.settings.apCategories || []) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "date", label: "Date", date: true },
@@ -218,7 +223,8 @@
     return [
       { field: "ownerId", label: "Owner", opts: users },
       { field: "activityTypeId", label: "Event type", opts: () => opt(D.settings.activityTypes || []) },
-      { field: "svpId", label: "SVP / vertical", opts: () => opt(D.settings.svps || []) },
+      { field: "svpId", label: "SVP", opts: () => opt(D.settings.svps || []) },
+      { field: "verticalId", label: "Vertical", opts: () => opt(D.settings.verticals || []) },
       { field: "campaignId", label: "Campaign", opts: () => opt((D.events || []).filter((x) => x.kind === "Campaign")) },
       { field: "entityId", label: "Entity", opts: () => opt(D.settings.entities || []) },
       { field: "kind", label: "Kind", opts: () => [{ v: "Event", l: "Event" }, { v: "Campaign", l: "Campaign" }] },
@@ -754,7 +760,7 @@
   }
 
   async function loadSetupFile(incoming, name) {
-    const ok = await S.confirmDialog(`Replace your setup (entities, clusters, M1, types, SVPs, statuses, users, yearly budgets, codes) with the one in "${name}"? Your budget lines and events stay. Export a backup first if unsure.`);
+    const ok = await S.confirmDialog(`Replace your setup (entities, clusters, M1, types, SVPs, verticals, statuses, users, yearly budgets, codes) with the one in "${name}"? Your budget lines and events stay. Export a backup first if unsure.`);
     if (!ok) return false;
     S.state.data = API.replaceSetup(S.state.data, incoming);
     S.scheduleSave(); S.notify();
@@ -1298,11 +1304,11 @@
       return String(v);
     };
     const names = (arr) => arr.length > 4 ? arr.slice(0, 4).join(", ") + " and " + (arr.length - 4) + " more" : arr.join(", ");
-    const LABELS = { users: ["user", "users"], entities: ["entity", "entities"], svps: ["SVP / vertical", "SVPs / verticals"],
+    const LABELS = { users: ["user", "users"], entities: ["entity", "entities"], svps: ["SVP", "SVPs"], verticals: ["vertical", "verticals"],
       activityTypes: ["event type", "event types"], partners: ["partner", "partners"], statuses: ["status", "statuses"],
       apCategories: ["A&P category", "A&P categories"], countryGroups: ["country group", "country groups"],
       m1Levels: ["M1 zone", "M1 zones"], yearlyBudgets: ["yearly budgets"], budgetCodes: ["budget codes"],
-      svpAliases: ["SVP / vertical aliases"], adminPinHash: ["admin pin"] };
+      svpAliases: ["SVP aliases"], adminPinHash: ["admin pin"] };
     const FIELD = { homeCluster: "home cluster", homeCountryId: "home country", group: "cluster", defaultOwnerId: "default owner", startYear: "active from", endYear: "until",
       apCategoryId: "A&P category", activeYears: "active years", m1: "M1 zone", name: "name", role: "role", active: "active", email: "email" };
     const label = (k, n) => { const l = LABELS[k]; return l ? (n === 1 || !l[1] ? l[0] : l[1]) : k; };

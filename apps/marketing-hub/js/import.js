@@ -9,6 +9,7 @@
     activityType: ["a&p category", "category", "activity type"],
     status: ["activity status", "status"],
     svp: ["svp"],
+    vertical: ["vertical", "industry"],
     vendor: ["partner involved", "partner", "vendor", "supplier"],
     notes: ["description", "notes", "comments"],
     entity: ["entity", "country", "m3"],
@@ -119,7 +120,8 @@
       ["name", "Activity name *"],
       ["activityType", "A&P Category"],
       ["status", "Status"],
-      ["svp", "SVP / vertical"],
+      ["svp", "SVP"],
+      ["vertical", "Vertical"],
       ["vendor", "Vendor / Partner"],
       ["notes", "Notes / Description"],
       ["entity", "Entity (M3 / country)"],
@@ -172,7 +174,7 @@
       <h3>Preview <span class="muted small" id="imp-count"></span></h3>
       <div class="table-wrap" style="max-height: 240px; overflow-y: auto;">
         <table>
-          <thead><tr><th>Date</th><th>Name</th><th>Entity</th><th>Status</th><th>Type</th><th>SVP / vertical</th><th class="num">EUR</th></tr></thead>
+          <thead><tr><th>Date</th><th>Name</th><th>Entity</th><th>Status</th><th>Type</th><th>SVP</th><th>Vertical</th><th class="num">EUR</th></tr></thead>
           <tbody id="imp-preview"></tbody>
         </table>
       </div>
@@ -222,6 +224,7 @@
           <td>${S.escapeHtml(a.status || "-")}</td>
           <td>${S.escapeHtml(a.activityType || "-")}</td>
           <td>${S.escapeHtml(a.svp || "-")}</td>
+          <td>${S.escapeHtml(a.vertical || "-")}</td>
           <td class="num">${a.forecastGross.toLocaleString("en-US")}</td>
         </tr>
       `).join("");
@@ -257,7 +260,18 @@
 
       const status = normalizeStatus(getCell(row, state.mapping.status));
       const category = strOrEmpty(getCell(row, state.mapping.activityType));
-      const svp = strOrEmpty(getCell(row, state.mapping.svp));
+      let svp = strOrEmpty(getCell(row, state.mapping.svp));
+      let vertical = strOrEmpty(getCell(row, state.mapping.vertical));
+      // One column for both (an old "SVP / vertical" column): a known vertical goes to Vertical,
+      // anything else to SVP. A value typed in the wrong column is moved when the name is known.
+      const vNames = new Set((S.state.data.settings.verticals || []).map((x) => (x.name || "").trim().toLowerCase()));
+      const sNames = new Set((S.state.data.settings.svps || []).map((x) => (x.name || "").trim().toLowerCase()));
+      if (state.mapping.svp !== -1 && state.mapping.svp === state.mapping.vertical) {
+        if (vNames.has(svp.toLowerCase())) svp = ""; else vertical = "";
+      } else {
+        if (svp && !vertical && vNames.has(svp.toLowerCase())) { vertical = svp; svp = ""; }
+        if (vertical && !svp && sNames.has(vertical.toLowerCase())) { svp = vertical; vertical = ""; }
+      }
       let vendor = strOrEmpty(getCell(row, state.mapping.vendor));
       if (vendor.toUpperCase() === "TBC") vendor = "";
       const notes = strOrEmpty(getCell(row, state.mapping.notes));
@@ -272,7 +286,7 @@
         if (!amount || isNaN(amount)) continue;
         const date = `${state.year}-${String(m + 1).padStart(2, "0")}-01`;
         acts.push({
-          name, date, entity, svp, activityType: category, status, vendor, notes,
+          name, date, entity, svp, vertical, activityType: category, status, vendor, notes,
           forecastGross: amount,
         });
       }
@@ -308,12 +322,13 @@
   async function doImport(acts) {
     if (acts.length === 0) return S.toast("Nothing to import. Check the column mapping.", "error");
     const ok = await S.confirmDialog(
-      `Import ${acts.length} budget lines? Missing entities, SVPs, types and statuses will be created automatically.`
+      `Import ${acts.length} budget lines? Missing entities, SVPs, verticals, types and statuses will be created automatically.`
     );
     if (!ok) return;
 
     const data = S.state.data;
     data.settings.svps = data.settings.svps || [];
+    data.settings.verticals = data.settings.verticals || [];
     data.settings.activityTypes = data.settings.activityTypes || [];
     data.settings.statuses = data.settings.statuses || [];
     data.settings.entities = data.settings.entities || [];
@@ -339,6 +354,7 @@
         date: a.date,
         entityId: findOrCreate(data.settings.entities, a.entity, { group: "" }),
         svpId: findOrCreate(data.settings.svps, a.svp),
+        verticalId: findOrCreate(data.settings.verticals, a.vertical),
         apCategoryId: findOrCreate(data.settings.apCategories = data.settings.apCategories || [], a.activityType),
         statusId: findOrCreate(data.settings.statuses, a.status),
         ownerId: S.state.currentUserId || "",

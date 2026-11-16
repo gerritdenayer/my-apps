@@ -152,8 +152,9 @@
       // link to them. Drop the old lookup and the globalCampaignId references.
       migrateDropGlobalCampaigns(data);
       normalizeSortLists(data);
-      // SVP / vertical list: one "N.A." instead of "All" and "None" (setup only, rows untouched).
-      if (S.normalizeSvps(data.settings)) S.scheduleSave();
+      // SVP and Vertical: two lists, each with one "N.A." ("All" and "None" folded into it). The
+      // first load after 5.4 splits the old combined list and moves old rows over (nothing is lost).
+      if (S.normalizeSvpVerticals(data)) S.scheduleSave();
 
       if (!data.settings.yearlyBudgets) data.settings.yearlyBudgets = {};
       if (!data.settings.budgetCodes) data.settings.budgetCodes = {};
@@ -404,9 +405,9 @@
   // Settings with the other sections. "tab" is the panel that renders it; admin-only sections ask
   // for the pin when the user is not an admin (same rule as before).
   const SETTINGS_ITEMS = [
-    { group: "Structure" },
-    { key: "entities", label: "Entities & clusters", tab: "settings", admin: true, viewTab: "budget-structure", viewCap: "viewStructure" },
-    { key: "budget-structure", label: "Budget structure", tab: "budget-structure", cap: "viewStructure" },
+    { group: "Budget structure" },
+    { key: "entities", label: "Entities setup", tab: "settings", admin: true, viewTab: "budget-structure", viewCap: "viewStructure" },
+    { key: "budget-structure", label: "Budget", tab: "budget-structure", cap: "viewStructure" },
     { group: "Lists" },
     { key: "svps", label: "SVPs & verticals", tab: "settings", admin: true },
     { key: "countries", label: "Countries", tab: "settings", admin: true },
@@ -622,7 +623,7 @@
   function normalizeSortLists(data) {
     const s = data.settings || {};
     const byName = (a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
-    ["svps", "activityTypes", "statuses", "apCategories", "users", "partners", "entities"].forEach((k) => {
+    ["svps", "verticals", "activityTypes", "statuses", "apCategories", "users", "partners", "entities"].forEach((k) => {
       if (Array.isArray(s[k])) s[k].sort(byName);
     });
     if (Array.isArray(s.m1Levels)) s.m1Levels.sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: "base" }));

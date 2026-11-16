@@ -9,15 +9,16 @@
     quarter: "",
     month: "",
     goal: "all",                     // all | lead | awareness | intimacy | none
-    dim: "group",                    // m1 | group | entity | svp | goal | month | quarter
+    dim: "group",                    // m1 | group | entity | svp | vertical | goal | month | quarter
     scope: { m1: "", cluster: "", entityId: "" },
     svpFilter: "",
+    verticalFilter: "",
     kind: "all",                     // all | Event | Campaign
     chartMetric: "",                 // a metric or KPI key; "" = the goal's first
     chart: null,
   };
 
-  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP / vertical", goal: "Goal", month: "Month", quarter: "Quarter" };
+  const DIM_LABELS = { m1: "M1 zone", group: "Cluster", entity: "Entity", svp: "SVP", vertical: "Vertical", goal: "Goal", month: "Month", quarter: "Quarter" };
   const GOAL_TABS = [["all", "All goals"], ["lead", "Lead Generation"], ["awareness", "Awareness"], ["intimacy", "Customer Intimacy"], ["none", "No goal"]];
   const M = (k) => S.OUTCOME_METRICS.find((m) => m.key === k);
 
@@ -123,6 +124,10 @@
       const svp = ev.svpId ? S.svpById(ev.svpId) : null;
       return { key: S.canonicalSvpId(ev.svpId) || "_none", label: svp ? svp.name : "Unspecified" };
     }
+    if (view.dim === "vertical") {
+      const v = ev.verticalId ? S.verticalById(ev.verticalId) : null;
+      return { key: (v && v.id) || "_none", label: v ? v.name : "Unspecified" };
+    }
     // m1, group or entity -> resolve entity
     const eid = resolvedEntityId(ev);
     const ent = eid ? S.entityById(eid) : null;
@@ -137,6 +142,7 @@
     if (view.kind !== "all" && (ev.kind || "Event") !== view.kind) return false;
     if (!matchesScope(ev)) return false;
     if (view.svpFilter && S.canonicalSvpId(ev.svpId) !== view.svpFilter) return false;
+    if (view.verticalFilter && (ev.verticalId || "") !== view.verticalFilter) return false;
     if (!ignoreGoal && view.goal !== "all") {
       if (view.goal === "none") { if (ev.goal) return false; }
       else if (ev.goal !== view.goal) return false;
@@ -234,7 +240,8 @@
         <div><label>Month</label><select id="o-month">${S.monthOptions(view.month)}</select></div>
         <div><label>Group by</label><select id="o-dim">${Object.entries(DIM_LABELS).map(([v, l]) => `<option ${view.dim === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         ${S.scopeFilterHtml("o", view.scope, null, view.year === "all" ? 0 : view.year)}
-        <div><label>SVP / vertical</label><select id="o-svp"><option value="">All</option>${(data.settings.svps || []).map((s) => `<option ${view.svpFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+        <div><label>SVP</label><select id="o-svp"><option value="">All</option>${(data.settings.svps || []).map((s) => `<option ${view.svpFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+        <div><label>Vertical</label><select id="o-vertical"><option value="">All</option>${(data.settings.verticals || []).map((s) => `<option ${view.verticalFilter === s.id ? "selected" : ""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
         <div><label>Kind</label><select id="o-kind">${[["all", "All"], ["Event", "Events"], ["Campaign", "Campaigns"]].map(([v, l]) => `<option ${view.kind === v ? "selected" : ""} value="${v}">${l}</option>`).join("")}</select></div>
         <div><label>Chart</label><select id="o-chart-metric"></select></div>
         <div class="grow"></div>
@@ -250,6 +257,7 @@
     root.querySelector("#o-dim").onchange = (e) => { view.dim = e.target.value; renderBody(); };
     S.wireScopeFilter(root, "o", view.scope, renderBody, null, view.year === "all" ? 0 : view.year);
     root.querySelector("#o-svp").onchange = (e) => { view.svpFilter = e.target.value; renderBody(); };
+    root.querySelector("#o-vertical").onchange = (e) => { view.verticalFilter = e.target.value; renderBody(); };
     root.querySelector("#o-kind").onchange = (e) => { view.kind = e.target.value; renderBody(); };
     root.querySelector("#o-chart-metric").onchange = (e) => { view.chartMetric = e.target.value; drawChart(buildRows()); };
     root.querySelector("#o-export").onclick = exportExcel;

@@ -31,7 +31,8 @@
     { key: "name", label: "Name", def: 340 },
     { key: "entity", label: "Entity", def: 150 },
     { key: "code", label: "Budget code", def: 120 },
-    { key: "svp", label: "SVP / vertical", def: 130 },
+    { key: "svp", label: "SVP", def: 130 },
+    { key: "vertical", label: "Vertical", def: 120 },
     { key: "apcat", label: "A&P category", def: 170 },
     { key: "status", label: "Status", def: 110 },
     { key: "owner", label: "Owner", def: 120 },
@@ -55,13 +56,15 @@
     // By default the table shows what fits a laptop and matters most: date, name (with type and
     // vendor under it), entity, status, owner and the net amounts. The rest is one click away in
     // Columns. (v2 key: everyone gets this default once, then their own choice is kept.)
-    const def = ["quarter", "code", "svp", "apcat", "vendor", "po", "clink", "fG", "fP", "aG", "aP", "createdBy", "createdAt", "updatedBy", "updatedAt"];
+    const def = ["quarter", "code", "svp", "vertical", "apcat", "vendor", "po", "clink", "fG", "fP", "aG", "aP", "createdBy", "createdAt", "updatedBy", "updatedAt"];
     const raw = localStorage.getItem("mb_budget_hidden_v2");
     if (raw === null) return new Set(def);
     try {
       const set = new Set(JSON.parse(raw));
       // The A&P category column is new (it replaced "Type"): hidden at first, as it shows under the name.
       if (!localStorage.getItem("mb_budget_seen_apcat")) { set.add("apcat"); localStorage.setItem("mb_budget_seen_apcat", "1"); }
+      // The Vertical column is new (5.4): it follows the SVP column (shown if SVP is shown).
+      if (!localStorage.getItem("mb_budget_seen_vertical")) { if (set.has("svp")) set.add("vertical"); localStorage.setItem("mb_budget_seen_vertical", "1"); }
       return set;
     } catch (e) { return new Set(def); }
   }
@@ -302,6 +305,7 @@
       case "entity": return ((S.entityById(a.entityId) || {}).name || "").toLowerCase();
       case "code": return S.budgetCodeForActivity(a).toLowerCase();
       case "svp": return ((S.svpById(a.svpId) || {}).name || "").toLowerCase();
+      case "vertical": return ((S.verticalById(a.verticalId) || {}).name || "").toLowerCase();
       case "apcat": return ((S.apCategoryForActivity(a) || {}).name || "").toLowerCase();
       case "status": return ((S.statusById(a.statusId) || {}).name || "").toLowerCase();
       case "owner": return ((S.userById(a.ownerId) || {}).name || "").toLowerCase();
@@ -351,6 +355,7 @@
       case "entity": return (S.entityById(a.entityId) || {}).name || "";
       case "code": return S.budgetCodeForActivity(a);
       case "svp": return (S.svpById(a.svpId) || {}).name || "";
+      case "vertical": return (S.verticalById(a.verticalId) || {}).name || "";
       case "apcat": return (S.apCategoryForActivity(a) || {}).name || "";
       case "status": return (S.statusById(a.statusId) || {}).name || "";
       case "owner": return (S.userById(a.ownerId) || {}).name || "";
@@ -458,7 +463,7 @@
     const title = `${S.escapeHtml(ent.name)}${code ? ` <span class="bsum-code">${S.escapeHtml(code)}</span>` : ""} <span class="muted">&middot; ${view.year}</span>`;
     if (!budget) {
       host.innerHTML = `<div class="bsum card"><div class="bsum-title">${title}</div>
-        <div class="muted small">No yearly budget set for ${view.year}. Planned spend so far: <strong>${S.fmtMoney(fNet)}</strong> net (${n} line${n === 1 ? "" : "s"}). Set the budget in Settings &gt; Budget structure.</div>${codeShareHtml(code, cid)}</div>`;
+        <div class="muted small">No yearly budget set for ${view.year}. Planned spend so far: <strong>${S.fmtMoney(fNet)}</strong> net (${n} line${n === 1 ? "" : "s"}). Set the budget in Settings &gt; Budget structure &gt; Budget.</div>${codeShareHtml(code, cid)}</div>`;
       return;
     }
     host.innerHTML = `<div class="bsum card">
@@ -597,6 +602,7 @@
         const aNet = (a.actualGross || 0) - (a.actualPartner || 0);
         const ent = S.entityById(a.entityId);
         const svp = S.svpById(a.svpId);
+        const vert = S.verticalById(a.verticalId);
         const apc = S.apCategoryForActivity(a);
         const st = S.statusById(a.statusId);
         const own = S.userById(a.ownerId);
@@ -615,6 +621,7 @@
           entity: `<td class="bc-entity">${ent ? S.escapeHtml(ent.name) : "<span class='muted'>-</span>"}</td>`,
           code: `<td class="bc-code">${S.budgetCodeForActivity(a) ? S.escapeHtml(S.budgetCodeForActivity(a)) : "<span class='muted'>-</span>"}</td>`,
           svp: `<td class="bc-svp">${svp ? S.escapeHtml(svp.name) : "<span class='muted'>-</span>"}</td>`,
+          vertical: `<td class="bc-vertical">${vert ? S.escapeHtml(vert.name) : "<span class='muted'>-</span>"}</td>`,
           apcat: `<td class="bc-apcat">${apc ? S.escapeHtml(apc.name) : "<span class='muted'>-</span>"}</td>`,
           status: `<td class="bc-status">${statusName ? `<span class="status status-${statusSlug}">${S.escapeHtml(statusName)}</span>` : "<span class='muted'>-</span>"}</td>`,
           owner: `<td class="bc-owner">${own ? S.escapeHtml(own.name) : "<span class='muted'>-</span>"}</td>`,
@@ -683,6 +690,7 @@
       apCategoryId: "",
       entityId: "",
       svpId: "",
+      verticalId: "",
       activityTypeId: "",
       statusId: defaultStatusId(),
       ownerId: S.state.currentUserId || "",
@@ -737,16 +745,20 @@
             <div><label>Entity *</label><select id="m-entity"></select></div>
           </div>
           <div class="row">
-            <div><label>SVP / vertical</label>
+            <div><label>SVP</label>
               <select id="m-svp"><option value="">Select...</option>
                 ${data.settings.svps.map(s => `<option ${S.canonicalSvpId(a.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
               </select></div>
+            <div><label>Vertical</label>
+              <select id="m-vertical"><option value="">Select...</option>
+                ${(data.settings.verticals||[]).map(s => `<option ${a.verticalId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}
+              </select></div>
+          </div>
+          <div class="row">
             <div><label>A&amp;P category *</label>
               <select id="m-apcat"><option value="">Select...</option>
                 ${(data.settings.apCategories||[]).map(c => `<option ${((S.apCategoryForActivity(a)||{}).id)===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name)}</option>`).join("")}
               </select></div>
-          </div>
-          <div class="row">
             <div><label>Owner</label>
               <select id="m-owner"><option value="">Unassigned</option>${S.activeOwnerOptions(a.ownerId)}</select></div>
           </div>
@@ -828,10 +840,11 @@
     // Preselect canonical so duplicates map to the visible option
     populateEntityOptions(initialGroup, S.canonicalEntityId(a.entityId));
     // Changing the date can change which year's entities apply; refresh the list.
-    // SVP / vertical, A&P category and status: only those used in the line's year.
+    // SVP, vertical, A&P category and status: only those used in the line's year.
     const yearLists = () => {
       const st = S.state.data.settings, yr = lineYear();
       S.yearFilterSelect(modal.querySelector("#m-svp"), st.svps, yr);
+      S.yearFilterSelect(modal.querySelector("#m-vertical"), st.verticals, yr);
       S.yearFilterSelect(modal.querySelector("#m-apcat"), st.apCategories, yr);
       S.yearFilterSelect(modal.querySelector("#m-status"), st.statuses, yr);
     };
@@ -919,6 +932,7 @@
         apCategoryId: modal.querySelector("#m-apcat").value,
         entityId,
         svpId: modal.querySelector("#m-svp").value,
+        verticalId: modal.querySelector("#m-vertical").value,
         activityTypeId: undefined, // budget lines no longer have an activity type (A&P category instead)
         statusId: modal.querySelector("#m-status").value,
         ownerId: modal.querySelector("#m-owner").value,
@@ -1004,6 +1018,7 @@
     view.colFilters = {};
     const addEq = (key, name) => { if (name) view.colFilters[key] = { op: "eq", value: name }; };
     if (f.svpId) addEq("svp", (S.svpById(f.svpId) || {}).name);
+    if (f.verticalId) addEq("vertical", (S.verticalById(f.verticalId) || {}).name);
     if (f.apCategoryId) addEq("apcat", (S.apCategoryById(f.apCategoryId) || {}).name);
     if (f.statusId) addEq("status", (S.statusById(f.statusId) || {}).name);
     if (f.ownerId) addEq("owner", (S.userById(f.ownerId) || {}).name);

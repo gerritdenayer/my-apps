@@ -496,7 +496,8 @@
               <tr>
                 <th>Date</th>
                 <th>Name</th>
-                <th>SVP / vertical</th>
+                <th>SVP</th>
+                <th>Vertical</th>
                 <th>A&amp;P category</th>
                 <th>Status</th>
                 <th>Owner</th>
@@ -521,6 +522,7 @@
                   <td>${S.fmtDate(a.date)}</td>
                   <td>${S.escapeHtml(a.name)}</td>
                   <td>${S.escapeHtml((S.svpById(a.svpId)||{}).name || "")}</td>
+                  <td>${S.escapeHtml((S.verticalById(a.verticalId)||{}).name || "")}</td>
                   <td>${S.escapeHtml((S.apCategoryForActivity(a)||{}).name || "")}</td>
                   <td>${S.escapeHtml((S.statusById(a.statusId)||{}).name || "")}</td>
                   <td>${S.escapeHtml((S.userById(a.ownerId)||{}).name || "")}</td>
@@ -600,7 +602,8 @@
       Name: a.name,
       Entity: (S.entityById(a.entityId)||{}).name || "",
       "Entity group": (S.entityById(a.entityId)||{}).group || "",
-      "SVP / vertical": (S.svpById(a.svpId)||{}).name || "",
+      SVP: (S.svpById(a.svpId)||{}).name || "",
+      Vertical: (S.verticalById(a.verticalId)||{}).name || "",
       "A&P category": (S.apCategoryForActivity(a)||{}).name || "",
       Status: (S.statusById(a.statusId)||{}).name || "",
       Owner: (S.userById(a.ownerId)||{}).name || "",

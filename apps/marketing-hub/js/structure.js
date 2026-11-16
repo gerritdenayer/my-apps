@@ -78,8 +78,8 @@
 
     if (ents.length === 0) {
       html += allEnts.length === 0
-        ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Entities &amp; clusters.</p>`
-        : `<p class="bs-empty">No entities are active in ${view.year}. Set each entity's "Active from / Until" years in Settings &gt; Entities &amp; clusters.</p>`;
+        ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Budget structure &gt; Entities setup.</p>`
+        : `<p class="bs-empty">No entities are active in ${view.year}. Set each entity's "Active from / Until" years in Settings &gt; Budget structure &gt; Entities setup.</p>`;
       root.innerHTML = html;
       wire(root, canEdit);
       return;
@@ -186,7 +186,7 @@
         <div><label>Budget code year</label><select id="bs-year">${yearOptions()}</select></div>
         <div class="muted small bs-ro">View only. Ask an admin to add or change an entity, its cluster or its codes.</div>
       </div>
-      <div class="card"><h2 style="margin:0 0 4px">Entities &amp; clusters</h2>
+      <div class="card"><h2 style="margin:0 0 4px">Entities setup</h2>
         <p class="muted small" style="margin:0 0 10px">Every entity with its cluster, M1 zone, default owner, budget code for ${view.year} and the years it is in use. Entities not in use in ${view.year} are greyed out.</p>
         <div class="table-wrap"><table>
           <thead><tr><th>Entity</th><th>Cluster</th><th>M1 zone</th><th>Default owner</th><th>Budget code (${view.year})</th><th>In use</th></tr></thead>

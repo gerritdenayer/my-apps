@@ -633,6 +633,8 @@ html[data-theme="dark"] .env-banner { color: #000; }
 #tab-outcomes .o-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .chip .chip-years { font-weight: 500; font-size: 11px; opacity: .75; border-left: 1px solid var(--bd-d1d5db); margin-left: 2px; padding-left: 6px; }
 .chip .chip-years:hover { opacity: 1; text-decoration: underline; }
+.chip .chip-move { font-weight: 600; font-size: 12px; opacity: .75; }
+.chip .chip-move:hover { opacity: 1; }
 .chip.chip-retired { opacity: .6; }
 #settings-nav button .sn-ro { margin-left: auto; font-size: 10px; font-weight: 600; color: var(--fg-6b7280); border: 1px solid var(--bd-d1d5db); border-radius: 8px; padding: 0 6px; }
 #tab-budget-structure .bs-ro { align-self: center; }

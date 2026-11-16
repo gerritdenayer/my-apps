@@ -256,6 +256,63 @@
     });
     return changed;
   }
+
+  // ---- SVP and Vertical are two separate fields (since 5.4) ----
+  // settings.svps = SVPs, settings.verticals = verticals (industries). Each list has its own "N.A.".
+  // Rows store svpId and verticalId. Before 5.4 there was one list ("SVP / vertical") and rows only
+  // had svpId. The names below are the verticals in that old list; everything else is an SVP.
+  // An admin can move an item to the other list in Settings if a name lands on the wrong side.
+  const VERTICAL_NAMES = ["bfsi", "manufacturing"];
+  function verticalById(id) { return (state.data.settings.verticals || []).find((x) => x.id === id); }
+  function naOf(list) { return (list || []).find((x) => (x.name || "").trim().toLowerCase() === "n.a.") || null; }
+  // Make sure both lists exist with one "N.A." each, split the old combined list once, and move old
+  // rows over. Safe to run many times (on load and after every merge or setup import): a row is only
+  // touched while it has no verticalId field yet, which means it was saved by an older version.
+  // Works on a whole data object (settings + activities + events). Returns true when something changed.
+  function normalizeSvpVerticals(data) {
+    if (!data || !data.settings) return false;
+    const s = data.settings;
+    let changed = normalizeSvps(s);
+    if (!Array.isArray(s.verticals)) {
+      // One-time split of the old combined list. Items keep their ids, so rows stay linked.
+      const isVert = (x) => VERTICAL_NAMES.includes((x.name || "").trim().toLowerCase());
+      s.verticals = (s.svps || []).filter(isVert);
+      s.svps = (s.svps || []).filter((x) => !isVert(x));
+      changed = true;
+    }
+    if (!naOf(s.verticals)) { s.verticals.push({ id: window.MB_API.uid(), name: "N.A." }); changed = true; }
+    const svpNa = naOf(s.svps), vertNa = naOf(s.verticals);
+    const vertIds = new Set(s.verticals.map((v) => v.id));
+    const canon = (id) => ((s.svpAliases || {})[id]) || id || "";
+    [data.activities, data.events].forEach((rows) => (rows || []).forEach((r) => {
+      if (!r || Object.prototype.hasOwnProperty.call(r, "verticalId")) return;
+      const c = canon(r.svpId);
+      if (c && vertIds.has(c)) { r.verticalId = c; r.svpId = ""; }          // was a vertical
+      else if (c && svpNa && c === svpNa.id) { r.verticalId = vertNa.id; } // N.A. meant neither applies
+      else r.verticalId = "";                                              // an SVP, or nothing set
+      changed = true;
+    }));
+    return changed;
+  }
+  // Move one list item to the other list (SVPs <-> Verticals) and re-point every row that uses it.
+  // Nothing is overwritten: if a row already has a value in the other field, the move is refused.
+  // Returns { moved: rows changed } or { blocked: names of rows in the way }.
+  function moveSvpVertical(id, toVerticals) {
+    const s = state.data.settings;
+    const from = toVerticals ? s.svps : s.verticals, to = toVerticals ? s.verticals : s.svps;
+    const it = (from || []).find((x) => x.id === id);
+    if (!it || (it.name || "").trim().toLowerCase() === "n.a.") return { blocked: [] };
+    const fFrom = toVerticals ? "svpId" : "verticalId", fTo = toVerticals ? "verticalId" : "svpId";
+    const canon = (v) => toVerticals ? canonicalSvpId(v) : (v || "");
+    const rows = [...(state.data.activities || []), ...(state.data.events || [])].filter((r) => canon(r[fFrom]) === id);
+    // A target that is only "N.A." may be replaced; a real value may not.
+    const toNa = naOf(to), canonTo = (v) => toVerticals ? (v || "") : canonicalSvpId(v);
+    const blocked = rows.filter((r) => r[fTo] && !(toNa && canonTo(r[fTo]) === toNa.id)).map((r) => r.name || "(no name)");
+    if (blocked.length) return { blocked };
+    from.splice(from.indexOf(it), 1); to.push(it);
+    rows.forEach((r) => { r[fTo] = id; r[fFrom] = ""; });
+    return { moved: rows.length };
+  }
   function countryById(id) { return (state.data.settings.countries || []).find((x) => x.id === id); }
   // Sorted country names for a list of ids (used to show an event's countries).
   function countryNamesOf(ids) {
@@ -343,7 +400,7 @@
   }
   // Is an entity in use for a given year? startYear/endYear are optional bounds (inclusive).
   // Empty year (or no bounds) means always active, so nothing is hidden unless the user sets it.
-  // Any list item (SVP / vertical, event type, A&P category, status) can have startYear / endYear,
+  // Any list item (SVP, vertical, event type, A&P category, status) can have startYear / endYear,
   // the same as entities. Forms only offer the items active in the item's year; old items keep theirs.
   function activeInYear(it, year) { return entityActiveInYear(it, year); }
   function yearRangeLabel(it) {
@@ -553,7 +610,7 @@
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     yearButtons, moreFilters, CLINK_LABEL, normUrl, customerLinkOfEvent, contentWithLink, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
-    entityById, svpById, canonicalSvpId, normalizeSvps, countryById, countryNamesOf, actTypeById, userById, homeCluster, statusById, activeOwnerOptions,
+    entityById, svpById, canonicalSvpId, normalizeSvps, verticalById, normalizeSvpVerticals, moveSvpVertical, countryById, countryNamesOf, actTypeById, userById, homeCluster, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,
     eventEntityName, eventOwnerName,

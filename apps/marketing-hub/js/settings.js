@@ -1,4 +1,4 @@
-// Settings tab: manage entities, SVPs, activity types, users, yearly budgets, JSONBin config
+// Settings tab: manage entities, SVPs, verticals, activity types, users, yearly budgets, JSONBin config
 (function () {
   const S = window.MB_STATE;
   const API = window.MB_API;
@@ -61,8 +61,8 @@
         <button id="set-saveall" class="primary" disabled>Save all changes</button>
       </div>
       <div class="card" data-sec="entities">
-        <h2>Entity structure</h2>
-        <p class="muted small">Hierarchy is M1 &gt; Cluster &gt; Entity. Cluster is used for subtotals in reporting; M1 is the top zone level and is a reporting filter. The budget code is per year. The yearly budget amounts are set in Settings &gt; Budget structure.</p>
+        <h2>Entities setup</h2>
+        <p class="muted small">Hierarchy is M1 &gt; Cluster &gt; Entity. Cluster is used for subtotals in reporting; M1 is the top zone level and is a reporting filter. The budget code is per year. The yearly budget amounts are set in Settings &gt; Budget structure &gt; Budget.</p>
         <div class="filter-bar">
           <div><label>Budget code year</label><select id="ent-year">${yearOptions()}</select></div>
         </div>
@@ -85,12 +85,22 @@
       </div>
 
       <div class="card" data-sec="svps">
-        <h2>SVPs &amp; verticals</h2>
-        <p class="muted small">Used for reporting: an SVP or a vertical industry per budget line and campaign / event. "N.A." (not applicable) is always in the list. Click the years on a chip to limit when it is offered in forms (for example a vertical used from 2027): older items keep theirs.</p>
+        <h2>SVPs</h2>
+        <p class="muted small">Used for reporting: the SVP a budget line or campaign / event belongs to. "N.A." (not applicable) is always in the list. Click the years on a chip to limit when it is offered in forms: older items keep theirs. Click the arrow to move an item to Verticals if it belongs there.</p>
         <div id="svps-list" class="chip-list"></div>
         <div class="row">
-          <div><label>New SVP or vertical</label><input id="new-svp" type="text" placeholder="e.g. Manufacturing" /></div>
+          <div><label>New SVP</label><input id="new-svp" type="text" placeholder="e.g. Data &amp; AI" /></div>
           <div style="display:flex; align-items:end;"><button class="primary" id="add-svp">Add</button></div>
+        </div>
+      </div>
+
+      <div class="card" data-sec="svps">
+        <h2>Verticals</h2>
+        <p class="muted small">Used for reporting: the vertical industry a budget line or campaign / event targets. "N.A." (not applicable) is always in the list. The years and the arrow work the same as for SVPs.</p>
+        <div id="verticals-list" class="chip-list"></div>
+        <div class="row">
+          <div><label>New vertical</label><input id="new-vertical" type="text" placeholder="e.g. Manufacturing" /></div>
+          <div style="display:flex; align-items:end;"><button class="primary" id="add-vertical">Add</button></div>
         </div>
       </div>
 
@@ -161,6 +171,7 @@
     renderEntities();
     renderM1();
     renderSvps();
+    renderVerticals();
     renderCountries();
     renderCountryGroups();
     renderTypes();
@@ -214,13 +225,23 @@
       root.querySelector("#new-m1").value = "";
       persistAndRefresh();
     };
-    root.querySelector("#add-svp").onclick = () => {
-      const name = root.querySelector("#new-svp").value.trim();
+    // SVPs and verticals: a name may only be in one of the two lists.
+    const addSvpVert = (inputId, key) => {
+      const name = root.querySelector(inputId).value.trim();
       if (!name) return;
-      S.state.data.settings.svps.push({ id: API.uid(), name });
-      root.querySelector("#new-svp").value = "";
+      const st = S.state.data.settings;
+      const low = name.toLowerCase();
+      const inSvps = (st.svps || []).some((x) => (x.name || "").trim().toLowerCase() === low);
+      const inVerts = (st.verticals || []).some((x) => (x.name || "").trim().toLowerCase() === low);
+      if ((inSvps || inVerts) && low !== "n.a.") return S.toast(`"${name}" is already in ${inSvps ? "SVPs" : "Verticals"}`, "error");
+      if (low === "n.a.") return S.toast("N.A. is already in the list", "error");
+      st[key] = st[key] || [];
+      st[key].push({ id: API.uid(), name });
+      root.querySelector(inputId).value = "";
       persistAndRefresh();
     };
+    root.querySelector("#add-svp").onclick = () => addSvpVert("#new-svp", "svps");
+    root.querySelector("#add-vertical").onclick = () => addSvpVert("#new-vertical", "verticals");
     root.querySelector("#add-country").onclick = () => {
       const name = root.querySelector("#new-country").value.trim();
       if (!name) return;
@@ -401,12 +422,38 @@
     });
   }
 
-  function renderSvps() {
-    renderChipList("svps-list", S.state.data.settings.svps, (id) => {
-      const lines = (S.state.data.activities || []).filter((a) => S.canonicalSvpId(a.svpId) === id).length;
-      const evs = (S.state.data.events || []).filter((e) => S.canonicalSvpId(e.svpId) === id).length;
+  function svpVertUsage(field, canon) {
+    return (id) => {
+      const lines = (S.state.data.activities || []).filter((a) => canon(a[field]) === id).length;
+      const evs = (S.state.data.events || []).filter((e) => canon(e[field]) === id).length;
       return lines + evs ? { n: lines + evs, text: `${lines} budget line${lines === 1 ? "" : "s"} and ${evs} campaign${evs === 1 ? "" : "s"} / event${evs === 1 ? "" : "s"} use it.` } : 0;
-    }, "SVP / vertical");
+    };
+  }
+  // Move an SVP to Verticals or back. Rows using it move to the other field with it.
+  async function moveSvpVert(id, toVerticals) {
+    const st = S.state.data.settings;
+    const it = (toVerticals ? st.svps : st.verticals).find((x) => x.id === id);
+    if (!it) return;
+    const used = svpVertUsage(toVerticals ? "svpId" : "verticalId", toVerticals ? S.canonicalSvpId : (v) => v || "")(id);
+    const n = used ? used.n : 0;
+    const msg = `Move "${it.name}" to ${toVerticals ? "Verticals" : "SVPs"}?` +
+      (n ? ` The ${n} budget line(s) and campaign(s) / event(s) that use it get it as their ${toVerticals ? "vertical" : "SVP"} instead.` : "");
+    if (!await S.confirmDialog(msg)) return;
+    const res = S.moveSvpVertical(id, toVerticals);
+    if (res.blocked) {
+      const list = res.blocked.slice(0, 5).join(", ") + (res.blocked.length > 5 ? ` and ${res.blocked.length - 5} more` : "");
+      S.toast(`Not moved: ${res.blocked.length} item(s) already have a different ${toVerticals ? "vertical" : "SVP"} (${list}). Change those first.`, "error");
+      return;
+    }
+    persistAndRefresh();
+  }
+  function renderSvps() {
+    renderChipList("svps-list", S.state.data.settings.svps, svpVertUsage("svpId", S.canonicalSvpId), "SVP", "",
+      { symbol: "→", title: "Move to Verticals", fn: (id) => moveSvpVert(id, true) });
+  }
+  function renderVerticals() {
+    renderChipList("verticals-list", S.state.data.settings.verticals || [], svpVertUsage("verticalId", (v) => v || ""), "vertical", "",
+      { symbol: "←", title: "Move to SVPs", fn: (id) => moveSvpVert(id, false) });
   }
   function renderCountries() {
     const host = document.getElementById("countries-list");
@@ -572,17 +619,20 @@
     }, "Status");
   }
 
-  function renderChipList(elId, items, usageFn, label, dir) {
+  // extra (optional): one more button on each chip, e.g. { symbol, title, fn(id) }. Not shown on "N.A.".
+  function renderChipList(elId, items, usageFn, label, dir, extra) {
     const host = document.getElementById(elId);
     if (items.length === 0) { host.innerHTML = "<p class='muted'>None yet.</p>"; return; }
     const disp = items.slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
     if (dir === "desc") disp.reverse();
     host.innerHTML = disp.map(it => `
-      <span class="chip ${it.endYear && it.endYear < new Date().getFullYear() ? "chip-retired" : ""}" data-id="${it.id}">${S.escapeHtml(it.name)}<button class="chip-years" title="Set the years this is offered in forms">${S.escapeHtml(S.yearRangeLabel(it))}</button><button class="chip-del" title="Remove">×</button></span>
+      <span class="chip ${it.endYear && it.endYear < new Date().getFullYear() ? "chip-retired" : ""}" data-id="${it.id}">${S.escapeHtml(it.name)}<button class="chip-years" title="Set the years this is offered in forms">${S.escapeHtml(S.yearRangeLabel(it))}</button>${extra && (it.name || "").trim().toLowerCase() !== "n.a." ? `<button class="chip-move" title="${S.escapeHtml(extra.title)}">${extra.symbol}</button>` : ""}<button class="chip-del" title="Remove">×</button></span>
     `).join("");
     host.querySelectorAll(".chip").forEach((chip) => {
       const id = chip.dataset.id;
       chip.querySelector(".chip-years").onclick = () => editYears(items.find((x) => x.id === id), label);
+      const mv = chip.querySelector(".chip-move");
+      if (mv) mv.onclick = () => extra.fn(id);
       chip.querySelector(".chip-del").onclick = async () => {
         const it = items.find((x) => x.id === id);
         const used = usageFn(id);

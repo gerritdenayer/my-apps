@@ -17,7 +17,7 @@
   // "list" in the left column (name, entity and dates), or "both". Remembered per browser.
   const NAMES_KEY = "mb_tl_names";
   const loadNames = () => { try { const v = localStorage.getItem(NAMES_KEY); return ["chart", "list", "both"].includes(v) ? v : "chart"; } catch (e) { return "chart"; } };
-  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "" };
+  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "", svp: "", vertical: "" };
 
   function ensureStyles() {
     if (document.getElementById("tl-styles")) return;
@@ -137,7 +137,8 @@
     if(dim==="cluster") return clusterOf(e);
     if(dim==="campaign") return campaignNameOf(e);
     if(dim==="goal") return S.goalLabel(e.goal)||"No goal";
-    if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP / vertical"; }
+    if(dim==="svp"){ const v=e.svpId?S.svpById(e.svpId):null; return (v&&v.name)||"No SVP"; }
+    if(dim==="vertical"){ const v=e.verticalId?S.verticalById(e.verticalId):null; return (v&&v.name)||"No vertical"; }
     return e[dim]||"Unspecified";
   }
   // The campaign an item belongs to: a campaign is itself; an event uses its linked campaign.
@@ -223,6 +224,8 @@
           <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
         <div class="tl-more-q"><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
         <div class="tl-more-month"><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
+        <div class="tl-more-svp"><label>SVP</label><select id="tl-svp"><option value="">All</option>${(data.settings.svps||[]).map(x=>`<option ${view.svp===x.id?"selected":""} value="${x.id}">${S.escapeHtml(x.name)}</option>`).join("")}<option value="__none" ${view.svp==="__none"?"selected":""}>(not set)</option></select></div>
+        <div class="tl-more-vertical"><label>Vertical</label><select id="tl-vertical"><option value="">All</option>${(data.settings.verticals||[]).map(x=>`<option ${view.vertical===x.id?"selected":""} value="${x.id}">${S.escapeHtml(x.name)}</option>`).join("")}<option value="__none" ${view.vertical==="__none"?"selected":""}>(not set)</option></select></div>
         ${(data.settings.countries||[]).length ? `<div><label>Country</label>
           <select id="tl-country">
             <option value="">All countries</option>
@@ -232,11 +235,11 @@
         <div class="bar-divider" aria-hidden="true"></div>
         <div><label>Group by</label>
           <select id="tl-group">
-            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["goal","Goal"],["none","None"]],view.groupBy)}
+            ${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["goal","Goal"],["svp","SVP"],["vertical","Vertical"],["none","None"]],view.groupBy)}
           </select></div>
         <div><label>Color by</label>
           <select id="tl-color">
-            ${opt([["kind","Event / Campaign"],["goal","Goal"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"]],view.colorBy)}
+            ${opt([["kind","Event / Campaign"],["goal","Goal"],["campaign","Campaign"],["cluster","Cluster"],["entity","Organising entity"],["type","Event type"],["svp","SVP"],["vertical","Vertical"]],view.colorBy)}
           </select></div>
         <div class="bar-spacer"></div>
         <div><label>&nbsp;</label><div><button id="tl-ppt" class="secondary" title="Download the current filtered view as a roadmap slide (PowerPoint)">Download agenda</button></div></div>
@@ -259,6 +262,8 @@
     root.querySelector("#tl-year").onchange=e=>{view.year=e.target.value;render();};
     root.querySelectorAll(".tlq-q").forEach(cb=>{ cb.onchange=()=>{ view.quarters=[...root.querySelectorAll(".tlq-q:checked")].map(x=>x.value); render(); }; });
     root.querySelector("#tl-month").onchange=e=>{view.month=e.target.value;render();};
+    root.querySelector("#tl-svp").onchange=e=>{view.svp=e.target.value;render();};
+    root.querySelector("#tl-vertical").onchange=e=>{view.vertical=e.target.value;render();};
     const tlCountry=root.querySelector("#tl-country");
     if(tlCountry) tlCountry.onchange=e=>{view.country=e.target.value;render();};
     S.wireScopeFilter(root,"tl",view.scope,render,null,view.year?+view.year:0);
@@ -272,6 +277,7 @@
     const pick=(sel)=>{ const el=root.querySelector(sel); return el?el.closest("div"):null; };
     S.moreFilters("timeline", root.querySelector(".tl-searchbox"), [
       root.querySelector(".tl-more-kind"), root.querySelector(".tl-more-q"), root.querySelector(".tl-more-month"),
+      root.querySelector(".tl-more-svp"), root.querySelector(".tl-more-vertical"),
       pick("#tl-m1"), pick("#tl-entity"), pick("#tl-country")]);
     const pptBtn=root.querySelector("#tl-ppt");
     if(pptBtn) pptBtn.onclick=()=>{
@@ -348,7 +354,7 @@
     const leg=document.getElementById("tl-legend");
     if(!leg) return;
     const cats=catList(events,view.colorBy);
-    const colorLabel={kind:"Event / Campaign",goal:"Goal",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type"}[view.colorBy];
+    const colorLabel={kind:"Event / Campaign",goal:"Goal",campaign:"Campaign",cluster:"Cluster",entity:"Organising entity",type:"Event type",svp:"SVP",vertical:"Vertical"}[view.colorBy];
     leg.innerHTML=`<span>Color by ${colorLabel}:</span>`+
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:var(--bg-999999)"></span>single-day</span>`+
@@ -367,6 +373,12 @@
   }
   // Country filter: a specific country shows events tagged with it, plus any event tagged with a
   // "global" country (like Pan-European). Untagged events show only under "All countries".
+  // SVP and Vertical filters (More filters). "__none" = items with no value set.
+  function matchesSvpVertical(e){
+    if(view.svp){ const c=S.canonicalSvpId(e.svpId); if(view.svp==="__none" ? !!c : c!==view.svp) return false; }
+    if(view.vertical){ const v=e.verticalId||""; if(view.vertical==="__none" ? !!v : v!==view.vertical) return false; }
+    return true;
+  }
   function matchesCountry(e){
     if(!view.country) return true;
     const ids=e.countryIds||[];
@@ -397,6 +409,8 @@
     {key:"countries",label:"Countries",         get:e=>shortList(S.countryNamesOf(e.countryIds||[]))},
     {key:"campaign", label:"Campaign",          get:e=>{ if((e.kind||"Event")==="Campaign") return ""; const n=campaignNameOf(e); return n==="No campaign"?"":n; }},
     {key:"partners", label:"Partners",          get:e=>shortList((e.partners||[]).map(p=>p.name).filter(Boolean))},
+    {key:"svp",      label:"SVP",               get:e=>{ const v=e.svpId?S.svpById(e.svpId):null; return v?v.name:""; }},
+    {key:"vertical", label:"Vertical",          get:e=>{ const v=e.verticalId?S.verticalById(e.verticalId):null; return v?v.name:""; }},
   ];
   // Long lists would not fit in a slide box: show the first three and count the rest.
   function shortList(arr){ return arr.length>3 ? arr.slice(0,3).join(", ")+" +"+(arr.length-3)+" more" : arr.join(", "); }
@@ -444,7 +458,7 @@
         <div><label>Include</label><select id="ag-kind">${opt([["all","Campaigns and events"],["Campaign","Campaigns only"],["Event","Events only"]],kind)}</select></div>
       </div>
       <div class="row">
-        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP / vertical"],["goal","Goal"],["none","None (one lane)"]],groupBy)}</select></div>
+        <div><label>Rows (lanes) by</label><select id="ag-group">${opt([["cluster","Cluster"],["campaign","Campaign"],["entity","Organising entity"],["type","Event type"],["kind","Event / Campaign"],["owner","Owner"],["svp","SVP"],["vertical","Vertical"],["goal","Goal"],["none","None (one lane)"]],groupBy)}</select></div>
         <div><label>Order of the lanes</label><select id="ag-lanesort">${opt([["az","A to Z"],["count","Most items first"],["start","Earliest start first"]],o.laneSort)}</select></div>
       </div>
       <div class="row">
@@ -541,6 +555,7 @@
       if(!ignoreKind&&view.kind!=="all"&&(e.kind||"Event")!==view.kind) return false;
       if(!matchesScope(e)) return false;
       if(!matchesCountry(e)) return false;
+      if(!matchesSvpVertical(e)) return false;
       if(ranges){
         // Show anything ACTIVE in any selected quarter/month: it may start before or end after it.
         const es=parseISO(e.start), ee=parseISO(e.end||e.start);
@@ -589,6 +604,7 @@
   function tooltipFor(e){
     const at=e.activityTypeId?((S.actTypeById(e.activityTypeId)||{}).name||""):"";
     const svp=e.svpId?((S.svpById(e.svpId)||{}).name||""):"";
+    const vert=e.verticalId?((S.verticalById(e.verticalId)||{}).name||""):"";
     const dates=(e.end&&e.end!==e.start)?`${S.fmtDate(e.start)} - ${S.fmtDate(e.end)}`:`${S.fmtDate(e.start)} (single day)`;
     return [
       e.name,
@@ -599,7 +615,8 @@
       `Cluster: ${clusterOf(e)}`,
       `Entity: ${S.eventEntityName(e)||"-"}`,
       `Owner: ${S.eventOwnerName(e)||"-"}`,
-      `SVP / vertical: ${svp||"-"}`,
+      `SVP: ${svp||"-"}`,
+      `Vertical: ${vert||"-"}`,
       ((e.kind||"Event")==="Event"?`Campaign: ${campaignNameOf(e)}`:null),
       `Countries: ${S.countryNamesOf(e.countryIds).join(", ")||"-"}`,
     ].filter(Boolean).join("\n");
@@ -761,11 +778,11 @@
     if(dAdd) dAdd.onclick=()=>{
       S.closeModal();
       window.MB_APP.switchTab("budget");
-      // Inherit the campaign's entity and SVP so a new line matches its campaign by default (still editable).
+      // Inherit the campaign's entity, SVP and vertical so a new line matches its campaign by default (still editable).
       window.MB_BUDGET.newActivity({
         eventIds:[id], name:e.name, date:e.start,
         apCategoryId:S.apCategoryForGoal(e.goal)||((S.actTypeById(e.activityTypeId)||{}).apCategoryId)||"",
-        entityId:e.entityId||"", svpId:e.svpId||"",
+        entityId:e.entityId||"", svpId:e.svpId||"", verticalId:e.verticalId||"",
       });
     };
   }
@@ -783,7 +800,7 @@
     const e=isEdit ? data.events.find(x=>x.id===id) : {
       id:API.uid(), name:"", kind:"Event", activityTypeId:"",
       start:new Date().toISOString().slice(0,10), end:"",
-      entityId:"", cluster:"", ownerId:"", campaignCode:"", svpId:"", campaignId:"",
+      entityId:"", cluster:"", ownerId:"", campaignCode:"", svpId:"", verticalId:"", campaignId:"",
       domains:[], scope:[], info:"",
       partners:[], content:[], outcomes:{},
       createdBy:S.actorId(), createdAt:new Date().toISOString(),
@@ -891,9 +908,14 @@
             </div>
             <div class="row-3">
               <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
-              <div><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
-              <div><label>SVP / vertical</label>
+              <div class="span-2"><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
+            </div>
+            <div class="row-3">
+              <div><label>SVP</label>
                 <select id="c-svp"><option value="">Select...</option>${(data.settings.svps||[]).map(s=>`<option ${S.canonicalSvpId(e.svpId)===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+              <div><label>Vertical</label>
+                <select id="c-vertical"><option value="">Select...</option>${(data.settings.verticals||[]).map(s=>`<option ${e.verticalId===s.id?"selected":""} value="${s.id}">${S.escapeHtml(s.name)}</option>`).join("")}</select></div>
+              <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
             </div>
             <div class="row-3">
               <div><label>Goal</label>
@@ -904,8 +926,7 @@
                 <select id="c-campaign"><option value="">(none)</option>${(data.events||[]).filter(x=>x.kind==="Campaign" && x.id!==e.id).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(c=>`<option ${e.campaignId===c.id?"selected":""} value="${c.id}">${S.escapeHtml(c.name||"(unnamed)")}</option>`).join("")}</select></div>
             </div>
             <div class="row-3">
-              <div><label>Campaign code</label><input id="c-code" type="text" value="${S.escapeHtml(e.campaignCode||"")}" /></div>
-              <div style="grid-column: span 2"><label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label><input id="c-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(S.customerLinkOfEvent(e))}" /></div>
+              <div style="grid-column: span 3"><label>CustomerLink Campaign <span class="muted small">(link to the campaign in CLinks)</span></label><input id="c-clink" type="text" inputmode="url" placeholder="https://..." value="${S.escapeHtml(S.customerLinkOfEvent(e))}" /></div>
             </div>
             <label>Notes</label>
             <textarea id="c-info" rows="4">${S.escapeHtml(e.info||"")}</textarea>
@@ -927,7 +948,7 @@
       <datalist id="c-partnerlist">${partnerNames.map(n=>`<option value="${S.escapeHtml(n)}"></option>`).join("")}</datalist>
       </div>
       <div class="modal-pane hidden" data-pane="budget">
-      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, event type, organising entity, owner and SVP / vertical are taken from the Details tab.</p>
+      <p class="muted small" style="margin:0 0 8px">Link existing budget line(s), create a new one, or leave it out for an agenda-only item. A new line uses the same fields as a normal budget line; name, dates, event type, organising entity, owner, SVP and vertical are taken from the Details tab.</p>
       <label>Budget line</label>
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
@@ -1050,10 +1071,11 @@
 
     // End date can never be before the start. Picking a start fills the end with the same day
     // (when empty or earlier) and blocks earlier dates, while staying editable for multi-day items.
-    // SVP / vertical, event type, A&P category and status: only those used in the item's year.
+    // SVP, vertical, event type, A&P category and status: only those used in the item's year.
     const yearLists=()=>{
       const st=S.state.data.settings, yr=evYear();
       S.yearFilterSelect(modal.querySelector("#c-svp"), st.svps, yr);
+      S.yearFilterSelect(modal.querySelector("#c-vertical"), st.verticals, yr);
       S.yearFilterSelect(modal.querySelector("#c-type"), st.activityTypes, yr);
       S.yearFilterSelect(modal.querySelector("#c-bapcat"), st.apCategories, yr);
       S.yearFilterSelect(modal.querySelector("#c-bstatus"), st.statuses, yr);
@@ -1286,6 +1308,7 @@
       const at=S.actTypeById(activityTypeId);
       const typeCatId=(at&&at.apCategoryId)||"";
       const svpId=modal.querySelector("#c-svp").value;
+      const verticalId=modal.querySelector("#c-vertical").value;
       const kindVal=modal.querySelector("#c-kind").value;
       const campaignId=(kindVal==="Campaign")?"":((modal.querySelector("#c-campaign")||{}).value||"");
       let primaryId=e.primaryActivityId||"";
@@ -1302,7 +1325,7 @@
         let line=primaryId ? (data.activities||[]).find(x=>x.id===primaryId) : null;
         const isNewLine=!line;
         if(isNewLine){
-          line={ id:API.uid(), eventIds:[], svpId:"", apCategoryId:"", vendor:"", poNumber:"", notes:"",
+          line={ id:API.uid(), eventIds:[], svpId:"", verticalId:"", apCategoryId:"", vendor:"", poNumber:"", notes:"",
                  createdBy:S.actorId(), createdAt:new Date().toISOString() };
           (data.activities=data.activities||[]).push(line);
           primaryId=line.id;
@@ -1310,7 +1333,7 @@
         const beforeSig=isNewLine?null:contentSig(line);
         const links=new Set(line.eventIds||[]); links.add(e.id);
         Object.assign(line,{
-          name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId,
+          name, date:start, eventIds:Array.from(links), entityId:orgEntityId, svpId, verticalId,
           apCategoryId:(bapc||typeCatId), statusId:bStatus,
           ownerId:(modal.querySelector("#c-owner").value||line.ownerId||S.state.currentUserId||""),
           vendor:bvendor, poNumber:bpo,
@@ -1368,7 +1391,7 @@
         entityId:orgEntityId,
         cluster,
         ownerId:modal.querySelector("#c-owner").value,
-        svpId, campaignId,
+        svpId, verticalId, campaignId,
         campaignCode:modal.querySelector("#c-code").value.trim(),
         goal:modal.querySelector("#c-goal").value||undefined,
         info:modal.querySelector("#c-info").value,

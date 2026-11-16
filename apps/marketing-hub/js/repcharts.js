@@ -12,8 +12,8 @@
 
   const TYPES = [["bar", "Bar"], ["stacked", "Stacked"], ["hbar", "Horizontal"], ["line", "Line"], ["pie", "Pie"], ["doughnut", "Doughnut"]];
   const DIMS = [["month", "Month"], ["quarter", "Quarter"], ["m1", "M1 zone"], ["cluster", "Cluster"], ["entity", "Entity"],
-    ["apcat", "A&P category"], ["svp", "SVP / vertical"], ["owner", "Owner"], ["status", "Status"], ["vendor", "Vendor"], ["code", "Budget code"]];
-  const SPLITS = [["fa", "Forecast / actual"], ["cluster", "Cluster"], ["m1", "M1 zone"], ["apcat", "A&P category"], ["svp", "SVP / vertical"], ["status", "Status"], ["owner", "Owner"]];
+    ["apcat", "A&P category"], ["svp", "SVP"], ["vertical", "Vertical"], ["owner", "Owner"], ["status", "Status"], ["vendor", "Vendor"], ["code", "Budget code"]];
+  const SPLITS = [["fa", "Forecast / actual"], ["cluster", "Cluster"], ["m1", "M1 zone"], ["apcat", "A&P category"], ["svp", "SVP"], ["vertical", "Vertical"], ["status", "Status"], ["owner", "Owner"]];
   const PRESETS = [
     ["fa-month", "Forecast vs actual by month", { type: "bar", group: "month", split: "fa", show: "both", budget: true, cumulative: false, top: 0 }],
     ["cum-budget", "Spend over the year vs budget", { type: "line", group: "month", split: "fa", show: "both", budget: true, cumulative: true, top: 0 }],
@@ -22,7 +22,8 @@
     ["apcat-pie", "Share per A&P category", { type: "doughnut", group: "apcat", split: "fa", show: "forecast", budget: false, cumulative: false, top: 0 }],
     ["month-cluster", "Monthly spend per cluster", { type: "stacked", group: "month", split: "cluster", show: "actual", budget: false, cumulative: false, top: 0 }],
     ["month-apcat", "Monthly forecast per A&P category", { type: "stacked", group: "month", split: "apcat", show: "forecast", budget: false, cumulative: false, top: 0 }],
-    ["svp", "By SVP / vertical", { type: "hbar", group: "svp", split: "fa", show: "both", budget: false, cumulative: false, top: 0 }],
+    ["svp", "By SVP", { type: "hbar", group: "svp", split: "fa", show: "both", budget: false, cumulative: false, top: 0 }],
+    ["vertical", "By vertical", { type: "hbar", group: "vertical", split: "fa", show: "both", budget: false, cumulative: false, top: 0 }],
     ["vendors", "Top 10 vendors (actual)", { type: "hbar", group: "vendor", split: "fa", show: "actual", budget: false, cumulative: false, top: 10 }],
     ["status-entity", "Status mix per cluster", { type: "stacked", group: "cluster", split: "status", show: "forecast", budget: false, cumulative: false, top: 0 }],
   ];
@@ -51,7 +52,8 @@
       case "cluster": return (ent && ent.group) || "No cluster";
       case "entity": return ent ? ent.name : "No entity";
       case "apcat": { const c = S.apCategoryForActivity(a); return c ? c.name : "No A&P category"; }
-      case "svp": { const v = S.svpById(a.svpId); return v ? v.name : "No SVP / vertical"; }
+      case "svp": { const v = S.svpById(a.svpId); return v ? v.name : "No SVP"; }
+      case "vertical": { const v = S.verticalById(a.verticalId); return v ? v.name : "No vertical"; }
       case "owner": { const u = S.userById(a.ownerId); return u ? u.name : "No owner"; }
       case "status": { const st = S.statusById(a.statusId); return st ? st.name : "No status"; }
       case "vendor": return (a.vendor || "").trim() || "No vendor";
