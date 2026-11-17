@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.3] - 2026-11-17 - Clearer forecast vs actual, simpler event results
 
 ### Changed
 - Event and campaign results are simpler: six fields for every item, whatever its goal. They are registrations, attendees, leads, contacts, customer accounts invited and customer accounts attending. Leads is the former MQL field and Contacts the former New contacts field, so numbers already entered carry over. The other results (SQL, opportunities, pipeline, revenue, reach, engagement, website visits, senior decision makers, follow-up meetings, satisfaction, influenced pipeline) are no longer shown in the form or in Outcomes, but numbers already entered stay in the data. Outcomes now calculates the no-show rate, cost per lead, cost per contact, accounts attending vs invited and cost per attending account for every goal.

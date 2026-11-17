@@ -1,5 +1,11 @@
 # Changelog
 
+## [v5.3.3] - 2026-11-17 - Clearer forecast vs actual, simpler event results
+
+### Changed
+- Event and campaign results are simpler: six fields for every item, whatever its goal. They are registrations, attendees, leads, contacts, customer accounts invited and customer accounts attending. Leads is the former MQL field and Contacts the former New contacts field, so numbers already entered carry over. The other results (SQL, opportunities, pipeline, revenue, reach, engagement, website visits, senior decision makers, follow-up meetings, satisfaction, influenced pipeline) are no longer shown in the form or in Outcomes, but numbers already entered stay in the data. Outcomes now calculates the no-show rate, cost per lead, cost per contact, accounts attending vs invited and cost per attending account for every goal.
+- Reporting shows the gap between forecast and actual more clearly. The monthly matrix has a Difference row (actual minus forecast) for each entity, cluster and the grand total: red with a + when spending is above forecast, green with a − when it is below. Forecast is now grey and in italics, actual in bold, and an actual above forecast gets a light red background. Only months with an actual count, so months not booked yet do not look like savings. Checkboxes (Show forecast, Show actual, Show difference) pick which rows you see, for example only the actuals; at least one stays ticked. The entity drill-down has a Difference column, and the Excel export a Difference row.
+
 ## [v5.3.2] - 2026-11-16 - SVP and vertical as separate fields
 
 ### Changed

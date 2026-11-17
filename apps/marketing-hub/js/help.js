@@ -65,7 +65,7 @@
         <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP, vertical, goal, event type, part of campaign, campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
         <tr><td><b>Budget</b></td><td>The budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
-        <tr><td><b>Outcomes</b></td><td>Target and actual for the KPIs that fit the goal you picked on Details. Other results are folded under "Other results".</td></tr>
+        <tr><td><b>Outcomes</b></td><td>Target and actual for six results: registrations, attendees, leads, contacts, customer accounts invited and customer accounts attending. They are the same for every goal.</td></tr>
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it. A new item starts on your home cluster, if an admin set one.</p>
       <p><b>Goal</b> is what the item is for: Lead Generation, Awareness or Customer Intimacy. Picking it fills the A&amp;P category on the Budget tab for you (Lead generation campaigns, Enhance market awareness and perception, Customer intimacy); you can still change it there. The event type is the means (Event, Tradeshow, ABM, Advertising...), so types that are really goals are not offered there. You can group and color the timeline by goal, use it for agenda lanes and details, and group Outcomes by it.</p>
@@ -79,7 +79,8 @@
       <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
-      <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner, and between forecast and actual. The entity view drills into one cluster or entity.</p>
+      <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner. The entity view drills into one cluster or entity.</p>
+      <p><b>Forecast and actual.</b> Each entity and cluster has three rows: <i>Forecast</i> (grey, in italics), <b>Actual</b> (in bold) and <b>Difference</b> (actual minus forecast). The difference is red with a + when you spent more than forecast, and green with a − when you spent less. It only counts months that have an actual, so months not booked yet do not show as "under forecast". An actual above its forecast also gets a light red background. Use the <b>Show forecast</b>, <b>Show actual</b> and <b>Show difference</b> checkboxes to pick which rows you see, for example only the actuals. At least one stays ticked, and the app remembers your choice on that computer. The entity drill-down and the Excel export have the difference too.</p>
       <p>Under the matrix, <b>By A&amp;P category</b> shows the forecast and actual per A&amp;P category for the year and scope you picked.</p>
       <h3>Charts</h3>
       <p>Click <b>Charts</b> at the top to build your own chart from the same filters (year, quarter, month, cluster, entity, measure).</p>
@@ -96,15 +97,14 @@
 
     { id: "outcomes", title: "Outcomes", tabs: ["outcomes"], html: `
       <p>What campaigns and events delivered against what they cost. Results come from each item's Outcomes tab; spend comes from its linked budget lines (a line linked to several events is split equally).</p>
-      <p>Results follow the <b>goal</b> of each campaign or event. On its Outcomes tab you enter a target when you plan and the actual when it is done:</p>
+      <p>Every campaign and event has the same six results on its Outcomes tab. Enter a target when you plan and the actual when it is done:</p>
       <table class="help-table">
-        <tr><th>Goal</th><th>You enter</th><th>The app calculates</th></tr>
-        <tr><td><b>Lead Generation</b></td><td>Registrations, attended, MQL, SQL, opportunities created, pipeline value, revenue won</td><td>No-show rate, MQL to SQL, cost per MQL and per SQL, pipeline and revenue per € spent</td></tr>
-        <tr><td><b>Awareness</b></td><td>Reach, engagement, website visits, new contacts (and registrations / attended for events)</td><td>Engagement rate, cost per 1,000 reached, cost per new contact, no-show rate</td></tr>
-        <tr><td><b>Customer Intimacy</b></td><td>Customer accounts invited and attending, senior decision makers attending, follow-up meetings, satisfaction (1 to 10), influenced pipeline</td><td>Accounts attending vs invited, cost per attending account, meetings per item, influenced pipeline per € spent</td></tr>
+        <tr><th>You enter</th><th>The app calculates</th></tr>
+        <tr><td>Registrations, attendees, leads, contacts, customer accounts invited, customer accounts attending</td><td>No-show rate, cost per lead, cost per contact, accounts attending vs invited, cost per attending account</td></tr>
       </table>
+      <p>The goal (Lead Generation, Awareness, Customer Intimacy) no longer changes the fields; it decides under which goal the item is counted in this report. Results that were used before (SQL, opportunities, pipeline, revenue, reach, engagement, website visits, senior decision makers, follow-up meetings, satisfaction, influenced pipeline) are no longer shown, but numbers already entered are kept in the data.</p>
       <p>The buttons at the top pick a goal. <b>All goals</b> shows one card per goal; click Open to see its KPIs, table and chart. A yellow note tells you how many items have no goal yet; <b>Show them</b> lists them so you can add one. Filter on SVP or vertical, and group by M1 zone, cluster, entity, SVP, vertical, goal, month or quarter, and pick what the chart shows.</p>
-      <p>Rates and costs only count the items that have the numbers they need. For example, the no-show rate only uses items with both registrations and attended filled in. Satisfaction is an average, not a total.</p>
+      <p>Rates and costs only count the items that have the numbers they need. For example, the no-show rate only uses items with both registrations and attendees filled in.</p>
       <p>Outcomes is only as good as what is filled in: enter actuals after each event and link the right budget lines.</p>` },
 
     { id: "sharing", title: "Publishing and updates", tabs: [], html: `

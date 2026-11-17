@@ -24,34 +24,18 @@
 
   // Calculated KPIs per goal. ratio: num / den over the items that have both; cost: actual spend of
   // the items that have the metric, divided by it; nos: no-show rate (1 - attended / registered).
-  const KPIS = {
-    lead: [
-      { key: "noshow", label: "No-show rate", type: "noshow", num: "attendees", den: "registrations", fmt: "pct", low: true },
-      { key: "conv", label: "MQL to SQL", type: "ratio", num: "sql", den: "mql", fmt: "pct" },
-      { key: "cpmql", label: "Cost per MQL", type: "cost", of: "mql", fmt: "money", low: true },
-      { key: "cpsql", label: "Cost per SQL", type: "cost", of: "sql", fmt: "money", low: true },
-      { key: "piperoi", label: "Pipeline per € spent", type: "roi", of: "pipeline", fmt: "x" },
-      { key: "revroi", label: "Revenue per € spent", type: "roi", of: "revenue", fmt: "x" },
-    ],
-    awareness: [
-      { key: "engrate", label: "Engagement rate", type: "ratio", num: "engagement", den: "reach", fmt: "pct" },
-      { key: "cpk", label: "Cost per 1,000 reached", type: "cost", of: "reach", per: 1000, fmt: "money", low: true },
-      { key: "cpcontact", label: "Cost per new contact", type: "cost", of: "newcontacts", fmt: "money", low: true },
-      { key: "noshow", label: "No-show rate", type: "noshow", num: "attendees", den: "registrations", fmt: "pct", low: true },
-    ],
-    intimacy: [
-      { key: "attrate", label: "Accounts attending vs invited", type: "ratio", num: "accAttended", den: "accInvited", fmt: "pct" },
-      { key: "cpacc", label: "Cost per attending account", type: "cost", of: "accAttended", fmt: "money", low: true },
-      { key: "meetper", label: "Follow-up meetings per item", type: "peritem", of: "meetings", fmt: "num1" },
-      { key: "inflroi", label: "Influenced pipeline per € spent", type: "roi", of: "influenced", fmt: "x" },
-    ],
-  };
+  // Since 5.3.3 every goal has the same six metrics, so the same KPIs.
+  const KPI_LIST = [
+    { key: "noshow", label: "No-show rate", type: "noshow", num: "attendees", den: "registrations", fmt: "pct", low: true },
+    { key: "cplead", label: "Cost per lead", type: "cost", of: "mql", fmt: "money", low: true },
+    { key: "cpcontact", label: "Cost per contact", type: "cost", of: "newcontacts", fmt: "money", low: true },
+    { key: "attrate", label: "Accounts attending vs invited", type: "ratio", num: "accAttended", den: "accInvited", fmt: "pct" },
+    { key: "cpacc", label: "Cost per attending account", type: "cost", of: "accAttended", fmt: "money", low: true },
+  ];
+  const KPIS = { lead: KPI_LIST, awareness: KPI_LIST, intimacy: KPI_LIST };
   // Headline cards per goal: metric keys (actual vs target) or KPI keys.
-  const CARDS = {
-    lead: ["mql", "pipeline", "noshow", "cpmql", "piperoi"],
-    awareness: ["reach", "engrate", "newcontacts", "cpk"],
-    intimacy: ["accAttended", "satisfaction", "meetings", "influenced"],
-  };
+  const CARD_LIST = ["attendees", "mql", "newcontacts", "accAttended", "cplead"];
+  const CARDS = { lead: CARD_LIST, awareness: CARD_LIST, intimacy: CARD_LIST };
 
   // ---- helpers ----
   function parseYMD(s) { if (!s) return null; const [y, m, d] = s.split("-").map(Number); return { y, m: m - 1, d }; }
@@ -169,7 +153,7 @@
     const sp = eventSpend(ev);
     agg.fNet += sp.fNet; agg.aNet += sp.aNet;
     S.OUTCOME_METRICS.forEach((m) => { if (+((o[m.key] || {}).a) > 0) agg.spendWith[m.key] = (agg.spendWith[m.key] || 0) + sp.aNet; });
-    Object.values(KPIS).flat().filter((k) => k.num).forEach((k) => {
+    KPI_LIST.filter((k) => k.num).forEach((k) => {
       const n = +((o[k.num] || {}).a) || 0, d = +((o[k.den] || {}).a) || 0;
       if (n > 0 && d > 0) { const pr = agg.pairs[k.key] = agg.pairs[k.key] || { n: 0, d: 0 }; pr.n += n; pr.d += d; }
     });
@@ -344,7 +328,7 @@
   }
   function overviewCards() {
     const out = [];
-    [["lead", ["mql", "pipeline"]], ["awareness", ["reach", "newcontacts"]], ["intimacy", ["accAttended", "satisfaction"]]].forEach(([g, keys]) => {
+    [["lead", ["attendees", "mql"]], ["awareness", ["attendees", "newcontacts"]], ["intimacy", ["accInvited", "accAttended"]]].forEach(([g, keys]) => {
       const t = goalTotals(g);
       const lines = keys.map((k) => `${fmtM(M(k), mval(t, k).a)} ${S.escapeHtml(M(k).label.toLowerCase())}`).join(" &middot; ");
       out.push(`<div class="kpi o-gcard"><div class="label">${S.escapeHtml(S.goalLabel(g))}</div><div class="value">${t.count} <span class="small muted">items</span></div><div class="delta muted">${lines}<br>${S.fmtMoney(t.aNet)} spent &middot; <button type="button" class="linkbtn" data-gopen="${g}">Open</button></div></div>`);
@@ -385,7 +369,7 @@
     if (window.MB_THEME) window.MB_THEME.chartColors();
     const byDim = " by " + DIM_LABELS[view.dim].toLowerCase();
     const key = view.chartMetric;
-    const m = M(key), k = Object.values(KPIS).flat().find((x) => x.key === key);
+    const m = M(key), k = KPI_LIST.find((x) => x.key === key);
     const money = { callback: (v) => "€" + new Intl.NumberFormat("en-US").format(v) };
     const plain = { callback: (v) => new Intl.NumberFormat("en-US").format(v) };
     let datasets, title, yTicks;

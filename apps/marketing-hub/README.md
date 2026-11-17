@@ -33,8 +33,8 @@ Tip: keep your exports next to `index.html` so the JSON file lives alongside the
 
 - **Budget:** all budget lines. Filter by year, group, entity, SVP, vertical, type, status, owner, or free text search. Sort by any column. Add / edit / copy / delete budget lines.
 - **Campaigns & Timeline:** a visual Gantt of campaigns and events. Add or edit a campaign, link it to the budget (pick an organising entity to create a linked budget line), record partners and content, and capture outcomes (engagement, attendees, registrations, MQL, SQL, revenue).
-- **Reporting:** monthly matrix per entity with forecast and actual side by side, with yearly budget and variance. Groups are collapsible. Entity drill-down with chart. Export to Excel.
-- **Outcomes:** results combined with budget. Group by Group, Entity, SVP, Vertical, Month or Quarter; filter by group, entity, SVP, vertical, kind and year. Shows outcome totals (actual vs target), revenue, spend, and efficiency (cost per MQL/SQL/attendee, revenue ROI). KPI cards, chart, Excel export.
+- **Reporting:** monthly matrix per entity with forecast, actual and difference (actual minus forecast, red when over, green when under) rows, with yearly budget and variance. Checkboxes pick which of the three rows show. Groups are collapsible. Entity drill-down with chart. Export to Excel.
+- **Outcomes:** results combined with budget. Group by Group, Entity, SVP, Vertical, Month or Quarter; filter by group, entity, SVP, vertical, kind and year. Shows outcome totals (actual vs target) for the six results every item has (registrations, attendees, leads, contacts, customer accounts invited and attending), spend, and efficiency (no-show rate, cost per lead, cost per contact, accounts attending vs invited, cost per attending account). KPI cards, chart, Excel export.
 - **Settings:** manage entities and groups (with collapsible per-group budgets), SVPs, verticals, activity types, statuses, users, yearly budgets and budget codes, plus the Data management section described above. Bulk import from any Excel file is also here.
 
 ## File map
