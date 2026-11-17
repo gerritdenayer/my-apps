@@ -88,29 +88,22 @@
     return list;
   }
 
-  // Outcome metrics shared by the campaign editor and the Outcomes report. Each belongs to one
-  // or more goals: the form shows the goal's metrics first and the Outcomes report shows the goal's
-  // KPIs. kind "ta" = target / actual; "pa" = potential / actual (revenue). agg "avg" = averaged
-  // over the items that have a value (a score), otherwise summed. Older items keep their numbers.
+  // Outcome metrics shared by the campaign editor and the Outcomes report. Since 5.3.3 every
+  // campaign and event has the same six (the goal no longer changes the fields). kind "ta" = target
+  // / actual. Keys stay as they were so older numbers carry over: "mql" is now shown as Leads and
+  // "newcontacts" as Contacts. The other metrics are hidden (OUTCOME_METRICS_HIDDEN): their numbers
+  // stay in the data, untouched, but are no longer shown, entered or reported.
+  const ALL_GOALS = ["lead", "awareness", "intimacy"];
   const OUTCOME_METRICS = [
-    { key: "registrations", label: "Registrations", kind: "ta", goals: ["lead", "awareness"], hint: "People who signed up" },
-    { key: "attendees",     label: "Attended",      kind: "ta", goals: ["lead", "awareness"], hint: "People who actually came or joined" },
-    { key: "mql",           label: "MQL",           kind: "ta", goals: ["lead"], hint: "Marketing qualified leads" },
-    { key: "sql",           label: "SQL",           kind: "ta", goals: ["lead"], hint: "Leads accepted by sales" },
-    { key: "opps",          label: "Opportunities created", kind: "ta", goals: ["lead"] },
-    { key: "pipeline",      label: "Pipeline value", kind: "ta", money: true, goals: ["lead"], hint: "Value of the opportunities created" },
-    { key: "revenue",       label: "Revenue won",   kind: "pa", money: true, goals: ["lead"] },
-    { key: "reach",         label: "Reach",         kind: "ta", goals: ["awareness"], hint: "Impressions or audience reached" },
-    { key: "engagement",    label: "Engagement",    kind: "ta", goals: ["awareness"], hint: "Clicks, likes, shares, interactions" },
-    { key: "visits",        label: "Website visits", kind: "ta", goals: ["awareness"] },
-    { key: "newcontacts",   label: "New contacts",  kind: "ta", goals: ["awareness"], hint: "Contacts new to our database" },
-    { key: "accInvited",    label: "Customer accounts invited", kind: "ta", goals: ["intimacy"] },
-    { key: "accAttended",   label: "Customer accounts attending", kind: "ta", goals: ["intimacy"] },
-    { key: "seniors",       label: "Senior decision makers attending", kind: "ta", goals: ["intimacy"], hint: "C-level, VP, director" },
-    { key: "meetings",      label: "Follow-up meetings", kind: "ta", goals: ["intimacy"] },
-    { key: "satisfaction",  label: "Satisfaction (1 to 10)", kind: "ta", agg: "avg", max: 10, goals: ["intimacy"], hint: "Average survey score" },
-    { key: "influenced",    label: "Influenced pipeline", kind: "ta", money: true, goals: ["intimacy"], hint: "Upsell or renewal opportunities from these customers" },
+    { key: "registrations", label: "Registrations", kind: "ta", goals: ALL_GOALS, hint: "People who signed up" },
+    { key: "attendees",     label: "Attendees",     kind: "ta", goals: ALL_GOALS, hint: "People who actually came or joined" },
+    { key: "mql",           label: "Leads",         kind: "ta", goals: ALL_GOALS, hint: "Leads to follow up" },
+    { key: "newcontacts",   label: "Contacts",      kind: "ta", goals: ALL_GOALS, hint: "Contacts collected" },
+    { key: "accInvited",    label: "Customer accounts invited", kind: "ta", goals: ALL_GOALS },
+    { key: "accAttended",   label: "Customer accounts attending", kind: "ta", goals: ALL_GOALS },
   ];
+  const OUTCOME_METRICS_HIDDEN = ["sql", "opps", "pipeline", "revenue", "reach", "engagement", "visits",
+    "seniors", "meetings", "satisfaction", "influenced"];
   function outcomeMetricsFor(goal) { return OUTCOME_METRICS.filter((m) => goal && (m.goals || []).includes(goal)); }
 
   // Schedule a save (debounced)
@@ -617,6 +610,6 @@
     uniqueEntities, canonicalEntityId,
     clusterList, entityListFor, entityActiveInYear, activeInYear, yearRangeLabel, yearFilterSelect, entityMatchesScope, scopeFilterHtml, wireScopeFilter,
     openModal, closeModal, confirmDialog,
-    OUTCOME_METRICS, outcomeMetricsFor, actorId,
+    OUTCOME_METRICS, OUTCOME_METRICS_HIDDEN, outcomeMetricsFor, actorId,
   };
 })();

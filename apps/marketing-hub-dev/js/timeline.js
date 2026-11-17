@@ -844,7 +844,7 @@
         <input id="c-oc-${m.key}-t" type="number" step="${step}" min="0"${max} placeholder="${ph}" value="${ov(m.key,subT)}" />
         <input id="c-oc-${m.key}-a" type="number" step="${step}" min="0"${max} placeholder="${ph}" value="${ov(m.key,'a')}" /></div>`;
     };
-    const ocHead=`<div class="oc-row oc-headrow"><div class="oc-head">Metric</div><div class="oc-head">Target / potential</div><div class="oc-head">Actual</div></div>`;
+    const ocHead=`<div class="oc-row oc-headrow"><div class="oc-head">Metric</div><div class="oc-head">Target</div><div class="oc-head">Actual</div></div>`;
     const outcomesHtml=`
       <h3 style="margin:14px 0 4px" id="c-oc-title">Results</h3>
       <p class="muted small" style="margin:0 0 8px" id="c-oc-intro"></p>
@@ -1164,13 +1164,13 @@
         (g ? (mine.has(m.key)?main:other) : main).appendChild(row);
       });
       const filled=[...other.querySelectorAll("input")].some(i=>i.value!==""&&+i.value!==0);
-      box.classList.toggle("hidden", !g);
+      box.classList.toggle("hidden", !g || !other.querySelector(".oc-row[data-oc]"));
       if(filled) box.open=true;
       modal.querySelector("#c-oc-othersum").textContent=filled?"Other results (some filled in)":"Other results";
-      modal.querySelector("#c-oc-title").textContent=g?`Results for ${S.goalLabel(g)}`:"Results";
+      modal.querySelector("#c-oc-title").textContent="Results";
       modal.querySelector("#c-oc-intro").textContent=g
-        ? "The KPIs that fit this goal. Enter the target when you plan, the actual when it is done. They feed the Outcomes report."
-        : "Pick a goal on Details to see the KPIs that fit it. Until then all metrics are shown.";
+        ? "Enter the target when you plan, the actual when it is done. They feed the Outcomes report."
+        : "Enter the target when you plan, the actual when it is done. They feed the Outcomes report. Pick a goal on Details so the item is counted under it.";
     }
     arrangeOutcomes();
     if(cGoalSel) cGoalSel.addEventListener("change", arrangeOutcomes);
@@ -1368,9 +1368,11 @@
         primaryId="";
       }
 
-      // Outcomes
-      const outcomes={};
+      // Outcomes. Start from what the item already has, so numbers in hidden (older) metrics are
+      // kept; only the metrics shown in the form are set or cleared.
+      const outcomes=JSON.parse(JSON.stringify((isEdit&&e.outcomes)||{}));
       S.OUTCOME_METRICS.forEach(m=>{
+        delete outcomes[m.key];
         const subT=m.kind==="pa"?"p":"t";
         const tv=parseFloat(modal.querySelector(`#c-oc-${m.key}-t`).value)||0;
         const av=parseFloat(modal.querySelector(`#c-oc-${m.key}-a`).value)||0;
