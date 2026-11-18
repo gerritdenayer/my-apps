@@ -816,6 +816,15 @@
             <div class="amt-net" id="m-an"></div>
           </div>
           <label class="chk-line" title="The partner pays the whole cost: partner funds follow gross, so net is 0"><input type="checkbox" id="m-full" ${a.fullyPartnerFunded ? "checked" : ""} /> Fully partner funded <span class="muted small">(partner pays it all, net is 0)</span></label>
+          ${isEdit ? "" : `<label class="chk-line"><input type="checkbox" id="m-split" /> Split across months <span class="muted small">(one budget line per month, amounts shared evenly)</span></label>
+          <div id="m-splitbox" class="split-box" hidden>
+            <div class="split-head"><span class="small">Months in <b id="m-split-year"></b></span>
+              <button type="button" class="link" id="m-split-all">All year</button>
+              <button type="button" class="link" id="m-split-clear">Clear</button></div>
+            <div class="split-months">${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m, i) =>
+              `<label class="split-m"><input type="checkbox" class="m-split-m" value="${i}" /> ${m}</label>`).join("")}</div>
+            <p class="muted small" id="m-split-info" style="margin:6px 0 0"></p>
+          </div>`}
           <label>Notes</label>
           <textarea id="m-notes" rows="3">${S.escapeHtml(a.notes || "")}</textarea>
         </div>
@@ -938,6 +947,42 @@
       });
     };
     modal.querySelector("#m-cancel").onclick = S.closeModal;
+    // Split across months (new lines only): one line per ticked month, amounts shared evenly.
+    const splitChk = modal.querySelector("#m-split");
+    const splitMonths = () => [...modal.querySelectorAll(".m-split-m:checked")].map((c) => +c.value);
+    // Share an amount over n parts in whole cents; the last part takes the rounding remainder.
+    const shareOf = (total, n) => {
+      const cents = Math.round((total || 0) * 100), part = Math.floor(cents / n);
+      return Array.from({ length: n }, (_, i) => (i === n - 1 ? cents - part * (n - 1) : part) / 100);
+    };
+    const updSplitInfo = () => {
+      if (!splitChk) return;
+      const ms = splitMonths(), n = ms.length, d = modal.querySelector("#m-date").value;
+      modal.querySelector("#m-split-year").textContent = d ? d.slice(0, 4) : String(new Date().getFullYear());
+      const fg = parseFloat(modal.querySelector("#m-fg").value) || 0;
+      const fp = modal.querySelector("#m-full").checked ? fg : (parseFloat(modal.querySelector("#m-fp").value) || 0);
+      modal.querySelector("#m-split-info").textContent = !n ? "Tick at least one month." :
+        `${n} budget line${n === 1 ? "" : "s"}, each about ${S.fmtMoney((fg - fp) / n)} forecast net (${S.fmtMoney(fg - fp)} in total). The amounts you entered above are the total for all months.`;
+    };
+    if (splitChk) {
+      const box = modal.querySelector("#m-splitbox");
+      splitChk.onchange = () => {
+        box.hidden = !splitChk.checked;
+        // First time open: tick the line's month to December.
+        if (splitChk.checked && !splitMonths().length) {
+          const d = modal.querySelector("#m-date").value, from = d ? +d.slice(5, 7) - 1 : 0;
+          modal.querySelectorAll(".m-split-m").forEach((c) => { c.checked = +c.value >= from; });
+        }
+        updSplitInfo();
+      };
+      modal.querySelector("#m-split-all").onclick = () => { modal.querySelectorAll(".m-split-m").forEach((c) => { c.checked = true; }); updSplitInfo(); };
+      modal.querySelector("#m-split-clear").onclick = () => { modal.querySelectorAll(".m-split-m").forEach((c) => { c.checked = false; }); updSplitInfo(); };
+      modal.querySelectorAll(".m-split-m").forEach((c) => { c.onchange = updSplitInfo; });
+      ["#m-fg", "#m-fp", "#m-date", "#m-full"].forEach((sel) => modal.querySelector(sel).addEventListener("input", updSplitInfo));
+      modal.querySelector("#m-date").addEventListener("change", updSplitInfo);
+      modal.querySelector("#m-full").addEventListener("change", updSplitInfo);
+    }
+
     modal.querySelector("#m-save").onclick = () => {
       const name = modal.querySelector("#m-name").value.trim();
       const date = modal.querySelector("#m-date").value;
@@ -985,6 +1030,26 @@
       }
 
       if (!updated.customerLinkUrl) delete updated.customerLinkUrl;
+      if (!isEdit && splitChk && splitChk.checked) {
+        const ms = splitMonths().sort((x, y) => x - y);
+        if (!ms.length) return S.toast("Tick at least one month to split across, or untick Split across months.", "error");
+        const n = ms.length, yr = +date.slice(0, 4), day = +date.slice(8, 10);
+        const parts = {};
+        ["forecastGross", "forecastPartner", "actualGross", "actualPartner"].forEach((k) => { parts[k] = shareOf(updated[k], n); });
+        const splitId = API.uid();
+        ms.forEach((m, i) => {
+          const last = new Date(yr, m + 1, 0).getDate();
+          const d = `${yr}-${String(m + 1).padStart(2, "0")}-${String(Math.min(day, last)).padStart(2, "0")}`;
+          const line = { ...updated, id: i === 0 ? updated.id : API.uid(), date: d, splitId };
+          Object.keys(parts).forEach((k) => { line[k] = parts[k][i]; });
+          line.statusId = S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
+          data.activities.push(line);
+        });
+        const addedTo = syncCustomerLink(updated, "");
+        S.scheduleSave(); S.notify(); S.closeModal();
+        S.toast(`${n} budget lines created, one per month` + (addedTo ? ` (CustomerLink added to ${addedTo} campaign${addedTo === 1 ? "" : "s"} / event${addedTo === 1 ? "" : "s"})` : ""), "success");
+        return;
+      }
       if (isEdit) {
         const i = data.activities.findIndex((x) => x.id === id);
         data.activities[i] = updated;

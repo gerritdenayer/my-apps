@@ -1,5 +1,10 @@
 # Changelog
 
+## [v5.3.6] - 2026-11-18 - Split a budget line across months
+
+### Added
+- A new budget line can be split across months. Enter the total amount, tick "Split across months" and pick the months: the app creates one budget line per month with the amounts shared evenly. The option only shows on a new line.
+
 ## [v5.3.5] - 2026-11-18 - Admins decide when a year's budget is visible
 
 ### Added
