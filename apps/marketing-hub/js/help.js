@@ -34,9 +34,9 @@
       <table class="help-table">
         <tr><th>Role</th><th>What you can do</th></tr>
         <tr><td>Super admin</td><td>Everything an admin can do, plus <b>View as another user</b>: see the app as any colleague, without their password. Only a super admin can make someone super admin (while there is none yet, an admin can name the first one in Users &amp; access). The email inbox is filled by the super admin.</td></tr>
-        <tr><td>Admin</td><td>Everything, including users, publishing the setup and deleted items.</td></tr>
-        <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the Budget structure section: the entities setup and the budget.</td></tr>
-        <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting, Outcomes and the budget structure.</td></tr>
+        <tr><td>Admin</td><td>Everything, including users, publishing the setup, deleted items and who sees each year's budget.</td></tr>
+        <tr><td>Budget owner</td><td>Edit budget lines and events, Data &amp; sharing. View (not change) the Budget structure section: the entities setup and the budget. A year's budget shows once an admin releases it to budget owners or everyone.</td></tr>
+        <tr><td>Marketing user</td><td>Edit campaigns and events, view the budget, Reporting, Outcomes and the budget structure. A year's budget shows once an admin releases it to everyone.</td></tr>
         <tr><td>Campaigns viewer</td><td>View Campaigns &amp; events only.</td></tr>
       </table>
       <p>Your password works on every computer: it is stored, scrambled, in the shared folder. Forgot it? An admin clicks <b>Reset password</b> in Settings &gt; Users &amp; access, and you log in with 1234 again.</p>
