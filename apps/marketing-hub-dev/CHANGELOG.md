@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- In the budget line form, "Linked campaigns / events" only lists the campaigns and events that run in the year of the line's date, so the list is much shorter. It updates when you change the date, and items the line is already linked to always stay.
+
 ## [v5.3.6] - 2026-11-18 - Split a budget line across months
 
 ### Added
