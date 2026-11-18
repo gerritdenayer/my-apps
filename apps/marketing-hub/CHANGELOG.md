@@ -1,5 +1,12 @@
 # Changelog
 
+## [v5.3.4] - 2026-11-18 - Simpler event creation
+
+### Changed
+- A new campaign or event starts with "No budget line (agenda only)" on its Budget tab. Pick "Create a new budget line" or "Link existing budget line(s)" when it has a cost.
+- "Part of campaign" in the event form only lists campaigns that run in the year of the event's start date, and updates when you change that date. A campaign the event is already linked to stays in the list.
+- Picking Campaign as the kind sets the event type to Campaign. If the event type list has no Campaign, it falls back to Digital campaign as before. You can still change it.
+
 ## [v5.3.3] - 2026-11-17 - Clearer forecast vs actual, simpler event results
 
 ### Changed

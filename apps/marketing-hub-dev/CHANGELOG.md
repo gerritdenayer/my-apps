@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.4] - 2026-11-18 - Simpler event creation
 
 ### Changed
 - A new campaign or event starts with "No budget line (agenda only)" on its Budget tab. Pick "Create a new budget line" or "Link existing budget line(s)" when it has a cost.

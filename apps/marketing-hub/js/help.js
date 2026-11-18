@@ -62,9 +62,9 @@
       <p><b>Names</b> (right above the timeline) chooses where the names show: <b>On the timeline</b>, next to each bar or diamond with the entity in the left column (the classic look, as in the presentations), <b>In the list</b>, in the left column with the entity and dates under each name, or <b>Both</b>. Your choice is remembered.</p>
       <h4>The form</h4>
       <table class="help-table">
-        <tr><td><b>Details</b></td><td>Name, kind, start and end, owner, cluster, organising entity, SVP, vertical, goal, event type, part of campaign, campaign code, notes, countries.</td></tr>
+        <tr><td><b>Details</b></td><td>Name, kind (picking Campaign sets the event type to Campaign; you can still change it), start and end, owner, cluster, organising entity, SVP, vertical, goal, event type, part of campaign (only campaigns that run in the year of the start date), campaign code, notes, countries.</td></tr>
         <tr><td><b>Partners &amp; content</b></td><td>Partners with role and co-funding, and links to decks, pages and recordings.</td></tr>
-        <tr><td><b>Budget</b></td><td>The budget link: create a new line, link existing lines, or "No budget line (agenda only)". Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
+        <tr><td><b>Budget</b></td><td>The budget link: "No budget line (agenda only)" for a new item, or create a new line, or link existing lines. Choose <b>Fully partner funded (no impact on our budget)</b> when a partner pays it all: no budget line is made, and the item's card says it is partner funded.</td></tr>
         <tr><td><b>Outcomes</b></td><td>Target and actual for six results: registrations, attendees, leads, contacts, customer accounts invited and customer accounts attending. They are the same for every goal.</td></tr>
       </table>
       <p>The cluster and organising entity lists follow the year of the start date: only clusters and entities in use that year are offered (for example, no Pan European in 2027). Change the start date and the lists update. An item that already has a cluster or entity keeps it. A new item starts on your home cluster, if an admin set one.</p>
