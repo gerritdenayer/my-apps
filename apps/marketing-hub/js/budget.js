@@ -431,6 +431,29 @@
   // Budget left for the selected entity (its budget code) in the selected year. Uses net amounts
   // (gross - partner funds), like Reporting, and the whole year: other filters (quarter, month,
   // search, column filters) do not change what is left on the budget.
+  // Admins: choose who sees this year's budget (Everyone / Admins and budget owners / Admins only).
+  function addReleaseRow() {
+    const host = document.getElementById("bud-summary");
+    const card = host && host.querySelector(".bsum");
+    if (!card || !S.isBudgetAdmin()) return;
+    const yr = view.year;
+    const div = document.createElement("div");
+    div.className = "bsum-release";
+    div.innerHTML = S.budgetReleaseSelect(yr, "bsum-release-sel") +
+      (S.budgetRelease(yr) ? `<span class="bsum-hidden-tag">Hidden from ${S.budgetRelease(yr) === "admins" ? "budget owners and marketing users" : "marketing users"}</span>` : "");
+    card.appendChild(div);
+    S.wireBudgetReleaseSelect(div, yr, "bsum-release-sel", () => { renderEntitySummary(); addReleaseRow(); });
+  }
+  // Someone who may not see this year's budget: planned and spent only, no budget or "left".
+  function renderHiddenSummary(host, title, f, a, n) {
+    host.innerHTML = `<div class="bsum card"><div class="bsum-title">${title}</div>
+      <div class="bsum-kpis">
+        <div><div class="bsum-l">Yearly budget</div><div class="bsum-v muted">Not released yet</div></div>
+        <div><div class="bsum-l">Planned (forecast net)</div><div class="bsum-v">${S.fmtMoney(f)}</div></div>
+        <div><div class="bsum-l">Spent (actual net)</div><div class="bsum-v">${S.fmtMoney(a)}</div></div>
+      </div>
+      <div class="muted small">The ${view.year} budget is not released yet. An admin makes it visible when it is final. ${n} budget line${n === 1 ? "" : "s"} in ${view.year}.</div></div>`;
+  }
   function renderEntitySummary() {
     const host = document.getElementById("bud-summary");
     if (!host) return;
@@ -441,7 +464,7 @@
     if (!ent) { host.innerHTML = ""; return; }
     const cid = S.canonicalEntityId(entId);
     const sameEnt = (id) => id && S.canonicalEntityId(id) === cid;
-    const yb = ((data.settings.yearlyBudgets || {})[view.year]) || {};
+    const yb = S.yearBudgets(view.year);
     const bcs = ((data.settings.budgetCodes || {})[view.year]) || {};
     let budget = 0, code = bcs[entId] || "";
     (data.settings.entities || []).forEach((e) => {
@@ -461,6 +484,7 @@
     const barW = Math.max(0, Math.min(100, pct));
     const over = budget && leftF < 0;
     const title = `${S.escapeHtml(ent.name)}${code ? ` <span class="bsum-code">${S.escapeHtml(code)}</span>` : ""} <span class="muted">&middot; ${view.year}</span>`;
+    if (!S.canSeeYearBudget(view.year)) { renderHiddenSummary(host, title, fNet, aNet, n); return; }
     if (!budget) {
       host.innerHTML = `<div class="bsum card"><div class="bsum-title">${title}</div>
         <div class="muted small">No yearly budget set for ${view.year}. Planned spend so far: <strong>${S.fmtMoney(fNet)}</strong> net (${n} line${n === 1 ? "" : "s"}). Set the budget in Settings &gt; Budget structure &gt; Budget.</div>${codeShareHtml(code, cid)}</div>`;
@@ -486,7 +510,7 @@
     const data = S.state.data;
     const yr = view.year;
     const sc = view.scope || {};
-    const yb = ((data.settings.yearlyBudgets || {})[yr]) || {};
+    const yb = S.yearBudgets(yr);
     const bcs = ((data.settings.budgetCodes || {})[yr]) || {};
     const ents = (data.settings.entities || []).filter((e) => S.entityMatchesScope(e.id, sc));
     const codeOf = (id) => bcs[id] || bcs[S.canonicalEntityId(id)] || "";
@@ -513,6 +537,7 @@
       grp.ents[cid] = grp.ents[cid] || (S.entityById(cid) || {}).name || "";
     });
     const scopeLabel = sc.cluster ? `Cluster ${S.escapeHtml(sc.cluster)}` : sc.m1 ? `${S.escapeHtml(sc.m1)}` : "All entities";
+    if (!S.canSeeYearBudget(yr)) { renderHiddenSummary(host, `${scopeLabel} <span class="muted">&middot; ${yr}</span>`, f, a, n); return; }
     const leftF = budget - f, leftA = budget - a;
     const pct = budget ? Math.round((f / budget) * 100) : 0;
     const over = budget && leftF < 0;
@@ -562,7 +587,7 @@
   function codeShareHtml(code, cid) {
     if (!code) return "";
     const data = S.state.data;
-    const yb = ((data.settings.yearlyBudgets || {})[view.year]) || {};
+    const yb = S.yearBudgets(view.year);
     const bcs = ((data.settings.budgetCodes || {})[view.year]) || {};
     const ids = (data.settings.entities || []).filter((e) => bcs[e.id] === code).map((e) => e.id);
     const others = [...new Set(ids.filter((id) => S.canonicalEntityId(id) !== cid).map((id) => (S.entityById(id) || {}).name).filter(Boolean))];
@@ -583,6 +608,7 @@
 
   function renderRows() {
     renderEntitySummary();
+    addReleaseRow();
     const canEditRows = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
     const rows = filteredActivities();
     const tbody = document.getElementById("activities-body");

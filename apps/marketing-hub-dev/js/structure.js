@@ -57,7 +57,8 @@
 
     const ybAll = data.settings.yearlyBudgets || (data.settings.yearlyBudgets = {});
     if (canEdit && !ybAll[view.year]) ybAll[view.year] = {};
-    const yb = ybAll[view.year] || {};
+    const hidden = !S.canSeeYearBudget(view.year);
+    const yb = S.yearBudgets(view.year);
     const bc = ((data.settings.budgetCodes || {})[view.year]) || {};
 
     const tree = {};
@@ -71,10 +72,15 @@
           ? `<div><button id="bs-done" class="primary">Done editing</button></div>
              <div><button id="bs-copy" class="secondary">Copy from ${view.year - 1}</button></div>`
           : `<div><button id="bs-edit" class="secondary">Edit budgets</button></div>`) : ""}
-        ${canEdit ? "" : `<div class="muted small bs-ro">View only. Ask an admin to change the yearly budgets or budget codes.</div>`}
-        <div class="bs-total">Total budget ${view.year}: <strong id="bs-grand">${S.fmtMoney(grand)}</strong></div>
+        ${canEdit ? `<div>${S.budgetReleaseSelect(view.year, "bs-release")}</div>` : `<div class="muted small bs-ro">View only. Ask an admin to change the yearly budgets or budget codes.</div>`}
+        <div class="bs-total">Total budget ${view.year}: <strong id="bs-grand">${hidden ? "not released yet" : S.fmtMoney(grand)}</strong></div>
       </div>
     `;
+    if (hidden) {
+      root.innerHTML = html + `<p class="bs-empty">The ${view.year} budget is not released yet. An admin makes it visible when it is final.</p>`;
+      wire(root, canEdit);
+      return;
+    }
 
     if (ents.length === 0) {
       html += allEnts.length === 0
@@ -155,6 +161,7 @@
     const y = root.querySelector("#bs-year");
     if (y) y.onchange = (e) => { view.year = +e.target.value; render(); };
     if (!canEdit) return;
+    S.wireBudgetReleaseSelect(root, view.year, "bs-release", () => render());
     const editBtn = root.querySelector("#bs-edit");
     if (editBtn) editBtn.onclick = () => { view.editing = true; render(); };
     const doneBtn = root.querySelector("#bs-done");

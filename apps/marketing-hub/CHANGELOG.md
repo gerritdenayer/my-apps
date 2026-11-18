@@ -1,5 +1,10 @@
 # Changelog
 
+## [v5.3.5] - 2026-11-18 - Admins decide when a year's budget is visible
+
+### Added
+- Admins decide when a year's budget becomes visible. "Budget visible to" (on the Budget tab card and in Settings > Budget structure > Budget) offers Everyone, Admins and budget owners, or Admins only. Until a year is released to you, the Budget tab, Reporting and Budget structure say "Not released yet" and show only planned and spent amounts, and backups you download leave that year's budget out. Admins publish the setup after a change so the team gets it.
+
 ## [v5.3.4] - 2026-11-18 - Simpler event creation
 
 ### Changed

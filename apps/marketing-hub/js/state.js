@@ -404,6 +404,57 @@
     return "all years";
   }
   // Hide the options of a <select> that are not active in that year (the selected one always stays).
+  // ---- Yearly budget release (since 5.3.5) ----
+  // settings.budgetRelease[year] = "admins" (only admins and super admins see that year's budget),
+  // "owners" (admins and budget owners) or absent (everyone). It is part of the setup, so it
+  // reaches the team when an admin publishes the setup. It only hides the amounts in the app:
+  // the numbers are still in the shared setup file.
+  const BUDGET_RELEASE = [["", "Everyone"], ["owners", "Admins and budget owners"], ["admins", "Admins only"]];
+  function budgetRelease(year) { return ((state.data.settings.budgetRelease || {})[year]) || ""; }
+  function setBudgetRelease(year, level) {
+    const s = state.data.settings;
+    s.budgetRelease = s.budgetRelease || {};
+    if (level) s.budgetRelease[year] = level; else delete s.budgetRelease[year];
+  }
+  function isBudgetAdmin() {
+    const A = window.MB_AUTH;
+    if (!A) return true;
+    const r = A.role();
+    return r === "admin" || r === "super_admin" || A.isUnlocked();
+  }
+  function canSeeYearBudget(year) {
+    const lvl = budgetRelease(year);
+    if (!lvl || isBudgetAdmin()) return true;
+    return lvl === "owners" && window.MB_AUTH && window.MB_AUTH.role() === "budget_owner";
+  }
+  // The yearly budgets of one year as this user may see them: {} when not released to them.
+  function yearBudgets(year) {
+    return canSeeYearBudget(year) ? ((state.data.settings.yearlyBudgets || {})[year] || {}) : {};
+  }
+  // For exports: drop the budgets of years this user may not see (works on a copy).
+  function stripHiddenBudgets(obj) {
+    const s = obj && obj.settings;
+    if (!s || !s.yearlyBudgets || isBudgetAdmin()) return obj;
+    const out = JSON.parse(JSON.stringify(obj));
+    Object.keys(out.settings.yearlyBudgets).forEach((y) => { if (!canSeeYearBudget(y)) delete out.settings.yearlyBudgets[y]; });
+    return out;
+  }
+  // A small "Budget visible to" dropdown for admins; onChange(level) after it is stored.
+  function budgetReleaseSelect(year, id) {
+    const cur = budgetRelease(year);
+    return `<label for="${id}" class="small">${year} budget visible to</label><select id="${id}">${BUDGET_RELEASE.map(([v, l]) =>
+      `<option value="${v}" ${v === cur ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+  }
+  function wireBudgetReleaseSelect(root, year, id, onChange) {
+    const el = root.querySelector("#" + id);
+    if (!el) return;
+    el.onchange = () => {
+      setBudgetRelease(year, el.value);
+      scheduleSave();
+      toast(el.value ? `The ${year} budget is now hidden from ${el.value === "admins" ? "everyone but admins" : "marketing users"}. Publish the setup so the team gets this.` : `The ${year} budget is visible to everyone. Publish the setup so the team gets this.`, "success");
+      if (onChange) onChange(el.value);
+    };
+  }
   function yearFilterSelect(sel, list, year) {
     if (!sel) return;
     const byId = {}; (list || []).forEach((x) => { byId[x.id] = x; });
@@ -603,6 +654,7 @@
     fmtMoney, fmtMoneyShort, fmtNum, fmtDate, monthOf, yearOf, escapeHtml,
     inPeriod, inPeriodQ, quarterOptions, quarterChecks, monthOptions,
     yearButtons, moreFilters, CLINK_LABEL, normUrl, customerLinkOfEvent, contentWithLink, GOALS, goalLabel, apCategoryForGoal, goalOfType, hiddenEventType,
+    budgetRelease, setBudgetRelease, isBudgetAdmin, canSeeYearBudget, yearBudgets, stripHiddenBudgets, budgetReleaseSelect, wireBudgetReleaseSelect,
     entityById, svpById, canonicalSvpId, normalizeSvps, verticalById, normalizeSvpVerticals, moveSvpVertical, countryById, countryNamesOf, actTypeById, userById, homeCluster, statusById, activeOwnerOptions,
     budgetCodeForActivity, autoCommitStatus,
     eventById, apCategoryById, apCategoryForActivity,

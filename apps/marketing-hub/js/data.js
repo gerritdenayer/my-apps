@@ -39,11 +39,11 @@
     const today = () => new Date().toISOString().slice(0, 10);
 
     root.querySelector("#dm-export-all").onclick = () => {
-      API.exportToFile(S.state.data, `marketing-budget-all-${today()}.json`, exporterName(), "full");
+      API.exportToFile(S.stripHiddenBudgets(S.state.data), `marketing-budget-all-${today()}.json`, exporterName(), "full");
       S.toast("Full backup downloaded", "success");
     };
     root.querySelector("#dm-export-setup").onclick = () => {
-      API.exportToFile(API.pickSetup(S.state.data), `marketing-setup-${today()}.json`, exporterName(), "setup");
+      API.exportToFile(S.stripHiddenBudgets(API.pickSetup(S.state.data)), `marketing-setup-${today()}.json`, exporterName(), "setup");
       S.toast("Setup file downloaded", "success");
     };
     root.querySelector("#dm-export-be").onclick = () => {

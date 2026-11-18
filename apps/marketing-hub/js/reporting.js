@@ -57,7 +57,7 @@
     return rows.map((r, k) => `<tr class="${r.cls}"${o.attrs || ""}>
       ${k === 0 ? `<td rowspan="${n}"${o.nameCls ? ` class="${o.nameCls}"` : ""}>${o.nameHtml}</td>` : ""}
       ${r.label}${r.cells}${r.ytd}
-      ${k === 0 ? `<td class="num" rowspan="${n}">${S.fmtMoney(o.budget)}</td>` : ""}
+      ${k === 0 ? `<td class="num" rowspan="${n}">${S.canSeeYearBudget(view.year) ? S.fmtMoney(o.budget) : "<span class='muted'>-</span>"}</td>` : ""}
       ${r.vari}
     </tr>`).join("");
   }
@@ -172,7 +172,7 @@
   // Deduped entities limited to the shared M1 > Cluster > Entity scope.
   // Entities retired for the year are left out, unless they still have a budget or lines that year.
   function reportEntities() {
-    const yb = (S.state.data.settings.yearlyBudgets || {})[view.year] || {};
+    const yb = S.yearBudgets(view.year);
     const used = new Set((S.state.data.activities || []).filter((a) => S.inPeriod(a.date, view.year, "", "")).map((a) => S.canonicalEntityId(a.entityId)));
     return S.uniqueEntities().filter((e) => S.entityMatchesScope(e.id, view.scope)
       && (S.entityActiveInYear(e, view.year) || used.has(e.id) || (S.state.data.settings.entities || []).some((x) => S.canonicalEntityId(x.id) === e.id && yb[x.id])));
@@ -183,7 +183,7 @@
   // budgets entered against duplicate entities are not dropped. This keeps the Reporting
   // total in line with the sum shown in Settings.
   function budgetByCanonical(year) {
-    const yb = (S.state.data.settings.yearlyBudgets || {})[year] || {};
+    const yb = S.yearBudgets(year);
     const allowed = new Set(reportEntities().map((e) => e.id));
     const out = {};
     (S.state.data.settings.entities || []).forEach((e) => {
@@ -350,10 +350,11 @@
     const usedPct = tb ? ((ta / tb) * 100).toFixed(0) : "-";
     const fcPct = tb ? ((tf / tb) * 100).toFixed(0) : "-";
     return `
-      <div class="kpi"><div class="label">Yearly budget</div><div class="value">${S.fmtMoney(tb)}</div><div class="delta muted">${view.year}</div></div>
+      ${S.canSeeYearBudget(view.year) ? "" : `<div class="kpi"><div class="label">Yearly budget</div><div class="value muted">Not released yet</div><div class="delta muted">${view.year}: an admin makes it visible when it is final</div></div>`}
+      ${S.canSeeYearBudget(view.year) ? `<div class="kpi"><div class="label">Yearly budget</div><div class="value">${S.fmtMoney(tb)}</div><div class="delta muted">${view.year}</div></div>` : ""}
       <div class="kpi"><div class="label">Forecast YTD</div><div class="value">${S.fmtMoney(tf)}</div><div class="delta ${tb && tf<=tb?"pos":"neg"}">${tb ? fcPct + "% of budget" : ""}</div></div>
       <div class="kpi"><div class="label">Actual YTD</div><div class="value">${S.fmtMoney(ta)}</div><div class="delta ${tb && ta<=tb?"pos":"neg"}">${tb ? usedPct + "% of budget" : ""}</div></div>
-      <div class="kpi"><div class="label">Budget vs Forecast</div><div class="value">${S.fmtMoney(tb - tf)}</div><div class="delta muted">Remaining after forecast</div></div>
+      ${S.canSeeYearBudget(view.year) ? `<div class="kpi"><div class="label">Budget vs Forecast</div><div class="value">${S.fmtMoney(tb - tf)}</div><div class="delta muted">Remaining after forecast</div></div>` : ""}
     `;
   }
 
@@ -428,10 +429,10 @@
     const acPct = yb ? ((totalA / yb) * 100).toFixed(0) : "-";
     return `
       <div class="kpi-row">
-        <div class="kpi"><div class="label">Yearly budget</div><div class="value">${S.fmtMoney(yb)}</div></div>
+        <div class="kpi"><div class="label">Yearly budget</div><div class="value${S.canSeeYearBudget(view.year) ? "" : " muted"}">${S.canSeeYearBudget(view.year) ? S.fmtMoney(yb) : "Not released yet"}</div></div>
         <div class="kpi"><div class="label">Forecast YTD</div><div class="value">${S.fmtMoney(totalF)}</div><div class="delta ${yb && totalF<=yb?"pos":"neg"}">${yb ? fcPct + "% of budget" : ""}</div></div>
         <div class="kpi"><div class="label">Actual YTD</div><div class="value">${S.fmtMoney(totalA)}</div><div class="delta ${yb && totalA<=yb?"pos":"neg"}">${yb ? acPct + "% of budget" : ""}</div></div>
-        <div class="kpi"><div class="label">Budget vs Forecast</div><div class="value">${S.fmtMoney(yb - totalF)}</div></div>
+        ${S.canSeeYearBudget(view.year) ? `<div class="kpi"><div class="label">Budget vs Forecast</div><div class="value">${S.fmtMoney(yb - totalF)}</div></div>` : ""}
       </div>`;
   }
 

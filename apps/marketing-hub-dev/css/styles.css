@@ -671,3 +671,17 @@ html[data-theme="dark"] .env-banner { color: #000; }
 
 .report-groupbar .inline-check { display: inline-flex; align-items: center; gap: 6px; margin: 0 12px 0 0; font-weight: 400; cursor: pointer; }
 .report-groupbar .inline-check input { width: auto; margin: 0; }
+
+/* Budget tab: admins choose who sees the year's budget. */
+.bsum-release { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd-e5e7eb); }
+.bsum-release label { margin: 0; }
+.bsum-release select { width: auto; }
+.bsum-hidden-tag { font-size: 12px; font-weight: 600; color: var(--fg-c2410c); background: var(--bg-fff7ed); border-radius: 10px; padding: 2px 8px; }
+
+/* Budget line form: split across months. */
+.split-box { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid var(--bd-e5e7eb); border-radius: 8px; background: var(--bg-fff7ed); }
+.split-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.split-months { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px 8px; }
+.split-m { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: 400; cursor: pointer; }
+.split-m input { width: auto; margin: 0; }
+
