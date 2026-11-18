@@ -939,13 +939,22 @@
     if (agInput) agInput.addEventListener("input", syncStatusFromActual);
     if (apInput) apInput.addEventListener("input", syncStatusFromActual);
 
+    // Linked campaigns / events: only those that run in the line's year (start year to end year),
+    // plus the filter text. Items already linked always stay, whatever their year.
     const evFilter = modal.querySelector("#m-event-filter");
-    if (evFilter) evFilter.oninput = () => {
-      const q = evFilter.value.trim().toLowerCase();
+    const applyEvList = () => {
+      const q = evFilter ? evFilter.value.trim().toLowerCase() : "";
+      const d = modal.querySelector("#m-date").value, yr = d ? +d.slice(0, 4) : null;
       modal.querySelectorAll("#m-event option").forEach((o) => {
-        o.hidden = !!q && !o.textContent.toLowerCase().includes(q);
+        const ev = S.eventById(o.value);
+        const y1 = ev && ev.start ? +ev.start.slice(0, 4) : null, y2 = ev && ev.end ? +ev.end.slice(0, 4) : y1;
+        const otherYear = !!(yr && y1) && (yr < y1 || yr > y2);
+        o.hidden = !o.selected && (otherYear || (!!q && !o.textContent.toLowerCase().includes(q)));
       });
     };
+    if (evFilter) evFilter.oninput = applyEvList;
+    modal.querySelector("#m-date").addEventListener("change", applyEvList);
+    applyEvList();
     modal.querySelector("#m-cancel").onclick = S.closeModal;
     // Split across months (new lines only): one line per ticked month, amounts shared evenly.
     const splitChk = modal.querySelector("#m-split");

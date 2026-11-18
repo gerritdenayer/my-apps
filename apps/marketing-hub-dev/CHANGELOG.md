@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.7] - 2026-11-18 - Budget lines list the campaigns of their year
 
 ### Changed
 - In the budget line form, "Linked campaigns / events" only lists the campaigns and events that run in the year of the line's date, so the list is much shorter. It updates when you change the date, and items the line is already linked to always stay.
