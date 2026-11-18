@@ -874,7 +874,7 @@
 
     // Existing budget lines (for linking) and the budget-section mode
     const linkedExisting=(data.activities||[]).filter(a=>(a.eventIds||[]).includes(e.id));
-    const bMode = presetBmode || (e.fullyPartnerFunded ? "partner" : (managed ? "new" : (linkedExisting.length>0 ? "existing" : (isEdit ? "none" : "new"))));
+    const bMode = presetBmode || (e.fullyPartnerFunded ? "partner" : (managed ? "new" : (linkedExisting.length>0 ? "existing" : "none")));  // a new item starts as agenda only
     const existingLinesHtml=(data.activities||[]).slice()
       .sort((x,y)=>(x.name||"").localeCompare(y.name||""))
       .map(a=>{
@@ -1079,6 +1079,18 @@
       S.yearFilterSelect(modal.querySelector("#c-type"), st.activityTypes, yr);
       S.yearFilterSelect(modal.querySelector("#c-bapcat"), st.apCategories, yr);
       S.yearFilterSelect(modal.querySelector("#c-bstatus"), st.statuses, yr);
+      // Part of campaign: only campaigns that run in the item's year (start year to end year).
+      // The campaign it is already linked to always stays.
+      const cs=modal.querySelector("#c-campaign");
+      if(cs && yr){
+        [...cs.options].forEach(o=>{
+          if(!o.value) return;
+          const c=(S.state.data.events||[]).find(x=>x.id===o.value);
+          const y1=c&&c.start?+c.start.slice(0,4):null, y2=c&&c.end?+c.end.slice(0,4):y1;
+          const off=!!y1 && (yr<y1 || yr>y2) && o.value!==cs.value;
+          o.hidden=off; o.disabled=off;
+        });
+      }
     };
     yearLists();
     modal.querySelector("#c-start").addEventListener("change", yearLists);
@@ -1099,14 +1111,14 @@
       };
     }
 
-    // Kind drives a default event type: Event -> "Event"; Campaign -> "Digital campaign" when the
-    // list has one (otherwise the type is left for the user to pick). Still editable.
+    // Kind drives a default event type: Event -> "Event"; Campaign -> "Campaign" (or, if the list
+    // has no such type, "Digital campaign"; otherwise the type is left for the user to pick). Still editable.
     const kindSel=modal.querySelector("#c-kind"), typeSelEl=modal.querySelector("#c-type");
     if(kindSel && typeSelEl){
       const typeIdBy=(names)=>{ for(const n of names){ const t=(data.settings.activityTypes||[]).find(x=>(x.name||"").trim().toLowerCase()===n); if(t) return t.id; } return ""; };
       kindSel.onchange=()=>{
         const id = kindSel.value==="Campaign"
-          ? typeIdBy(["digital campaign"])
+          ? typeIdBy(["campaign", "digital campaign"])
           : typeIdBy(["event"]);
         if(id) typeSelEl.value=id;
         // A campaign is not "part of" another campaign, so hide that field for campaigns.
