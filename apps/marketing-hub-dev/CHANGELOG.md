@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Boxes on the agenda PowerPoint are much smaller, so more items fit on one slide. Each box shows the name in bold with the details right after it, three lines at most, with no empty space. Short events get a slightly wider box so the text has room. Text that does not fit is cut off with "…". The legend shows the details on one line to match.
+
 ## [v5.3.7] - 2026-11-18 - Budget lines list the campaigns of their year
 
 ### Changed

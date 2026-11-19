@@ -76,10 +76,11 @@
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
-      <p><b>Download agenda</b> makes one roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
+      <p><b>Download agenda</b> makes a roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
       <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP, vertical, goal or one lane), the order of the lanes and of the items, and up to three details per item (dates, goal, type, owner, entity, cluster, countries, campaign, partners, SVP, vertical), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
       <p>When everything does not fit on one slide, you get as many slides as needed. Lanes are kept together on a slide; a lane too big for one slide continues on the next, marked "(cont.)". The pop-up tells you how many slides you will get, and each slide shows its number at the bottom.</p>
-      <p>Amounts and notes never go on the slide. Fewer details per box means more items per slide.</p>` },
+      <p>Each box is at most three lines high: the name in bold, then the details on the same line, separated by dots. Short events get a box of about six weeks so the text has room. Text that does not fit is cut off with "…"; the full name is still in the app.</p>
+      <p>Amounts and notes never go on the slide. Fewer details per box means shorter text and fewer cut-offs.</p>` },
 
     { id: "reporting", title: "Reporting", tabs: ["reporting"], html: `
       <p>The budget by month, as a table or as charts. The matrix has a row per entity (grouped by M1 zone and cluster) and a column per month. Switch between gross, net and partner. The entity view drills into one cluster or entity.</p>
