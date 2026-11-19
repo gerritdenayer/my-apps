@@ -17,7 +17,7 @@
   // "list" in the left column (name, entity and dates), or "both". Remembered per browser.
   const NAMES_KEY = "mb_tl_names";
   const loadNames = () => { try { const v = localStorage.getItem(NAMES_KEY); return ["chart", "list", "both"].includes(v) ? v : "chart"; } catch (e) { return "chart"; } };
-  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "", svp: "", vertical: "" };
+  const view = { names: loadNames(), groupBy: "cluster", colorBy: "kind", kind: "all", scope: { m1: "", cluster: "", entityId: "" }, q: "", year: "", quarters: [], month: "", country: "", svp: [], vertical: [] };
 
   function ensureStyles() {
     if (document.getElementById("tl-styles")) return;
@@ -26,6 +26,8 @@
     #tab-timeline .tl-toolbar{gap:10px 10px}
     #tab-timeline .tl-toolbar > div{min-width:0}
     #tab-timeline .tl-toolbar .grow{flex:1 1 140px;min-width:130px;max-width:260px}
+    #tab-timeline .tl-toolbar #tl-group, #tab-timeline .tl-toolbar #tl-color{width:132px}
+    #tab-timeline .tl-toolbar .grow{max-width:190px}
     #tab-timeline .tl-rowlabel{flex-direction:column;align-items:flex-start !important;justify-content:center;cursor:pointer;line-height:1.25}
     #tab-timeline .tl-rl-name{font-size:12.5px;font-weight:500;color:var(--fg-1f2937);max-width:100%;overflow:hidden;text-overflow:ellipsis}
     #tab-timeline .tl-rl-sub{font-size:11px;color:var(--fg-6b7280);max-width:100%;overflow:hidden;text-overflow:ellipsis}
@@ -217,15 +219,15 @@
       <div class="tl-toolbar filter-bar">
         <div><label>Year</label>
           <select id="tl-year">${tlYears(events).map(y=>`<option ${String(view.year)===String(y)?"selected":""} value="${y}">${y}</option>`).join("")}<option value="" ${!view.year?"selected":""}>All</option></select></div>
+        <div class="tl-q"><label>Quarter</label>${multiHtml("tl-quarter",QUARTERS,view.quarters,{none:false,cls:"ms-narrow"})}</div>
         ${S.scopeFilterHtml("tl", view.scope, null, view.year?+view.year:0)}
         <div class="grow tl-searchbox"><label>Search</label>
           <input id="tl-search" type="text" value="${S.escapeHtml(view.q)}" placeholder="Name, owner, type" /></div>
         <div class="tl-more-kind"><label>Kind</label>
           <select id="tl-kind">${opt([["all","All"],["Event","Events"],["Campaign","Campaigns"]],view.kind)}</select></div>
-        <div class="tl-more-q"><label>Quarters</label>${S.quarterChecks("tlq", view.quarters)}</div>
         <div class="tl-more-month"><label>Month</label><select id="tl-month">${S.monthOptions(view.month)}</select></div>
-        <div class="tl-more-svp"><label>SVP</label><select id="tl-svp"><option value="">All</option>${(data.settings.svps||[]).map(x=>`<option ${view.svp===x.id?"selected":""} value="${x.id}">${S.escapeHtml(x.name)}</option>`).join("")}<option value="__none" ${view.svp==="__none"?"selected":""}>(not set)</option></select></div>
-        <div class="tl-more-vertical"><label>Vertical</label><select id="tl-vertical"><option value="">All</option>${(data.settings.verticals||[]).map(x=>`<option ${view.vertical===x.id?"selected":""} value="${x.id}">${S.escapeHtml(x.name)}</option>`).join("")}<option value="__none" ${view.vertical==="__none"?"selected":""}>(not set)</option></select></div>
+        <div class="tl-more-svp"><label>SVP</label>${multiHtml("tl-svp",data.settings.svps,view.svp)}</div>
+        <div class="tl-more-vertical"><label>Vertical</label>${multiHtml("tl-vertical",data.settings.verticals,view.vertical)}</div>
         ${(data.settings.countries||[]).length ? `<div><label>Country</label>
           <select id="tl-country">
             <option value="">All countries</option>
@@ -260,10 +262,11 @@
     root.querySelector("#tl-color").onchange=e=>{view.colorBy=e.target.value;render();};
     root.querySelector("#tl-kind").onchange=e=>{view.kind=e.target.value;render();};
     root.querySelector("#tl-year").onchange=e=>{view.year=e.target.value;render();};
-    root.querySelectorAll(".tlq-q").forEach(cb=>{ cb.onchange=()=>{ view.quarters=[...root.querySelectorAll(".tlq-q:checked")].map(x=>x.value); render(); }; });
+    // Quarters change the zoom of the timeline, so they redraw the whole tab.
+    wireMulti(root.querySelector("#tl-quarter"),QUARTERS,view.quarters,render);
     root.querySelector("#tl-month").onchange=e=>{view.month=e.target.value;render();};
-    root.querySelector("#tl-svp").onchange=e=>{view.svp=e.target.value;render();};
-    root.querySelector("#tl-vertical").onchange=e=>{view.vertical=e.target.value;render();};
+    wireMulti(root.querySelector("#tl-svp"),data.settings.svps,view.svp);
+    wireMulti(root.querySelector("#tl-vertical"),data.settings.verticals,view.vertical);
     const tlCountry=root.querySelector("#tl-country");
     if(tlCountry) tlCountry.onchange=e=>{view.country=e.target.value;render();};
     S.wireScopeFilter(root,"tl",view.scope,render,null,view.year?+view.year:0);
@@ -276,8 +279,7 @@
     S.yearButtons(root.querySelector("#tl-year"));
     const pick=(sel)=>{ const el=root.querySelector(sel); return el?el.closest("div"):null; };
     S.moreFilters("timeline", root.querySelector(".tl-searchbox"), [
-      root.querySelector(".tl-more-kind"), root.querySelector(".tl-more-q"), root.querySelector(".tl-more-month"),
-      root.querySelector(".tl-more-svp"), root.querySelector(".tl-more-vertical"),
+      root.querySelector(".tl-more-kind"), root.querySelector(".tl-more-month"),
       pick("#tl-m1"), pick("#tl-entity"), pick("#tl-country")]);
     const pptBtn=root.querySelector("#tl-ppt");
     if(pptBtn) pptBtn.onclick=()=>{
@@ -289,6 +291,46 @@
     drawRows();
   }
 
+  // Multi-select filter (SVP, Vertical): a button that opens a list of checkboxes. Nothing ticked
+  // means All. "(not set)" (__none) matches items without a value. sel is the view array, changed in place.
+  function multiLabel(list,sel){
+    if(!sel.length) return "All";
+    if(sel.length>1){
+      // Short names (like Q1, Q3) are listed in full; longer ones are counted.
+      const names=(list||[]).filter(x=>sel.includes(x.id)).map(x=>x.name).concat(sel.includes("__none")?["(not set)"]:[]);
+      const txt=names.join(", ");
+      return txt.length<=12 ? txt : sel.length+" selected";
+    }
+    return sel[0]==="__none"?"(not set)":(((list||[]).find(x=>x.id===sel[0])||{}).name||sel[0]);
+  }
+  const QUARTERS=[{id:"1",name:"Q1"},{id:"2",name:"Q2"},{id:"3",name:"Q3"},{id:"4",name:"Q4"}];
+  function multiHtml(id,list,sel,o){
+    o=o||{};
+    const box=(v,l)=>`<label class="ms-opt"><input type="checkbox" value="${v}" ${sel.includes(v)?"checked":""}/> ${S.escapeHtml(l)}</label>`;
+    return `<div class="ms" id="${id}"><button type="button" class="ms-btn ${o.cls||""}" aria-expanded="false">${S.escapeHtml(multiLabel(list,sel))}</button>
+      <div class="ms-panel hidden">${(list||[]).map(x=>box(x.id,x.name)).join("")}${o.none===false?"":box("__none","(not set)")}
+      <button type="button" class="ms-clear secondary">Clear</button></div></div>`;
+  }
+  let msListening=false, msOpen="";
+  function wireMulti(el,list,sel,onChange){
+    if(!el) return;
+    const btn=el.querySelector(".ms-btn"), panel=el.querySelector(".ms-panel");
+    const sync=()=>{
+      sel.splice(0,sel.length,...[...panel.querySelectorAll("input:checked")].map(c=>c.value));
+      btn.textContent=multiLabel(list,sel); btn.classList.toggle("ms-on",sel.length>0);
+      if(onChange) onChange(); else drawRows();
+    };
+    btn.classList.toggle("ms-on",sel.length>0);
+    // Stay open after a full redraw, so several values can be ticked in a row.
+    if(msOpen===el.id){ panel.classList.remove("hidden"); btn.setAttribute("aria-expanded","true"); }
+    btn.onclick=e=>{ e.stopPropagation(); const open=panel.classList.contains("hidden");
+      document.querySelectorAll("#tab-timeline .ms-panel").forEach(p=>p.classList.add("hidden"));
+      panel.classList.toggle("hidden",!open); btn.setAttribute("aria-expanded",open?"true":"false"); msOpen=open?el.id:""; };
+    panel.addEventListener("click",e=>e.stopPropagation());
+    panel.querySelectorAll("input").forEach(c=>c.onchange=sync);
+    panel.querySelector(".ms-clear").onclick=()=>{ panel.querySelectorAll("input").forEach(c=>c.checked=false); sync(); };
+    if(!msListening){ msListening=true; document.addEventListener("click",()=>{ msOpen=""; document.querySelectorAll("#tab-timeline .ms-panel").forEach(p=>p.classList.add("hidden")); }); }
+  }
   function opt(pairs,sel){ return pairs.map(([v,l])=>`<option ${sel===v?"selected":""} value="${v}">${l}</option>`).join(""); }
 
   // The zoom window from the Year/Quarter/Month filters, or null (whole timeline).
@@ -375,8 +417,9 @@
   // "global" country (like Pan-European). Untagged events show only under "All countries".
   // SVP and Vertical filters (More filters). "__none" = items with no value set.
   function matchesSvpVertical(e){
-    if(view.svp){ const c=S.canonicalSvpId(e.svpId); if(view.svp==="__none" ? !!c : c!==view.svp) return false; }
-    if(view.vertical){ const v=e.verticalId||""; if(view.vertical==="__none" ? !!v : v!==view.vertical) return false; }
+    // Several values can be ticked: the item matches when its value is one of them.
+    if(view.svp.length && !view.svp.includes(S.canonicalSvpId(e.svpId)||"__none")) return false;
+    if(view.vertical.length && !view.vertical.includes(e.verticalId||"__none")) return false;
     return true;
   }
   function matchesCountry(e){
@@ -440,6 +483,15 @@
     return "Campaign roadmap"+(scope?" - "+scope:"")+" ("+year+")";
   }
 
+  // A short line in the export pop-up naming the SVP / Vertical filters in use, so it is clear
+  // that the slide only shows those items.
+  function agendaFilterNote(){
+    const st=S.state.data.settings, parts=[];
+    const nm=(list,id)=>id==="__none"?"(not set)":((list||[]).find(x=>x.id===id)||{}).name||id;
+    if(view.svp.length) parts.push("SVP: "+view.svp.map(id=>nm(st.svps,id)).join(", "));
+    if(view.vertical.length) parts.push("Vertical: "+view.vertical.map(id=>nm(st.verticals,id)).join(", "));
+    return parts.length?`<p class="small" style="margin:0 0 8px"><b>Filtered on</b> ${S.escapeHtml(parts.join("; "))}</p>`:"";
+  }
   function openAgendaOptions(){
     const base=filtered(S.state.data.events||[], {ignoreKind:true});
     if(!base.length) return S.toast("No campaigns or events in the current view.","error");
@@ -451,7 +503,8 @@
     const ordered=[...o.fields.filter(k=>AGENDA_FIELDS.some(f=>f.key===k)), ...AGENDA_FIELDS.map(f=>f.key).filter(k=>!o.fields.includes(k))];
     const m=S.openModal(`
       <h2>Download agenda</h2>
-      <p class="muted small" style="margin:0 0 8px">Choose what goes on the slide. It uses the filters you set on this page (scope, country, period, search). Amounts and notes are never included.</p>
+      <p class="muted small" style="margin:0 0 8px">Choose what goes on the slide. It uses the filters you set on this page (scope, SVP, vertical, country, period, search). Amounts and notes are never included.</p>
+      ${agendaFilterNote()}
       <label>Title</label><input id="ag-title" type="text" value="${S.escapeHtml(defaultAgendaTitle(year))}" />
       <div class="row">
         <div><label>Year</label><select id="ag-year">${opt(years.map(y=>[y,y]),year)}</select></div>

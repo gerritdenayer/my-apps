@@ -1,5 +1,12 @@
 # Changelog
 
+## [v5.3.8] - 2026-11-19 - Compact agenda slide and multi-select filters
+
+### Changed
+- The SVP and Vertical filters on Campaigns & events let you tick several values, for example two SVPs at once, and they are now in the main filter bar instead of under More filters. Nothing ticked means All; "(not set)" shows items without a value; Clear unticks all. Download agenda keeps these filters: the slide only shows the items that match, and the pop-up says which SVPs and verticals you filtered on.
+- Quarters on Campaigns & events is now the same kind of drop-down, next to the year, instead of checkboxes under More filters. Tick one or more quarters (it shows, for example, "Q1, Q3"); the list stays open while you tick. The agenda export uses the quarters you ticked.
+- Boxes on the agenda PowerPoint are much smaller, so more items fit on one slide. Each box shows the name in bold with the details right after it, three lines at most, with no empty space. Short events get a slightly wider box so the text has room. Text that does not fit is cut off with "…". The legend shows the details on one line to match.
+
 ## [v5.3.7] - 2026-11-18 - Budget lines list the campaigns of their year
 
 ### Changed

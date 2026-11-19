@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.8] - 2026-11-19 - Compact agenda slide and multi-select filters
 
 ### Changed
 - The SVP and Vertical filters on Campaigns & events let you tick several values, for example two SVPs at once, and they are now in the main filter bar instead of under More filters. Nothing ticked means All; "(not set)" shows items without a value; Clear unticks all. Download agenda keeps these filters: the slide only shows the items that match, and the pop-up says which SVPs and verticals you filtered on.

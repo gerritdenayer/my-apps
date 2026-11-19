@@ -5,9 +5,54 @@
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   // Layout constants shared by the page planner and the slide drawer (inches, 13.33 x 7.5 slide).
-  const LANE_TOP = 2.05, BOTTOM = 7.1, LANE_GAP = 0.14, BOX_GAP = 0.09;
-  // Smallest box that still reads well: taller when each box carries more detail lines.
-  const minBoxH = (nLines) => 0.38 + 0.1 * Math.min(3, nLines);
+  const LANE_TOP = 2.05, BOTTOM = 7.1, LANE_GAP = 0.14, BOX_GAP = 0.06;
+  const X0 = 2.05, X1 = 13.0, W = X1 - X0;
+  // Compact boxes (since 5.3.8): the name in bold on one or two lines, the details after it
+  // joined with " · ", three lines at most in total. Text that does not fit is cut with
+  // "…". A box is at least MIN_W wide (about 1.5 months) so short events still have room.
+  const MIN_W = 1.45, NAME_PT = 8, LINE_PT = 7, PAD = 0.05, INSET = 0.05;
+  const NAME_LH = NAME_PT * 1.2 / 72, LINE_LH = LINE_PT * 1.2 / 72;
+  // Characters per line for Arial at a size, a little on the safe side so PowerPoint never wraps more.
+  const cpl = (w, pt, bold) => Math.max(4, Math.floor((w - 2 * INSET) / (pt / 72 * (bold ? 0.6 : 0.53))));
+  // Greedy word wrap into at most maxLines lines; the last line gets "…" when text is left over.
+  function fitLines(text, perLine, maxLines) {
+    const words = String(text || "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+    const lines = []; let cur = "";
+    const push = () => { lines.push(cur); cur = ""; };
+    for (let k = 0; k < words.length; k++) {
+      let w = words[k];
+      while (w.length > perLine) { // a single word longer than a line: hard break
+        if (cur) push();
+        if (lines.length === maxLines) break;
+        lines.push(w.slice(0, perLine)); w = w.slice(perLine);
+      }
+      if (lines.length >= maxLines) { return cut(lines, maxLines, perLine); }
+      const next = cur ? cur + " " + w : w;
+      if (next.length <= perLine) { cur = next; continue; }
+      push();
+      if (lines.length >= maxLines) { lines[maxLines - 1] += " " + w; return cut(lines, maxLines, perLine); }
+      cur = w;
+    }
+    if (cur) push();
+    if (lines.length > maxLines) return cut(lines, maxLines, perLine);
+    return lines.length ? lines : [""];
+  }
+  function cut(lines, maxLines, perLine) {
+    const out = lines.slice(0, maxLines);
+    let last = out[maxLines - 1];
+    if (last.length > perLine - 1) last = last.slice(0, perLine - 1);
+    out[maxLines - 1] = last.replace(/[\s,·\-]+$/, "") + "…";
+    return out;
+  }
+  // The text of one box: name lines + one detail line, and the box height that fits them.
+  function boxText(it) {
+    const w = Math.max(MIN_W, (it.b - it.a) * W);
+    const details = (it.lines || []).slice(0, 3).map((l) => String(l)).filter((l) => l.trim()).join(" · ");
+    const name = fitLines(it.name || "(no name)", cpl(w, NAME_PT, true), details ? 2 : 3);
+    // Details get the lines the name leaves free, so the box never goes over three lines.
+    const det = details ? fitLines(details, cpl(w, LINE_PT, false), 3 - name.length) : [];
+    return { name, det, h: 2 * PAD + name.length * NAME_LH + det.length * LINE_LH };
+  }
 
   // Place every item on the year axis (0..1) and pack each lane into rows without overlap.
   function packLanes(model) {
@@ -19,10 +64,11 @@
       const dim = new Date(year, dt.getMonth() + 1, 0).getDate();
       return Math.max(0, Math.min(1, (dt.getMonth() + (dt.getDate() - 1) / dim) / 12));
     };
+    const minF = MIN_W / W;
     return model.lanes.map((ln) => {
       const items = ln.items.map((it) => {
         let a = frac(it.start), b = frac(it.end || it.start);
-        if (b - a < 0.055) b = Math.min(1, a + 0.11);
+        if (b - a < minF) { b = a + minF; if (b > 1) { a = Math.max(0, 1 - minF); b = 1; } }
         return { name: it.name, lines: it.lines || [], kind: it.kind, a, b };
       });
       // Items arrive in the order chosen in the export pop-up (keepOrder); otherwise by start.
@@ -30,11 +76,13 @@
       // Each item goes in the first row where it does not overlap anything already there.
       const rows = [];
       items.forEach((it) => {
-        let r = rows.find((row) => row.every((o) => o.b + 0.008 <= it.a || it.b + 0.008 <= o.a));
+        let r = rows.find((row) => row.every((o) => o.b + 0.004 <= it.a || it.b + 0.004 <= o.a));
         if (!r) { r = []; rows.push(r); }
+        it.t = boxText(it);
         r.push(it);
       });
-      return { label: ln.label, rows };
+      // A row is as high as its tallest box, so there is no empty space under short boxes.
+      return { label: ln.label, rows: rows.map((r) => ({ items: r, h: Math.max(...r.map((x) => x.t.h)) })) };
     });
   }
 
@@ -42,24 +90,26 @@
   // that is too tall for a slide on its own is cut into parts, marked "(cont.)" after the first.
   function planPages(model) {
     const lanes = packLanes(model);
-    const nLines = Math.max(0, ...lanes.flatMap((l) => l.rows.flat().map((it) => Math.min(3, (it.lines || []).length))));
-    const rowH = minBoxH(nLines) + BOX_GAP;
-    const avail = BOTTOM - LANE_TOP + BOX_GAP;
-    const maxRows = Math.max(1, Math.floor(avail / rowH));
-    const height = (laneList) => laneList.reduce((h, l) => h + l.rows.length * rowH, 0) + Math.max(0, laneList.length - 1) * LANE_GAP;
+    const avail = BOTTOM - LANE_TOP;
+    const laneH = (l) => l.rows.reduce((h, r) => h + r.h + BOX_GAP, 0) - BOX_GAP;
+    const height = (list) => list.reduce((h, l) => h + laneH(l), 0) + Math.max(0, list.length - 1) * LANE_GAP;
     const pages = [];
     let cur = [];
     const flush = () => { if (cur.length) { pages.push(cur); cur = []; } };
     lanes.forEach((ln) => {
-      if (ln.rows.length > maxRows) {
-        // Too big for one slide: cut it into even parts on their own slides. The last part stays
+      if (laneH(ln) > avail) {
+        // Too tall for one slide: cut it into parts that each fill a slide. The last part stays
         // open, so the next lane can join it when there is room.
         flush();
-        const parts = Math.ceil(ln.rows.length / maxRows), size = Math.ceil(ln.rows.length / parts);
-        for (let i = 0; i < ln.rows.length; i += size) {
-          const part = { label: ln.label ? ln.label + (i ? " (cont.)" : "") : "", rows: ln.rows.slice(i, i + size) };
-          if (i + size < ln.rows.length) pages.push([part]); else cur = [part];
-        }
+        let part = [], h = 0, first = true;
+        ln.rows.forEach((r) => {
+          if (part.length && h + r.h > avail) {
+            pages.push([{ label: ln.label ? ln.label + (first ? "" : " (cont.)") : "", rows: part }]);
+            first = false; part = []; h = 0;
+          }
+          part.push(r); h += r.h + BOX_GAP;
+        });
+        cur = [{ label: ln.label ? ln.label + (first ? "" : " (cont.)") : "", rows: part }];
         return;
       }
       if (cur.length && height(cur.concat([ln])) > avail) flush();
@@ -74,7 +124,6 @@
     s.background = { color: BLACK };
 
     const LX = 0.3, LW = 1.65;
-    const X0 = 2.05, X1 = 13.0, W = X1 - X0;
 
     // Title bar
     s.addShape("roundRect", { x: 0.3, y: 0.22, w: 9.4, h: 0.72, rectRadius: 0.04, fill: { color: WHITE }, line: { color: WHITE } });
@@ -83,9 +132,9 @@
     // Legend: the box name plus the detail fields chosen in the export pop-up.
     if (model.showLegend !== false) {
       const labels = (model.detailLabels || ["Detail", "Detail"]).slice(0, 3);
-      const lh = 0.3 + labels.length * 0.17;
-      const leg = [{ text: "Campaign / event name", options: { bold: true, fontSize: 9, color: WHITE, breakLine: true } }];
-      labels.forEach((l) => leg.push({ text: l, options: { fontSize: 8.5, color: WHITE, bullet: { code: "2022", indent: 8 }, breakLine: true } }));
+      const lh = 0.5;
+      const leg = [{ text: "Campaign / event name", options: { bold: true, fontSize: 9, color: WHITE, breakLine: true } },
+        { text: labels.join(" · "), options: { fontSize: 8.5, color: WHITE, breakLine: true } }];
       s.addShape("rect", { x: 10.55, y: 0.22, w: 2.45, h: lh, fill: { color: BLACK }, line: { color: WHITE, width: 1 } });
       s.addText(leg, { x: 10.68, y: 0.24, w: 2.28, h: lh - 0.04, fontFace: "Arial", align: "left", valign: "middle", margin: 1 });
     }
@@ -103,38 +152,23 @@
       s.addText("Q" + (q + 1), { x: cx - 0.4, y: axisY - 0.3, w: 0.8, h: 0.26, fontFace: "Arial", fontSize: 12, bold: true, color: WHITE, align: "center" });
     }
 
-    const totalRows = lanes.reduce((n, l) => n + l.rows.length, 0) || 1;
-    let boxH = (BOTTOM - LANE_TOP - Math.max(0, lanes.length - 1) * LANE_GAP) / totalRows - BOX_GAP;
-    boxH = Math.max(0.42, Math.min(0.9, boxH));
-
-    // Text size: estimate how many text lines each box needs at full size (name wraps by box width,
-    // each detail line may wrap too) and shrink all box text evenly so the busiest box still fits.
-    const boxW = (it) => Math.max(0.9, (it.b - it.a) * W) - 0.12;
-    const wrap = (txt, w, cpi) => Math.max(1, Math.ceil(String(txt || "").length / Math.max(1, w * cpi)));
-    let scale = 1;
-    lanes.forEach((ln) => ln.rows.forEach((row) => row.forEach((it) => {
-      const w = boxW(it);
-      const need = 0.05 + wrap(it.name, w, 13) * 0.165 + (it.lines || []).slice(0, 3).reduce((n, l) => n + wrap(l, w - 0.1, 16) * 0.14, 0);
-      scale = Math.min(scale, boxH / need);
-    })));
-    scale = Math.max(0.6, Math.min(1, scale));
-    const nameSize = Math.round(10 * scale * 2) / 2, lineSize = Math.round(8.5 * scale * 2) / 2;
-
     let y = LANE_TOP;
     lanes.forEach((ln, li) => {
-      const bandH = ln.rows.length * (boxH + BOX_GAP) - BOX_GAP;
-      s.addText(ln.label, { x: LX, y: y, w: LW, h: bandH, fontFace: "Arial", fontSize: 14, bold: true, color: WHITE, align: "left", valign: "middle", fit: "shrink" });
-      ln.rows.forEach((row, ri) => {
-        const ry = y + ri * (boxH + BOX_GAP);
-        row.forEach((it) => {
-          const bx = X0 + it.a * W, bw = Math.max(0.9, (it.b - it.a) * W);
+      const bandH = ln.rows.reduce((h, r) => h + r.h + BOX_GAP, 0) - BOX_GAP;
+      s.addText(ln.label, { x: LX, y: y, w: LW, h: Math.max(0.3, bandH), fontFace: "Arial", fontSize: 14, bold: true, color: WHITE, align: "left", valign: "middle", fit: "shrink" });
+      let ry = y;
+      ln.rows.forEach((row) => {
+        row.items.forEach((it) => {
+          const bx = X0 + it.a * W, bw = Math.max(MIN_W, (it.b - it.a) * W);
           const isC = (it.kind || "Campaign") === "Campaign";
           const fill = isC ? ORANGE : GREY, txt = isC ? BLACK : WHITE;
-          s.addShape("roundRect", { x: bx, y: ry, w: bw, h: boxH, rectRadius: 0.05, fill: { color: fill }, line: { color: fill } });
-          const body = [{ text: it.name || "(no name)", options: { bold: true, fontSize: nameSize, color: txt, breakLine: true } }];
-          (it.lines || []).slice(0, 3).forEach((l) => body.push({ text: String(l), options: { fontSize: lineSize, color: txt, bullet: { code: "2022", indent: 6 }, breakLine: true } }));
-          s.addText(body, { x: bx + 0.06, y: ry + 0.02, w: bw - 0.12, h: boxH - 0.04, fontFace: "Arial", align: "left", valign: "middle", margin: 1, fit: "shrink" });
+          s.addShape("roundRect", { x: bx, y: ry, w: bw, h: row.h, rectRadius: 0.04, fill: { color: fill }, line: { color: fill } });
+          const body = it.t.name.map((l) => ({ text: l, options: { bold: true, fontSize: NAME_PT, color: txt, breakLine: true } }))
+            .concat(it.t.det.map((l) => ({ text: l, options: { fontSize: LINE_PT, color: txt, breakLine: true } })));
+          s.addText(body, { x: bx, y: ry, w: bw, h: row.h, fontFace: "Arial", align: "left", valign: "top",
+            margin: [Math.round(INSET * 72), Math.round(INSET * 72), Math.round(PAD * 72) - 1, Math.round(PAD * 72) - 1], lineSpacingMultiple: 1.0, paraSpaceBefore: 0, paraSpaceAfter: 0 });
         });
+        ry += row.h + BOX_GAP;
       });
       y += bandH + LANE_GAP;
       if (li < lanes.length - 1) s.addShape("line", { x: LX, y: y - LANE_GAP / 2, w: X1 - LX, h: 0, line: { color: SEP, width: 1, dashType: "dot" } });
