@@ -685,3 +685,15 @@ html[data-theme="dark"] .env-banner { color: #000; }
 .split-m { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: 400; cursor: pointer; }
 .split-m input { width: auto; margin: 0; }
 
+
+/* Multi-select filter (Campaigns & events: SVP, Vertical). */
+.ms { position: relative; }
+.ms-btn { width: 118px; text-align: left; padding: 8px 26px 8px 10px; border: 1px solid var(--bd-d1d5db); border-radius: 6px; background: var(--bg-ffffff); color: inherit; font: inherit; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.ms-btn::after { content: "▾"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; }
+.ms-btn.ms-on { border-color: var(--bd-ff6a00); }
+.ms-panel { position: absolute; left: 0; top: 100%; margin-top: 4px; z-index: 70; background: var(--bg-ffffff); border: 1px solid var(--bd-d1d5db); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 8px 10px; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.ms-panel.hidden { display: none; }
+.ms-opt { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.ms-opt input { width: auto; margin: 0; }
+.ms-btn.ms-narrow { width: 92px; }
+.ms-clear { margin-top: 6px; align-self: flex-start; padding: 4px 10px; font-size: 13px; }

@@ -61,7 +61,7 @@
       <p>The agenda as a timeline: a bar per campaign or event, a diamond for single-day items, a green euro badge when it has a budget line.</p>
       <p>A <b>campaign</b> is an umbrella; an <b>event</b> has a date and usually a place, and can be part of a campaign.</p>
       <h4>View</h4>
-      <p>The tab opens on your home cluster, if an admin set one, so you see all events of your cluster. Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on cluster or search; kind, quarters, month, SVP, vertical, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view, for example by SVP or vertical. Click a bar, a name or a row to open its card.</p>
+      <p>The tab opens on your home cluster, if an admin set one, so you see all events of your cluster. Pick a year with the year buttons: the whole year then fits the screen, January to December. Filter on quarter, cluster, SVP, vertical or search. In <b>Quarter</b>, <b>SVP</b> and <b>Vertical</b> you can tick several values, for example Q1 and Q3 or two SVPs; nothing ticked means all, and <b>(not set)</b> shows items without an SVP or vertical. Kind, month, M1 zone, entity and country are under <b>More filters</b>. <b>Group by</b> and <b>Color by</b> change the view, for example by SVP or vertical. Click a bar, a name or a row to open its card.</p>
       <p><b>Names</b> (right above the timeline) chooses where the names show: <b>On the timeline</b>, next to each bar or diamond with the entity in the left column (the classic look, as in the presentations), <b>In the list</b>, in the left column with the entity and dates under each name, or <b>Both</b>. Your choice is remembered.</p>
       <h4>The form</h4>
       <table class="help-table">
@@ -76,7 +76,7 @@
       <p>Deleting an item keeps its budget lines (they lose the link). An admin can restore it.</p>` },
 
     { id: "agenda", title: "Download agenda (PowerPoint)", tabs: ["timeline"], html: `
-      <p><b>Download agenda</b> makes a roadmap slide in the Orange style from the current view. It uses the filters set on the page.</p>
+      <p><b>Download agenda</b> makes a roadmap slide in the Orange style from the current view. It uses the filters set on the page, including the SVPs and verticals you ticked, and the pop-up names them.</p>
       <p>In the pop-up you choose the title, the year, campaigns and/or events, what the lanes are (cluster, campaign, entity, type, kind, owner, SVP, vertical, goal or one lane), the order of the lanes and of the items, and up to three details per item (dates, goal, type, owner, entity, cluster, countries, campaign, partners, SVP, vertical), in the order you tick them. Legend and quarter labels can be switched off. Your choices are remembered; <b>Reset to defaults</b> clears them.</p>
       <p>When everything does not fit on one slide, you get as many slides as needed. Lanes are kept together on a slide; a lane too big for one slide continues on the next, marked "(cont.)". The pop-up tells you how many slides you will get, and each slide shows its number at the bottom.</p>
       <p>Each box is at most three lines high: the name in bold, then the details on the same line, separated by dots. Short events get a box of about six weeks so the text has room. Text that does not fit is cut off with "…"; the full name is still in the app.</p>
