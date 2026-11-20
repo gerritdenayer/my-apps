@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Reporting charts can show the numbers on the chart itself. A new "Labels" choice offers None, Amount, Percentage or Amount and %. In a pie or doughnut the percentage is each slice's share of the whole, in stacked bars the share of the column, and in other charts the share of the series total. Budget bars and lines get no label, and labels that do not fit in a small slice are left out. The labels also appear in the downloaded image, and your choice stays when you switch quick pick.
+
 ## [v5.3.8] - 2026-11-19 - Compact agenda slide and multi-select filters
 
 ### Changed

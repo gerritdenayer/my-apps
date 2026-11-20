@@ -91,6 +91,7 @@
       <ul>
         <li><b>Quick pick</b>: ready-made charts, such as forecast vs actual by month, spend over the year vs budget, budget by cluster, or the share per A&amp;P category.</li>
         <li><b>Chart type</b>: bar, stacked, horizontal, line, pie or doughnut.</li>
+        <li><b>Labels</b>: write the numbers on the chart itself: <i>Amount</i>, <i>Percentage</i> or <i>Amount and %</i> (None hides them). In a pie or doughnut the percentage is the share of the whole; in stacked bars, the share of that column; in other charts, the share of the series total. Labels that do not fit in a small slice are left out; the tooltip and the table under the chart still show them. Labels are part of <b>Download image</b>.</li>
         <li><b>Group by</b>: what the bars or slices are: month, quarter, M1 zone, cluster, entity, A&amp;P category, SVP, vertical, owner, status, vendor or budget code.</li>
         <li><b>Split by</b>: forecast next to actual, or one color per cluster, A&amp;P category, status and so on.</li>
         <li><b>Values</b>: forecast, actual or both. <b>Show</b> keeps the top 5, 10 or 15 and puts the rest in "Other".</li>

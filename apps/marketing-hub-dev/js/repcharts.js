@@ -1,6 +1,7 @@
 // Reporting > Charts: build your own chart from the budget lines in the Reporting filters
 // (year, quarter, month, M1 > cluster > entity, measure). Choose a quick pick or set the chart
 // type, what to group by, how to split it, forecast and/or actual, budget, cumulative, top N.
+// "Labels" writes the amount and/or percentage on the chart itself (also in the downloaded image).
 // Choices are remembered per browser (mb_rep_chart).
 (function () {
   const S = window.MB_STATE;
@@ -145,6 +146,68 @@
   }
 
   function money(v) { return S.fmtMoney(v); }
+  const LABELS = [["none", "None"], ["value", "Amount"], ["percent", "Percentage"], ["both", "Amount and %"]];
+  // Short amount for labels on the chart: €950, €8.7K, €1.2M.
+  const shortMoney = (v) => "€" + new Intl.NumberFormat("en-US", { notation: Math.abs(v) >= 1000 ? "compact" : "standard", maximumFractionDigits: Math.abs(v) >= 1000 ? 1 : 0 }).format(v);
+  const pct = (v, t) => (t ? (Math.round(v / t * 1000) / 10).toLocaleString("en-US") : "0") + "%";
+
+  // Chart.js plugin that writes the chosen labels on the chart. Percentages: share of the whole
+  // pie, share of the column for stacked bars, share of the series total for other charts (of the
+  // year-end total when cumulative). Budget bars and lines get no label. Labels that do not fit
+  // inside a small slice or segment are left out; the tooltip and the table still have them.
+  const labelPlugin = {
+    id: "mbLabels",
+    afterDatasetsDraw(ch) {
+      const mode = cfg.labels || "none";
+      if (mode === "none") return;
+      const g = ch.ctx, type = cfg.type, pie = isPie(), horiz = type === "hbar", stacked = type === "stacked";
+      const cum = cfg.cumulative && timeGroup();
+      const fg = (window.Chart && Chart.defaults.color) || "#666";
+      const sets = ch.data.datasets.map((ds, di) => ({ ds, di, meta: ch.getDatasetMeta(di) }))
+        .filter((x) => !x.meta.hidden && x.ds.mbKind !== "budget" && x.ds.mbKind !== "budget-line");
+      const colTotal = (i) => sets.reduce((t, x) => t + (+x.ds.data[i] || 0), 0);
+      g.save();
+      g.font = "600 11px Arial, sans-serif";
+      g.textBaseline = "middle";
+      sets.forEach(({ ds, meta }) => {
+        const vals = ds.data.map((v) => +v || 0);
+        const total = cum ? (vals[vals.length - 1] || 0) : vals.reduce((a, b) => a + b, 0);
+        meta.data.forEach((el, i) => {
+          const v = vals[i];
+          if (!v || !el) return;
+          const p = stacked ? pct(v, colTotal(i)) : pct(v, total);
+          const parts = mode === "value" ? [shortMoney(v)] : mode === "percent" ? [p] : [shortMoney(v), p];
+          if (pie) {
+            const arc = (el.endAngle - el.startAngle);
+            const pos = el.tooltipPosition();
+            const lines = parts;
+            const w = Math.max(...lines.map((t) => g.measureText(t).width));
+            const r = (el.outerRadius - (el.innerRadius || 0));
+            // Too small to hold the text: skip (the legend tooltip still shows it).
+            if (arc * (el.innerRadius + r / 2) < w * 0.9 || r < 14 * lines.length) return;
+            g.textAlign = "center";
+            g.fillStyle = "#000"; g.globalAlpha = 0.85;
+            lines.forEach((t, k) => g.fillText(t, pos.x, pos.y + (k - (lines.length - 1) / 2) * 13));
+            g.globalAlpha = 1;
+            return;
+          }
+          const txt = parts.join(" · ");
+          const w = g.measureText(txt).width;
+          if (stacked) {
+            const box = horiz ? Math.abs(el.x - el.base) : Math.abs(el.base - el.y);
+            if (box < (horiz ? w + 6 : 14) || (!horiz && el.width < w + 4)) return;
+            g.textAlign = "center"; g.fillStyle = "#000";
+            g.fillText(txt, horiz ? (el.x + el.base) / 2 : el.x, horiz ? el.y : (el.y + el.base) / 2);
+            return;
+          }
+          g.fillStyle = fg;
+          if (horiz) { g.textAlign = v >= 0 ? "left" : "right"; g.fillText(txt, el.x + (v >= 0 ? 4 : -4), el.y); }
+          else { g.textAlign = "center"; g.fillText(txt, el.x, el.y + (v >= 0 ? -9 : 9)); }
+        });
+      });
+      g.restore();
+    },
+  };
 
   function html(ctx) {
     const typeBtns = TYPES.map(([v, l]) => `<button type="button" class="seg-btn ${cfg.type === v ? "on" : ""}" data-ctype="${v}">${l}</button>`).join("");
@@ -159,6 +222,7 @@
           <div><label>Group by</label><select id="rc-group">${opt(DIMS, cfg.group)}</select></div>
           <div class="${pie ? "rc-off" : ""}"><label>Split by</label><select id="rc-split" ${pie ? "disabled" : ""}>${opt(SPLITS.filter((s) => s[0] !== cfg.group), cfg.split)}</select></div>
           <div><label>Values</label><select id="rc-show">${opt([["both", "Forecast and actual"], ["forecast", "Forecast"], ["actual", "Actual"]], cfg.show)}</select></div>
+          <div><label>Labels</label><select id="rc-labels" title="Write the amount and/or percentage on the chart">${opt(LABELS, cfg.labels || "none")}</select></div>
           <div class="${timeGroup() ? "rc-off" : ""}"><label>Show</label><select id="rc-top" ${timeGroup() ? "disabled" : ""}>${opt([["0", "All"], ["5", "Top 5"], ["10", "Top 10"], ["15", "Top 15"]], String(cfg.top || 0))}</select></div>
           <label class="rc-check ${budgetPossible() ? "" : "rc-off"}" title="${budgetPossible() ? "" : "Budget shows when you group by month, quarter, M1 zone, cluster or entity, split by forecast / actual, and use a bar or line chart."}"><input type="checkbox" id="rc-budget" ${cfg.budget && budgetPossible() ? "checked" : ""} ${budgetPossible() ? "" : "disabled"}> Budget</label>
           <label class="rc-check ${timeGroup() && !pie ? "" : "rc-off"}" title="Add each month to the ones before it, to see how spending builds up over the year."><input type="checkbox" id="rc-cum" ${cfg.cumulative && timeGroup() ? "checked" : ""} ${timeGroup() && !pie ? "" : "disabled"}> Cumulative</label>
@@ -198,12 +262,16 @@
     const horiz = cfg.type === "hbar";
     const stacked = cfg.type === "stacked";
     const lineType = cfg.type === "line";
-    const datasets = res.datasets.map((d) => {
+    const datasets = res.datasets.map((d) => Object.assign(dsFor(d), { mbKind: d.kind }));
+    function dsFor(d) {
       if (pie) return { label: d.label, data: d.data, backgroundColor: res.labels.map((l, i) => l === "Other" ? "#8f8f8f" : PALETTE[i % PALETTE.length]), borderColor: dark ? "#1d2026" : "#fff", borderWidth: 2 };
       if (d.kind === "budget-line") return { label: d.label, data: d.data, type: "line", borderColor: d.color, backgroundColor: "transparent", borderDash: [6, 4], pointRadius: 0, tension: 0, order: 0 };
       if (lineType) return { label: d.label, data: d.data, type: "line", borderColor: d.color, backgroundColor: d.color, pointRadius: 3, tension: 0.25, fill: false };
       return { label: d.label, data: d.data, backgroundColor: d.kind === "budget" ? (dark ? "rgba(143,143,143,0.45)" : "rgba(143,143,143,0.35)") : d.color, borderColor: d.kind === "budget" ? d.color : undefined, borderWidth: d.kind === "budget" ? 1 : 0, stack: stacked ? (d.kind === "budget" ? "budget" : "s") : undefined, order: 1 };
-    });
+    }
+    // Room for labels written outside the bars.
+    const lab = (cfg.labels || "none") !== "none" && !pie && !stacked;
+    const padding = lab ? (horiz ? { right: cfg.labels === "both" ? 110 : 64 } : { top: 20 }) : 0;
     const fmtAxis = (v) => "€" + new Intl.NumberFormat("en-US", { notation: Math.abs(v) >= 100000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(v);
     const valueAxis = { stacked, beginAtZero: true, ticks: { callback: fmtAxis } };
     const catAxis = { stacked, ticks: { autoSkip: !horiz } };
@@ -212,7 +280,9 @@
     chart = new Chart(canvas, {
       type: pie ? cfg.type : "bar",
       data: { labels: res.labels, datasets },
+      plugins: [labelPlugin],
       options: {
+        layout: { padding },
         responsive: true, maintainAspectRatio: false,
         indexAxis: horiz ? "y" : "x",
         plugins: {
@@ -245,6 +315,7 @@
     host.querySelector("#rc-group").onchange = (e) => { const g = e.target.value; set({ group: g, split: cfg.split === g ? "fa" : cfg.split }); };
     host.querySelector("#rc-split").onchange = (e) => set({ split: e.target.value, show: e.target.value !== "fa" && cfg.show === "both" ? "actual" : cfg.show });
     host.querySelector("#rc-show").onchange = (e) => set({ show: e.target.value });
+    host.querySelector("#rc-labels").onchange = (e) => set({ labels: e.target.value, preset: cfg.preset });
     host.querySelector("#rc-top").onchange = (e) => set({ top: +e.target.value });
     host.querySelector("#rc-budget").onchange = (e) => set({ budget: e.target.checked });
     host.querySelector("#rc-cum").onchange = (e) => set({ cumulative: e.target.checked });
