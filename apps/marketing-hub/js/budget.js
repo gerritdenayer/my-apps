@@ -816,7 +816,7 @@
             <div class="amt-net" id="m-an"></div>
           </div>
           <label class="chk-line" title="The partner pays the whole cost: partner funds follow gross, so net is 0"><input type="checkbox" id="m-full" ${a.fullyPartnerFunded ? "checked" : ""} /> Fully partner funded <span class="muted small">(partner pays it all, net is 0)</span></label>
-          ${isEdit ? "" : `<label class="chk-line"><input type="checkbox" id="m-split" /> Split across months <span class="muted small">(one budget line per month, amounts shared evenly)</span></label>
+          ${`<label class="chk-line"><input type="checkbox" id="m-split" /> Split across months <span class="muted small">(one budget line per month, amounts shared evenly)</span></label>
           <div id="m-splitbox" class="split-box" hidden>
             <div class="split-head"><span class="small">Months in <b id="m-split-year"></b></span>
               <button type="button" class="link" id="m-split-all">All year</button>
@@ -956,7 +956,8 @@
     modal.querySelector("#m-date").addEventListener("change", applyEvList);
     applyEvList();
     modal.querySelector("#m-cancel").onclick = S.closeModal;
-    // Split across months (new lines only): one line per ticked month, amounts shared evenly.
+    // Split across months: one line per ticked month, amounts shared evenly. On an existing line,
+    // that line becomes the first ticked month and the other months are added as new lines.
     const splitChk = modal.querySelector("#m-split");
     const splitMonths = () => [...modal.querySelectorAll(".m-split-m:checked")].map((c) => +c.value);
     // Share an amount over n parts in whole cents; the last part takes the rounding remainder.
@@ -971,7 +972,7 @@
       const fg = parseFloat(modal.querySelector("#m-fg").value) || 0;
       const fp = modal.querySelector("#m-full").checked ? fg : (parseFloat(modal.querySelector("#m-fp").value) || 0);
       modal.querySelector("#m-split-info").textContent = !n ? "Tick at least one month." :
-        `${n} budget line${n === 1 ? "" : "s"}, each about ${S.fmtMoney((fg - fp) / n)} forecast net (${S.fmtMoney(fg - fp)} in total). The amounts you entered above are the total for all months.`;
+        `${n} budget line${n === 1 ? "" : "s"}, each about ${S.fmtMoney((fg - fp) / n)} forecast net (${S.fmtMoney(fg - fp)} in total). The amounts above are the total for all months.${isEdit ? " This line becomes the first month; the other months are added as new lines." : ""}`;
     };
     if (splitChk) {
       const box = modal.querySelector("#m-splitbox");
@@ -1039,7 +1040,7 @@
       }
 
       if (!updated.customerLinkUrl) delete updated.customerLinkUrl;
-      if (!isEdit && splitChk && splitChk.checked) {
+      if (splitChk && splitChk.checked) {
         const ms = splitMonths().sort((x, y) => x - y);
         if (!ms.length) return S.toast("Tick at least one month to split across, or untick Split across months.", "error");
         const n = ms.length, yr = +date.slice(0, 4), day = +date.slice(8, 10);
@@ -1052,11 +1053,19 @@
           const line = { ...updated, id: i === 0 ? updated.id : API.uid(), date: d, splitId };
           Object.keys(parts).forEach((k) => { line[k] = parts[k][i]; });
           line.statusId = S.autoCommitStatus(line.statusId, line.actualGross, line.actualPartner);
+          const now = new Date().toISOString();
+          if (isEdit && i === 0) {
+            // The edited line keeps its id and history, with its new month and share.
+            line.updatedBy = S.actorId(); line.updatedAt = now;
+            data.activities[data.activities.findIndex((x) => x.id === id)] = line;
+            return;
+          }
+          if (isEdit) { line.createdBy = S.actorId(); line.createdAt = now; delete line.updatedBy; delete line.updatedAt; }
           data.activities.push(line);
         });
-        const addedTo = syncCustomerLink(updated, "");
+        const addedTo = syncCustomerLink(updated, isEdit ? (a.customerLinkUrl || "") : "");
         S.scheduleSave(); S.notify(); S.closeModal();
-        S.toast(`${n} budget lines created, one per month` + (addedTo ? ` (CustomerLink added to ${addedTo} campaign${addedTo === 1 ? "" : "s"} / event${addedTo === 1 ? "" : "s"})` : ""), "success");
+        S.toast((isEdit ? `Budget line split into ${n} lines, one per month` : `${n} budget lines created, one per month`) + (addedTo ? ` (CustomerLink added to ${addedTo} campaign${addedTo === 1 ? "" : "s"} / event${addedTo === 1 ? "" : "s"})` : ""), "success");
         return;
       }
       if (isEdit) {

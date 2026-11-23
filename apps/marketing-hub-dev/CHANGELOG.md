@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.10] - 2026-11-23 - Split existing budget lines across months
 
 ### Fixed
 - "Split across months" now also works when you edit an existing budget line. The line you edit becomes the first ticked month with its share of the amounts, and the other months are added as new lines with the same details and linked campaigns. Before, the option only showed on a new line.
