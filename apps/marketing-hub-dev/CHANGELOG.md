@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.14] - 2026-11-25 - Who pays: badges on the timeline
 
 ### Added
 - The timeline shows who pays for an event or campaign. A purple badge next to the bar means someone else pays in full: a handshake for a partner, a building for another entity, a globe for global marketing. When our budget line is partly paid by a partner, the bar shows the green euro badge and the purple handshake. In the event form, the budget option "Fully partner funded" is now "Paid in full by someone else", with a "Paid by" choice and a free text "Who" field. Older items marked fully partner funded show as paid by a partner.

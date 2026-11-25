@@ -62,6 +62,8 @@
     #tab-timeline .tl-track{position:absolute;top:0;height:100%}
     #tab-timeline .tl-bar{position:absolute;top:6px;height:18px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 7px;font-size:11px;color:var(--fg-11130f);overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.18)}
     #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid var(--bd-333333)}
+    #tab-timeline .tl-paid{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-534ab7);color:var(--fg-ffffff);margin-right:5px}
+    #tab-timeline .tl-paid svg{width:10px;height:10px}
     #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px;margin-right:5px}
     #tab-timeline .tl-bar.open-left{border-top-left-radius:0;border-bottom-left-radius:0;border-left:3px dashed rgba(0,0,0,.55)}
     #tab-timeline .tl-bar.open-right{border-top-right-radius:0;border-bottom-right-radius:0;border-right:3px dashed rgba(0,0,0,.55)}
@@ -401,6 +403,7 @@
       cats.map((c,i)=>`<span class="k"><span class="tl-swatch" style="background:${PALETTE[i%PALETTE.length]}"></span>${S.escapeHtml(c)}</span>`).join("")+
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:var(--bg-999999)"></span>single-day</span>`+
       `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px">€</span> has budget</span>`+
+      `<span class="k"><span class="tl-paid" style="margin:0">${paidIcon("partner")}</span><span class="tl-paid" style="margin:0">${paidIcon("entity")}</span><span class="tl-paid" style="margin:0">${paidIcon("global")}</span> paid by partner, other entity or global marketing</span>`+
       (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed var(--bd-555555)"></span> spans beyond period</span>`:"")+
       `<span class="k tl-names" role="group" aria-label="Show names"><span>Names:</span>${[["chart","On the timeline"],["list","In the list"],["both","Both"]].map(([v,l])=>`<button type="button" class="tl-nm${view.names===v?" on":""}" data-v="${v}" aria-pressed="${view.names===v}">${l}</button>`).join("")}</span>`;
     leg.querySelectorAll(".tl-nm").forEach(b=>b.onclick=()=>{ view.names=b.dataset.v; try{ localStorage.setItem(NAMES_KEY,view.names); }catch(e){} drawRows(); });
@@ -664,6 +667,7 @@
       `Kind: ${e.kind||"Event"}`,
       `Goal: ${S.goalLabel(e.goal)||"-"}`,
       `Dates: ${dates}`,
+      ...(paidText(e)?[paidText(e)]:[]),
       `Activity type: ${at||"-"}`,
       `Cluster: ${clusterOf(e)}`,
       `Entity: ${S.eventEntityName(e)||"-"}`,
@@ -689,6 +693,27 @@
 
   // Shared "has budget" marker: a small green euro badge used on bars and diamonds alike.
   function makeEur(){ const b=document.createElement("span"); b.className="tl-eur"; b.textContent="€"; b.title="Has an allocated budget"; return b; }
+  // Who pays, when someone else pays for an item in full: partner, other entity or global marketing.
+  // Older items only have fullyPartnerFunded, which means a partner.
+  const PAID_BY={ partner:"Partner", entity:"Other entity", global:"Global marketing" };
+  const PAID_ICON={
+    partner:'<path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/>',
+    entity:'<path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16"/>',
+    global:'<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/>'
+  };
+  function paidByOf(e){ return e.paidBy && PAID_BY[e.paidBy] ? e.paidBy : (e.fullyPartnerFunded ? "partner" : ""); }
+  function paidText(e){ const k=paidByOf(e); return k ? `Paid in full by ${PAID_BY[k].toLowerCase()}${e.paidByName?": "+e.paidByName:""}` : ""; }
+  function paidIcon(k){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PAID_ICON[k]}</svg>`; }
+  function makePaid(k,title){ const b=document.createElement("span"); b.className="tl-paid"; b.innerHTML=paidIcon(k); b.title=title; return b; }
+  // The badges for one item: green euro when it has our budget, purple when someone else pays,
+  // and both when our budget line is partly paid by a partner.
+  function badgesFor(e){
+    const out=[], k=paidByOf(e), b=eventBudget(e.id);
+    if(b.count>0) out.push(makeEur());
+    if(k) out.push(makePaid(k, paidText(e)));
+    else if(b.count>0 && (b.fP>0 || b.aP>0)) out.push(makePaid("partner","Partly paid by a partner"));
+    return out;
+  }
 
   function rowEl(e,g,events){
     const tip=tooltipFor(e);
@@ -708,7 +733,7 @@
     track.className="tl-track"; track.style.left=LABELW+"px"; track.style.width=g.trackW+"px";
     const col=colorFor(events,e);
     const s=parseISO(e.start), end=parseISO(e.end||e.start);
-    const hasBudget=eventBudget(e.id).count>0;
+    const badges=badgesFor(e), hasBudget=badges.length>0, bw=badges.length*19;
     const single=!e.end||e.start===e.end;
     if(single){
       const dm=document.createElement("div");
@@ -717,10 +742,10 @@
       track.appendChild(dm);
       if(hasBudget||onChart){
         const lbl=document.createElement("div"); lbl.className="tl-diflabel"; lbl.style.left=(xOf(s,g)+12)+"px"; lbl.title=tip;
-        if(hasBudget) lbl.appendChild(makeEur());
+        badges.forEach(x=>lbl.appendChild(x));
         if(onChart) lbl.appendChild(document.createTextNode(markerText(e)));
         // Near the end of the period the name goes to the left of the marker, so it stays in view.
-        const estW=(onChart?markerText(e).length*6.6:0)+(hasBudget?19:0);
+        const estW=(onChart?markerText(e).length*6.6:0)+bw;
         if(xOf(s,g)+12+estW>g.trackW){ lbl.style.left=Math.max(0,xOf(s,g)-12-estW)+"px"; }
         track.appendChild(lbl);
       }
@@ -736,18 +761,18 @@
       track.appendChild(bar);
       // Names on the timeline: inside the bar when it fits, otherwise just after it.
       const mtxt = onChart ? markerText(e) : "";
-      const fits = !!mtxt && (mtxt.length * 6.6 + 14 + (hasBudget ? 19 : 0)) <= w;
+      const fits = !!mtxt && (mtxt.length * 6.6 + 14 + bw) <= w;
       if (fits) {
-        if(hasBudget) bar.appendChild(makeEur());
+        badges.forEach(x=>bar.appendChild(x));
         bar.appendChild(document.createTextNode(mtxt));
       } else if (hasBudget || mtxt) {
         const lbl=document.createElement("div");
         lbl.className="tl-barlabel";
         lbl.style.left=(left+w+6)+"px";
         lbl.title=tip;
-        if(hasBudget) lbl.appendChild(makeEur());
+        badges.forEach(x=>lbl.appendChild(x));
         if(mtxt) lbl.appendChild(document.createTextNode(mtxt));
-        const estW=(mtxt?mtxt.length*6.6:0)+(hasBudget?19:0);
+        const estW=(mtxt?mtxt.length*6.6:0)+bw;
         if(left+w+6+estW>g.trackW){ lbl.style.left=Math.max(0,left-6-estW)+"px"; }
         lbl.onclick=()=>openCampaignDetail(e.id);
         track.appendChild(lbl);
@@ -809,7 +834,7 @@
       <h3 style="margin:12px 0 2px">Content &amp; assets (${content.length})</h3>
       ${content.length?`<ul style="margin:4px 0 0;padding-left:18px">${content.map(c=>`<li>${c.url?`<a href="${S.escapeHtml(c.url)}" target="_blank" rel="noopener">${S.escapeHtml(c.label||c.url)} &#8599;</a>`:S.escapeHtml(c.label||"")}</li>`).join("")}</ul>`:`<div class="muted">No content linked yet.</div>`}
 
-      ${e.fullyPartnerFunded?`<div class="tl-pf-note"><b>Fully partner funded.</b> A partner pays for it in full; no impact on our budget.</div>`:""}
+      ${paidByOf(e)?`<div class="tl-pf-note"><b>${S.escapeHtml(paidText(e))}.</b> No impact on our budget.</div>`:""}
       <h3 style="margin:14px 0 2px">Linked budget lines</h3>
       ${b.count?`<table class="tl-mini"><thead><tr><th>Date</th><th>Name</th><th>Cluster</th><th>Entity</th><th>Type</th><th>Status</th><th class="num">Forecast net</th><th class="num">Actual net</th></tr></thead><tbody>
         ${b.lines.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||"")).map(a=>{
@@ -1006,10 +1031,16 @@
       <select id="c-bmode">
         <option value="new" ${bMode==="new"?"selected":""}>Create a new budget line from this campaign</option>
         <option value="existing" ${bMode==="existing"?"selected":""}>Link existing budget line(s)</option>
-        <option value="partner" ${bMode==="partner"?"selected":""}>Fully partner funded (no impact on our budget)</option>
+        <option value="partner" ${bMode==="partner"?"selected":""}>Paid in full by someone else (no impact on our budget)</option>
         <option value="none" ${bMode==="none"?"selected":""}>No budget line (agenda only)</option>
       </select>
-      <p id="c-bpartner" class="muted small" style="margin:10px 0 0" ${bMode==="partner"?"":"hidden"}>A partner pays for this ${S.escapeHtml((e.kind||"event").toLowerCase())} in full, so no budget line is needed and nothing counts against our budget. Add the partner and their role on the Partners &amp; content tab.</p>
+      <div id="c-bpartner" ${bMode==="partner"?"":"hidden"}>
+        <div class="row">
+          <div><label>Paid by</label><select id="c-paidby">${Object.entries(PAID_BY).map(([k,l])=>`<option value="${k}" ${(paidByOf(e)||"partner")===k?"selected":""}>${l}</option>`).join("")}</select></div>
+          <div><label>Who</label><input id="c-paidname" type="text" value="${S.escapeHtml(e.paidByName||"")}" placeholder="Fortinet, OCD, Global marketing" /></div>
+        </div>
+        <p class="muted small" style="margin:6px 0 0">Someone else pays for this ${S.escapeHtml((e.kind||"event").toLowerCase())} in full, so no budget line is needed and nothing counts against our budget. It shows with a purple badge on the timeline.</p>
+      </div>
       <div id="c-bnew" ${bMode==="new"?"":"hidden"}>
         <div class="row-3">
           <div><label>A&amp;P category</label>
@@ -1466,6 +1497,8 @@
         partners, content, outcomes,
         primaryActivityId:primaryId,
         fullyPartnerFunded: bmode==="partner" ? true : undefined,
+        paidBy: bmode==="partner" ? modal.querySelector("#c-paidby").value : undefined,
+        paidByName: bmode==="partner" ? (modal.querySelector("#c-paidname").value.trim()||undefined) : undefined,
         entity:undefined, owner:undefined, type:undefined, globalCampaignId:undefined, // drop legacy fields
       };
       // CustomerLink Campaign: one link for the event and its budget lines. Lines that had no link,
