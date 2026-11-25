@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- The total on Settings > Budget could be lower than the yearly budget on the Budget tab. The Settings page only counted entities that are active in that year, while the Budget tab also counted an entity that is not active but still has an amount for that year. The Settings page now shows those entities too, marked "not active in <year>", with a note at the top that gives the amount and what to do. Both totals now match.
+
 ## [v5.3.10] - 2026-11-23 - Split existing budget lines across months
 
 ### Fixed
