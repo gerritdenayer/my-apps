@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Names inside timeline bars are easier to read. On orange and other darker colors the text is now white; on light colors (yellow, light green, light blue) it stays dark. On a TBC bar with white text, the stripes are darker and sit behind the text.
+
 ## [v5.3.16] - 2026-11-25 - Duplicate campaigns and events
 
 ### Added
