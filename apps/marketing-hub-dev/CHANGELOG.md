@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- A Duplicate button in the edit form of a campaign or event. It opens a new item with the same details and " (copy)" after the name, so you change the dates or anything else and click Create. Outcomes, budget lines, the CustomerLink and the created/updated history are not copied. Nothing is saved until you click Create.
+
 ## [v5.3.15] - 2026-11-25 - TBC items on the timeline
 
 ### Added
