@@ -1317,7 +1317,7 @@ Major change. A full backup of v1.9 is in `_backups/` (tar.gz) for rollback.
   actual spend, plus efficiency: cost per MQL, cost per SQL, cost per attendee, and revenue
   ROI. Includes KPI cards, a revenue-vs-spend chart, and Excel export.
 
-## [Unreleased] - 2026-06-16 - Campaign budget link from the timeline
+## [v5.3.12] - 2026-11-25 - Roll back of v5.3.11 - 2026-06-16 - Campaign budget link from the timeline
 
 ### Added
 - The campaign add/edit form (Campaigns & Timeline) now has a Budget section. Pick an
