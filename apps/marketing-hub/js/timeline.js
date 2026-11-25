@@ -850,6 +850,7 @@
 
       <div class="actions" style="margin-top:16px">
         <button class="secondary" id="d-close">Close</button>
+        ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="secondary" id="d-dup" title="Open a new item with the same details, to adjust and create">Duplicate</button>':''}
         ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="secondary" id="d-edit">Edit</button>':''}
         ${(!window.MB_AUTH||window.MB_AUTH.can("editCampaign"))?'<button class="primary" id="d-addline">+ Add budget line</button>':''}
       </div>
@@ -857,6 +858,8 @@
     modal.querySelector("#d-close").onclick=S.closeModal;
     const dEdit=modal.querySelector("#d-edit");
     if(dEdit) dEdit.onclick=()=>openCampaignModal(id);
+    const dDup=modal.querySelector("#d-dup");
+    if(dDup) dDup.onclick=()=>duplicateItem(e);
     const dAdd=modal.querySelector("#d-addline");
     if(dAdd) dAdd.onclick=()=>{
       S.closeModal();
@@ -875,6 +878,19 @@
   // ---------- add / edit campaign ----------
   // opts.preset: fields to pre-fill a new item (used by the email inbox); opts.onSaved(event)
   // is called after a successful save.
+  // Duplicate: a new item with the same details, opened in the form to adjust and create.
+  // Not copied: outcomes, budget lines, the CustomerLink and the created/updated history.
+  function duplicateItem(e){
+    const src=JSON.parse(JSON.stringify(e));
+    ["id","createdBy","createdAt","updatedBy","updatedAt","primaryActivityId","customerLinkUrl"].forEach(k=>delete src[k]);
+    src.name=(src.name||"")+" (copy)";
+    src.outcomes={};
+    src.content=(src.content||[]).filter(c=>c.label!==S.CLINK_LABEL);
+    src._bmode=paidByOf(e)?"partner":"none";
+    S.closeModal();
+    openCampaignModal(null,{preset:src});
+    S.toast("Copy opened. Change what you need and click Create.","success");
+  }
   function openCampaignModal(id, opts){
     opts=opts||{};
     const data=S.state.data;
