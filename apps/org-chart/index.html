@@ -27,6 +27,17 @@
     <button id="btnZoomOut" title="Zoom out">-</button>
     <button id="btnZoomIn" title="Zoom in">+</button>
     <span class="sep"></span>
+    <button id="btnBranches" title="Pick the teams you want to see">Branches</button>
+    <div class="menu-wrap">
+      <button id="btnOut" title="Download what you see as a PDF or PowerPoint file">Export</button>
+      <div id="outMenu" class="menu" hidden>
+        <button id="expPdf">PDF file</button>
+        <button id="expPptx">PowerPoint file</button>
+        <label class="check"><input id="expLight" type="checkbox"> White background (for printing)</label>
+        <div class="muted small">Exports what you see now: the open teams in the branches you picked.</div>
+      </div>
+    </div>
+    <span class="sep"></span>
     <button id="btnImport" title="Open an org.json file">Open file</button>
     <button id="btnExport" class="primary" title="Download the chart as org.json">Save file</button>
     <input id="fileInput" type="file" accept=".json,application/json" hidden>
@@ -49,12 +60,29 @@
     </div>
   </div>
 
+  <div id="filterInfo" class="filter-info" hidden>
+    <span id="filterText"></span>
+    <button id="filterEdit">Change</button>
+    <button id="filterClear">Show whole chart</button>
+  </div>
+
   <div class="legend">
     <span><i class="lg-line"></i>Digital &amp; Data reporting line</span>
     <span class="muted">Drag a box onto another box to move it · Double-click to open or close a team</span>
   </div>
   <div id="status" class="status muted"></div>
 </main>
+
+<aside id="branchPanel" class="panel left" hidden>
+  <div class="panel-head">
+    <span class="eyebrow">Branches</span>
+    <button id="branchClose" class="icon" title="Close">×</button>
+  </div>
+  <p class="muted small">Tick the teams you want to see. The chart then shows only those teams, with the managers above them for context. Tick none to see the whole chart.</p>
+  <input id="branchSearch" type="search" placeholder="Find a team or manager" autocomplete="off">
+  <button id="branchAll">Show whole chart</button>
+  <div id="branchList" class="branch-list"></div>
+</aside>
 
 <aside id="panel" class="panel" hidden>
   <div class="panel-head">

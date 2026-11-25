@@ -23,6 +23,8 @@ Live link (after the first push): https://gerritdenayer.github.io/my-apps/apps/o
 - **Remove:** "Remove with team" deletes the box and everyone below it. "Remove, keep team" moves the team up one level.
 - **Undo / Redo:** buttons in the top bar, or Ctrl/Cmd + Z and Ctrl/Cmd + Y.
 - **Rename the chart:** double-click the title in the top left.
+- **Show only some branches:** click **Branches** and tick the teams you want. Ticking a team includes everyone below it. Tick none, or click "Show whole chart", to see everything again. Your pick is kept in this browser, not in `org.json`.
+- **Export:** click **Export**, then "PDF file" or "PowerPoint file". The file shows exactly what is on screen: the open teams in the branches you picked. Tick "White background" for printing. Use **Expand all** first if you want every level in the file.
 
 ## Conventions (same as Marketing Hub)
 
@@ -32,6 +34,7 @@ Live link (after the first push): https://gerritdenayer.github.io/my-apps/apps/o
 - Every change gets a short entry in `CHANGELOG.md` (an "Unreleased" section until it is pushed).
 - Plain, clear English in the app and in the docs. American spelling. No m-dashes.
 - Data never goes into the repo: `*.json` is excluded.
+- Export libraries are stored in `js/vendor` (no CDN), so export also works on locked-down networks. Names never leave your computer.
 
 ## Publish
 
