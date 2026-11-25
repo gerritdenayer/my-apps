@@ -24,6 +24,9 @@
       .bs-code{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;background:var(--bg-f1f5f9);color:var(--fg-475569);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
       .bs-ent-amt{font-variant-numeric:tabular-nums;color:var(--fg-111111)}
       .bs-ent.zero .bs-ent-amt{color:var(--fg-9ca3af)}
+      .bs-off{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;background:var(--bg-fff7ed);color:var(--fg-c2410c);font-size:11px;white-space:nowrap}
+      .bs-ent-off .bs-ent-name{font-style:italic}
+      .bs-warn{margin:0 0 12px;padding:10px 12px;border:1px solid var(--bd-fed7aa);border-radius:8px;background:var(--bg-fff7ed);color:var(--fg-7c2d12);font-size:13px}
       #tab-budget-structure .bs-amt-input{width:120px;text-align:right;font-size:13px;padding:3px 6px}
       .bs-cluster-total{font-variant-numeric:tabular-nums}
       .bs-empty{color:var(--fg-6b7280)}
@@ -52,8 +55,11 @@
     // they are part of the setup, which only admins publish. Everyone else can view.
     const canEdit = !window.MB_AUTH || window.MB_AUTH.canSeeSettings();
     const allEnts = data.settings.entities || [];
-    // Only show entities that are in use for the selected year (year-aware structure).
-    const ents = allEnts.filter((e) => S.entityActiveInYear(e, view.year));
+    // Entities in use for the selected year, plus any entity that is not active that year but
+    // still has a budget amount for it (shown marked, so the total matches the Budget tab).
+    const ybRaw = ((data.settings.yearlyBudgets || {})[view.year]) || {};
+    const ents = allEnts.filter((e) => S.entityActiveInYear(e, view.year) || +ybRaw[e.id]);
+    const inactive = (e) => !S.entityActiveInYear(e, view.year);
 
     const ybAll = data.settings.yearlyBudgets || (data.settings.yearlyBudgets = {});
     if (canEdit && !ybAll[view.year]) ybAll[view.year] = {};
@@ -82,6 +88,11 @@
       return;
     }
 
+    const offList = ents.filter(inactive);
+    if (offList.length) {
+      const offSum = offList.reduce((t, e) => t + (+yb[e.id] || 0), 0);
+      html += `<div class="bs-warn">${S.fmtMoney(offSum)} of the ${view.year} budget is on ${offList.length} ${offList.length === 1 ? "entity that is" : "entities that are"} not active in ${view.year}: ${offList.map((e) => S.escapeHtml(e.name)).join(", ")}. ${offList.length === 1 ? "It is" : "They are"} marked below. Set the amount to 0 in Edit budgets, or make the entity active in Settings &gt; Budget structure &gt; Entities setup.</div>`;
+    }
     if (ents.length === 0) {
       html += allEnts.length === 0
         ? `<p class="bs-empty">No entities yet. Add them in Settings &gt; Budget structure &gt; Entities setup.</p>`
@@ -112,7 +123,8 @@
                       ? `<input class="bs-amt-input" data-id="${e.id}" type="number" step="100" value="${amt}" />`
                       : `<span class="bs-ent-amt">${amt ? S.fmtMoney(amt) : "-"}</span>`;
                     const code = bc[e.id] ? `<span class="bs-code" title="Budget code ${view.year}">${S.escapeHtml(bc[e.id])}</span>` : "";
-                    return `<div class="bs-ent${amt ? "" : " zero"}"><span class="bs-ent-name">${S.escapeHtml(e.name)}${code}</span>${right}</div>`;
+                    const off = inactive(e) ? `<span class="bs-off" title="This entity is not active in ${view.year} (Settings > Budget structure > Entities setup), but it still has a ${view.year} budget. Set the amount to 0 or make the entity active.">not active in ${view.year}</span>` : "";
+                    return `<div class="bs-ent${amt ? "" : " zero"}${off ? " bs-ent-off" : ""}"><span class="bs-ent-name">${S.escapeHtml(e.name)}${code}${off}</span>${right}</div>`;
                   }).join("")}
                 </div>`;
             }).join("")}
@@ -128,7 +140,7 @@
   function recalc(root) {
     const data = S.state.data;
     const yb = (data.settings.yearlyBudgets || {})[view.year] || {};
-    const ents = (data.settings.entities || []).filter((e) => S.entityActiveInYear(e, view.year));
+    const ents = (data.settings.entities || []).filter((e) => S.entityActiveInYear(e, view.year) || +yb[e.id] || root.querySelector(`.bs-amt-input[data-id="${e.id}"]`));
     const cT = {}, mT = {}; let grand = 0;
     ents.forEach((e) => {
       const v = yb[e.id] || 0, m = m1Key(e), c = clKey(e);
