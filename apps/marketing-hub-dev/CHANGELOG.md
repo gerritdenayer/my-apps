@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Events and campaigns can be marked "Not confirmed yet (TBC)" with a checkbox under the dates. A TBC item shows shaded (striped with a dashed outline) on the timeline, the tooltip and card say it is not confirmed, and the agenda PowerPoint adds "(TBC)" after its name.
+
 ## [v5.3.14] - 2026-11-25 - Who pays: badges on the timeline
 
 ### Added
