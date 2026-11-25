@@ -428,8 +428,14 @@
     return lvl === "owners" && window.MB_AUTH && window.MB_AUTH.role() === "budget_owner";
   }
   // The yearly budgets of one year as this user may see them: {} when not released to them.
+  // The yearly budget per entity, as set in Settings > Budget for that year. Only entities that are
+  // active in the year count (the same list Settings shows), so every total matches that page.
   function yearBudgets(year) {
-    return canSeeYearBudget(year) ? ((state.data.settings.yearlyBudgets || {})[year] || {}) : {};
+    if (!canSeeYearBudget(year)) return {};
+    const yb = (state.data.settings.yearlyBudgets || {})[year] || {};
+    const out = {};
+    (state.data.settings.entities || []).forEach((e) => { if (yb[e.id] && entityActiveInYear(e, +year)) out[e.id] = yb[e.id]; });
+    return out;
   }
   // For exports: drop the budgets of years this user may not see (works on a copy).
   function stripHiddenBudgets(obj) {

@@ -30,11 +30,11 @@ def main():
     ver, title = sys.argv[1], sys.argv[2]
     today = datetime.date.today().isoformat()
     cl = os.path.join(DEV, "CHANGELOG.md")
-    if "## [Unreleased]" not in open(cl, encoding="utf-8").read():
+    if not re.search(r"^## \[Unreleased\][ \t]*$", open(cl, encoding="utf-8").read(), re.M):
         sys.exit("Nothing to release: CHANGELOG.md in dev has no [Unreleased] section.")
     edit(os.path.join(DEV, "js", "config.js"), lambda s: re.sub(r'appVersion: "[^"]*"', f'appVersion: "{ver}"', s))
     edit(os.path.join(DEV, "index.html"), lambda s: re.sub(r'\?v=[0-9A-Za-z.\-]+"', f'?v={ver}"', s))
-    edit(cl, lambda s: s.replace("## [Unreleased]", f"## [v{ver}] - {today} - {title}", 1))
+    edit(cl, lambda s: re.sub(r"^## \[Unreleased\][ \t]*$", f"## [v{ver}] - {today} - {title}", s, count=1, flags=re.M))
 
     copied = 0
     for base, dirs, files in os.walk(DEV):

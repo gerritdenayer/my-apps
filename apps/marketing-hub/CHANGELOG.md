@@ -1,5 +1,15 @@
 # Changelog
 
+## [v5.3.13] - 2026-11-25 - Yearly budget from Settings everywhere
+
+### Fixed
+- The yearly budget on the Budget tab and in Reporting now comes from Settings > Budget for that year, so all three show the same total. Before, they also counted amounts stored on entities that are not active in that year, which Settings does not show.
+
+## [v5.3.12] - 2026-11-25 - Roll back of v5.3.11
+
+### Changed
+- Rolled back the v5.3.11 change to Settings > Budget. The page again lists only the entities that are active in the selected year, as in v5.3.10.
+
 ## [v5.3.11] - 2026-11-25 - Inactive entities with a yearly budget
 
 ### Fixed
@@ -1317,7 +1327,7 @@ Major change. A full backup of v1.9 is in `_backups/` (tar.gz) for rollback.
   actual spend, plus efficiency: cost per MQL, cost per SQL, cost per attendee, and revenue
   ROI. Includes KPI cards, a revenue-vs-spend chart, and Excel export.
 
-## [v5.3.12] - 2026-11-25 - Roll back of v5.3.11 - 2026-06-16 - Campaign budget link from the timeline
+## [Unreleased] - 2026-06-16 - Campaign budget link from the timeline
 
 ### Added
 - The campaign add/edit form (Campaigns & Timeline) now has a Budget section. Pick an
