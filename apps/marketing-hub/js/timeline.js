@@ -62,6 +62,8 @@
     #tab-timeline .tl-track{position:absolute;top:0;height:100%}
     #tab-timeline .tl-bar{position:absolute;top:6px;height:18px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 7px;font-size:11px;color:var(--fg-11130f);overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.18)}
     #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid var(--bd-333333)}
+    #tab-timeline .tl-tbc{opacity:.8;outline:1.5px dashed var(--bd-555555);outline-offset:1px}
+    #tab-timeline .tl-tbc::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--bg-ffffff) 60%,transparent) 0 4px,transparent 4px 8px)}
     #tab-timeline .tl-paid{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-534ab7);color:var(--fg-ffffff);margin-right:5px}
     #tab-timeline .tl-paid svg{width:10px;height:10px}
     #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px;margin-right:5px}
@@ -404,6 +406,7 @@
       `<span class="k" style="margin-left:auto"><span class="tl-swatch" style="transform:rotate(45deg);background:var(--bg-999999)"></span>single-day</span>`+
       `<span class="k"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px">€</span> has budget</span>`+
       `<span class="k"><span class="tl-paid" style="margin:0">${paidIcon("partner")}</span><span class="tl-paid" style="margin:0">${paidIcon("entity")}</span><span class="tl-paid" style="margin:0">${paidIcon("global")}</span> paid by partner, other entity or global marketing</span>`+
+      `<span class="k"><span class="tl-swatch tl-tbc" style="position:relative;background:var(--bg-999999)"></span>not confirmed (TBC)</span>`+
       (periodWindow()?`<span class="k"><span style="display:inline-block;width:13px;height:13px;border-left:3px dashed var(--bd-555555)"></span> spans beyond period</span>`:"")+
       `<span class="k tl-names" role="group" aria-label="Show names"><span>Names:</span>${[["chart","On the timeline"],["list","In the list"],["both","Both"]].map(([v,l])=>`<button type="button" class="tl-nm${view.names===v?" on":""}" data-v="${v}" aria-pressed="${view.names===v}">${l}</button>`).join("")}</span>`;
     leg.querySelectorAll(".tl-nm").forEach(b=>b.onclick=()=>{ view.names=b.dataset.v; try{ localStorage.setItem(NAMES_KEY,view.names); }catch(e){} drawRows(); });
@@ -596,7 +599,7 @@
     const lanes=keys.map(k=>({
       label: groupBy==="none" ? "" : k,
       items: map[k].slice().sort(itemCmp).map(e=>({
-        name:e.name, lines:fields.map(f=>f.get(e)).filter(Boolean),
+        name:(e.tbc && !/\bTBC\b/i.test(e.name||"")) ? (e.name||"")+" (TBC)" : e.name, lines:fields.map(f=>f.get(e)).filter(Boolean),
         start:e.start, end:e.end||e.start, kind:e.kind||"Event"
       }))
     }));
@@ -667,6 +670,7 @@
       `Kind: ${e.kind||"Event"}`,
       `Goal: ${S.goalLabel(e.goal)||"-"}`,
       `Dates: ${dates}`,
+      ...(e.tbc?["Not confirmed yet (TBC)"]:[]),
       ...(paidText(e)?[paidText(e)]:[]),
       `Activity type: ${at||"-"}`,
       `Cluster: ${clusterOf(e)}`,
@@ -737,7 +741,7 @@
     const single=!e.end||e.start===e.end;
     if(single){
       const dm=document.createElement("div");
-      dm.className="tl-diamond"; dm.style.left=(xOf(s,g)-8)+"px"; dm.style.background=col; dm.title=tip;
+      dm.className="tl-diamond"+(e.tbc?" tl-tbc":""); dm.style.left=(xOf(s,g)-8)+"px"; dm.style.background=col; dm.title=tip;
       dm.onclick=()=>openCampaignDetail(e.id);
       track.appendChild(dm);
       if(hasBudget||onChart){
@@ -753,7 +757,7 @@
       const bar=document.createElement("div");
       const openLeft = s < g.yb.start;   // starts before the visible window
       const openRight = end > g.yb.end;  // ends after the visible window
-      bar.className="tl-bar"+(openLeft?" open-left":"")+(openRight?" open-right":"");
+      bar.className="tl-bar"+(openLeft?" open-left":"")+(openRight?" open-right":"")+(e.tbc?" tl-tbc":"");
       const left=xOf(s,g), w=Math.max(10,xOf(end,g)-left+g.px);
       bar.style.left=left+"px"; bar.style.width=w+"px"; bar.style.background=col;
       bar.title=tip + (openLeft||openRight ? "\n(spans beyond the selected period)" : "");
@@ -834,6 +838,7 @@
       <h3 style="margin:12px 0 2px">Content &amp; assets (${content.length})</h3>
       ${content.length?`<ul style="margin:4px 0 0;padding-left:18px">${content.map(c=>`<li>${c.url?`<a href="${S.escapeHtml(c.url)}" target="_blank" rel="noopener">${S.escapeHtml(c.label||c.url)} &#8599;</a>`:S.escapeHtml(c.label||"")}</li>`).join("")}</ul>`:`<div class="muted">No content linked yet.</div>`}
 
+      ${e.tbc?`<div class="tl-pf-note"><b>Not confirmed yet (TBC).</b> Shown shaded on the timeline.</div>`:""}
       ${paidByOf(e)?`<div class="tl-pf-note"><b>${S.escapeHtml(paidText(e))}.</b> No impact on our budget.</div>`:""}
       <h3 style="margin:14px 0 2px">Linked budget lines</h3>
       ${b.count?`<table class="tl-mini"><thead><tr><th>Date</th><th>Name</th><th>Cluster</th><th>Entity</th><th>Type</th><th>Status</th><th class="num">Forecast net</th><th class="num">Actual net</th></tr></thead><tbody>
@@ -984,6 +989,7 @@
               <div><label>End</label><input id="c-end" type="date" value="${e.end||""}" /></div>
               <div><label>Owner</label><select id="c-owner">${ownerOptions(e.ownerId||"")}</select></div>
             </div>
+            <label class="chk-line" title="Shown shaded on the timeline until you untick it"><input type="checkbox" id="c-tbc" ${e.tbc?"checked":""} /> Not confirmed yet (TBC) <span class="muted small">(shown shaded on the timeline)</span></label>
             <div class="row-3">
               <div><label>Cluster</label><select id="c-cluster">${optByName(clusters,initialCluster)}</select></div>
               <div class="span-2"><label>Organising entity</label><select id="c-entity">${entOptions(initialCluster, orgEntId)}</select></div>
@@ -1486,6 +1492,7 @@
         ...e, name, kind:kindVal,
         activityTypeId,
         start, end: end||"",
+        tbc: modal.querySelector("#c-tbc").checked ? true : undefined,
         entityId:orgEntityId,
         cluster,
         ownerId:modal.querySelector("#c-owner").value,
