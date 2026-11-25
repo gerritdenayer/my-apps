@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.0
+
+- Hide boxes without deleting them, for a clean view to print or export. In the edit panel: "Hide box only" (the people below move up one level) or "Hide with team".
+- Hidden boxes are saved in `org.json` (`"hide": "self"` or `"hide": "all"`), so a print view is kept with the file.
+- New **Hidden** button: shows hidden boxes dashed so you can click one and choose "Show again", or "Unhide all".
+- Exports never include hidden boxes. Narrow charts get a PDF page wide enough for the title.
+
 ## 0.2.0
 
 - New **Branches** panel: tick the teams you want to see. The chart shows only those teams, with their managers above them (dimmed) for context. A bar at the top shows what you picked, with "Change" and "Show whole chart".

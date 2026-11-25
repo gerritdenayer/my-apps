@@ -24,6 +24,7 @@ Live link (after the first push): https://gerritdenayer.github.io/my-apps/apps/o
 - **Undo / Redo:** buttons in the top bar, or Ctrl/Cmd + Z and Ctrl/Cmd + Y.
 - **Rename the chart:** double-click the title in the top left.
 - **Show only some branches:** click **Branches** and tick the teams you want. Ticking a team includes everyone below it. Tick none, or click "Show whole chart", to see everything again. Your pick is kept in this browser, not in `org.json`.
+- **Hide for printing:** click a box, then "Hide box only" (the people below move up one level) or "Hide with team". Hidden boxes stay in the file. Click **Hidden** to see them dashed, click one and choose "Show again", or use "Unhide all".
 - **Export:** click **Export**, then "PDF file" or "PowerPoint file". The file shows exactly what is on screen: the open teams in the branches you picked. Tick "White background" for printing. Use **Expand all** first if you want every level in the file.
 
 ## Conventions (same as Marketing Hub)

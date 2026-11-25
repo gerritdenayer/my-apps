@@ -28,6 +28,7 @@
     <button id="btnZoomIn" title="Zoom in">+</button>
     <span class="sep"></span>
     <button id="btnBranches" title="Pick the teams you want to see">Branches</button>
+    <button id="btnHidden" title="Show the hidden boxes so you can unhide them">Hidden</button>
     <div class="menu-wrap">
       <button id="btnOut" title="Download what you see as a PDF or PowerPoint file">Export</button>
       <div id="outMenu" class="menu" hidden>
@@ -60,10 +61,17 @@
     </div>
   </div>
 
-  <div id="filterInfo" class="filter-info" hidden>
-    <span id="filterText"></span>
-    <button id="filterEdit">Change</button>
-    <button id="filterClear">Show whole chart</button>
+  <div class="bars">
+    <div id="hiddenInfo" class="filter-info hidden-info" hidden>
+      <span>Hidden boxes are shown dashed. Click one to show it again.</span>
+      <button id="unhideAll">Unhide all</button>
+      <button id="hiddenDone">Done</button>
+    </div>
+    <div id="filterInfo" class="filter-info" hidden>
+      <span id="filterText"></span>
+      <button id="filterEdit">Change</button>
+      <button id="filterClear">Show whole chart</button>
+    </div>
   </div>
 
   <div class="legend">
@@ -111,6 +119,15 @@
     <label>Report to
       <select id="fParent"></select>
     </label>
+  </div>
+  <div class="group">
+    <div class="group-title">Hide (for printing)</div>
+    <div id="hideInfo" class="muted small"></div>
+    <div class="row">
+      <button id="hideSelf" title="Hide only this box. The people below move up one level.">Hide box only</button>
+      <button id="hideAll" title="Hide this box and everyone below it">Hide with team</button>
+      <button id="unhide" class="primary">Show again</button>
+    </div>
   </div>
   <div class="group">
     <div class="group-title">Remove</div>

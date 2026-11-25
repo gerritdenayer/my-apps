@@ -1,6 +1,7 @@
 /* Org Chart app. Plain JavaScript, no build step.
    Data model: { title, updated, root } where every node is
-   { id, name, role, note, line, highlight, collapsed, children: [] }
+   { id, name, role, note, line, highlight, hide, collapsed, children: [] }
+   hide: "self" hides only this box (its team moves up), "all" hides the box and its team.
    Data lives in this browser (localStorage) and in an org.json file you save yourself.
    Nothing is sent to a server. */
 (function () {
@@ -20,6 +21,7 @@
   let matches = [], matchPos = -1;
   // Branch filter: ids of the teams the user ticked. Kept in this browser, not in org.json.
   let branches = new Set();
+  let showHidden = false;    // true: hidden boxes are drawn dashed so you can unhide them
   let inBranch = new Set(), onPath = new Set(), rendered = new Set();
   let viewTop = null;        // top box of what is drawn now
   let layout = null;         // last drawn boxes and lines, used by the PDF and PowerPoint export
@@ -76,6 +78,8 @@
   function updateButtons() {
     $("btnUndo").disabled = !undoStack.length; $("btnRedo").disabled = !redoStack.length;
     ["btnExpand", "btnCollapse", "btnFit", "btnZoomIn", "btnZoomOut", "btnExport", "btnBranches", "btnOut"].forEach((b) => ($(b).disabled = !doc));
+    const nh = doc ? countHidden() : 0;
+    $("btnHidden").disabled = !nh && !showHidden; $("btnHidden").textContent = nh ? `Hidden (${nh})` : "Hidden";
   }
 
   // ---------- branch filter ----------
@@ -97,7 +101,17 @@
   function restoreBranches() { try { branches = new Set(JSON.parse(localStorage.getItem(BKEY()) || "[]")); } catch (e) { branches = new Set(); } }
 
   // ---------- layout ----------
-  const visibleKids = (n) => (onPath.has(n.id) ? n.children.filter(shown) : n.collapsed ? [] : n.children);
+  const rawKids = (n, forceOpen) => (onPath.has(n.id) ? n.children.filter(shown) : n.collapsed && !forceOpen ? [] : n.children);
+  // Hidden boxes: "all" drops the box and its team, "self" drops only the box and lifts its team one level up.
+  function visibleKids(n, forceOpen) {
+    const out = [];
+    rawKids(n, forceOpen).forEach((c) => {
+      if (showHidden || !c.hide) out.push(c);
+      else if (c.hide === "self") out.push(...visibleKids(c, true));
+    });
+    return out;
+  }
+  function countHidden() { let k = 0; index.forEach(({ node }) => { if (node.hide) k++; }); return k; }
   const isLeafVisible = (n) => visibleKids(n).length === 0;
   function measure(n) {
     const kids = visibleKids(n);
@@ -147,6 +161,7 @@
       if (n.highlight) cls.push("highlight");
       if (!n.name) cls.push("team");
       if (isPath) cls.push("path");
+      if (n.hide) cls.push("hidden-box");
       if (n.id === selectedId) cls.push("selected");
       if (matchSet.has(n.id)) cls.push("match");
       if (matches[matchPos] === n.id) cls.push("current");
@@ -202,7 +217,7 @@
     if (!doc || !viewTop) return;
     const vp = $("viewport").getBoundingClientRect();
     const w = viewTop._w, h = viewTop._h;
-    const top = branches.size ? 64 : 24;   // leave room for the "showing branches" bar
+    const top = 24 + (branches.size ? 40 : 0) + (showHidden ? 40 : 0);   // leave room for the "showing branches" bar
     view.s = Math.min(1.1, (vp.width - 60) / w, (vp.height - 66 - top) / h);
     view.s = Math.max(view.s, minScale);
     // keep the top box in the middle when the chart is wider than the screen
@@ -219,7 +234,7 @@
     const vp = $("viewport");
     let pan = null;
     vp.addEventListener("pointerdown", (e) => {
-      if (e.target.closest(".node") || e.target.closest(".empty") || e.target.closest(".filter-info") || e.button !== 0) return;
+      if (e.target.closest(".node") || e.target.closest(".empty") || e.target.closest(".bars") || e.button !== 0) return;
       pan = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty, moved: false };
       vp.classList.add("panning"); vp.setPointerCapture(e.pointerId);
     });
@@ -297,6 +312,10 @@
     $("moveLeft").disabled = !p || sibs.indexOf(n) === 0;
     $("moveRight").disabled = !p || sibs.indexOf(n) === sibs.length - 1;
     $("delKeep").disabled = !p; $("delAll").disabled = !p;
+    $("hideSelf").hidden = $("hideAll").hidden = !!n.hide || !p; $("unhide").hidden = !n.hide;
+    $("hideInfo").textContent = !p ? "The top box cannot be hidden." : n.hide === "all" ? "Hidden, with the team below it." : n.hide === "self" ? "Hidden. The team below it moves up one level." : "Hidden boxes stay in the file but are left out of the chart and the exports.";
+    $("hideAll").textContent = n.children.length ? "Hide with team" : "Hide";
+    $("hideSelf").hidden = $("hideSelf").hidden || !n.children.length;
     const below = countBelow(n);
     $("delInfo").textContent = !p ? "The top box cannot be removed." : below ? `${below} ${below === 1 ? "box sits" : "boxes sit"} below this one.` : "No one reports to this box.";
     $("delKeep").hidden = !below;
@@ -434,7 +453,7 @@
     if (!doc) return;
     const clean = (n) => {
       const o = { id: n.id, name: n.name || "", role: n.role || "" };
-      if (n.note) o.note = n.note; if (n.line) o.line = true; if (n.highlight) o.highlight = true;
+      if (n.note) o.note = n.note; if (n.line) o.line = true; if (n.highlight) o.highlight = true; if (n.hide) o.hide = n.hide;
       if (n.children.length) { o.collapsed = !!n.collapsed; o.children = n.children.map(clean); }
       return o;
     };
@@ -452,6 +471,28 @@
     const done = () => { el.contentEditable = "false"; const t = el.textContent.trim(); if (t && t !== doc.title) commit(() => (doc.title = t)); el.removeEventListener("blur", done); };
     el.addEventListener("blur", done);
     el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } }, { once: true });
+  });
+
+  // ---------- hide boxes ----------
+  function setHide(mode) {
+    const n = get(selectedId); if (!n || !parentOf(n.id)) return;
+    commit(() => { if (mode) n.hide = mode; else delete n.hide; });
+    if (mode && !showHidden) select(null);
+    toast(mode ? `${label(n)} hidden` : `${label(n)} shown again`);
+  }
+  $("hideSelf").addEventListener("click", () => setHide("self"));
+  $("hideAll").addEventListener("click", () => setHide("all"));
+  $("unhide").addEventListener("click", () => setHide(null));
+  function setShowHidden(on) {
+    showHidden = on; $("btnHidden").classList.toggle("on", on); $("hiddenInfo").hidden = !on;
+    render(); updateButtons(); fit(0.3);
+  }
+  $("btnHidden").addEventListener("click", () => setShowHidden(!showHidden));
+  $("hiddenDone").addEventListener("click", () => setShowHidden(false));
+  $("unhideAll").addEventListener("click", () => {
+    if (!countHidden()) return;
+    commit(() => index.forEach(({ node }) => delete node.hide));
+    toast("All boxes shown again");
   });
 
   // ---------- branch picker ----------
@@ -565,7 +606,12 @@
     });
     const names = [...branches].map((id) => label(get(id)));
     const sub = new Date().toISOString().slice(0, 10) + (names.length ? " · Showing: " + names.join(", ") : "");
-    return { W: layout.top._w, H: layout.top._h, boxes, segs: layout.segs, title: doc.title || "Org chart", sub };
+    // make the page at least as wide as the title, and center the chart on it
+    mctx = mctx || document.createElement("canvas").getContext("2d");
+    mctx.font = "bold 22px Arial"; let tw = mctx.measureText(doc.title || "Org chart").width;
+    mctx.font = "12px Arial"; tw = Math.max(tw, mctx.measureText(sub).width) + 10;
+    const W = Math.max(layout.top._w, tw);
+    return { W, dx: (W - layout.top._w) / 2, H: layout.top._h, boxes, segs: layout.segs, title: doc.title || "Org chart", sub };
   }
   // vertical position of the name and role lines inside a box (in screen pixels)
   function textRows(b) {
@@ -591,7 +637,7 @@
     const pw = Wpx * s, ph = Hpx * s;
     const pdf = new JsPDF({ orientation: pw >= ph ? "landscape" : "portrait", unit: "pt", format: [pw, ph], compress: true });
     pdf.setProperties({ title: safe(m.title) });
-    const X = (x) => (M + x) * s, Y = (y) => (M + HEAD + y) * s, c = (h) => "#" + h;
+    const X = (x) => (M + m.dx + x) * s, Y = (y) => (M + HEAD + y) * s, c = (h) => "#" + h;
     pdf.setFillColor(c(T.bg)); pdf.rect(0, 0, pw, ph, "F");
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(22 * s); pdf.setTextColor(c(T.title));
     pdf.text(safe(m.title), M * s, M * s, { baseline: "top" });
@@ -632,7 +678,7 @@
     pres.defineLayout({ name: "ORGCHART", width: SW, height: SH }); pres.layout = "ORGCHART";
     pres.title = m.title;
     const sl = pres.addSlide(); sl.background = { color: T.bg };
-    const X = (x) => ox + (M + x) * k, Y = (y) => oy + (M + HEAD + y) * k, D = (v) => v * k, PT = (px) => px * k * 72;
+    const X = (x) => ox + (M + m.dx + x) * k, Y = (y) => oy + (M + HEAD + y) * k, D = (v) => v * k, PT = (px) => px * k * 72;
     const font = { fontFace: "Arial", margin: 0, wrap: false };
     sl.addText(m.title, Object.assign({ x: ox + M * k, y: oy + M * k, w: D(Wpx - 2 * M), h: D(30), fontSize: PT(22), bold: true, color: T.title, valign: "top" }, font));
     sl.addText(m.sub, Object.assign({ x: ox + M * k, y: oy + (M + 32) * k, w: D(Wpx - 2 * M), h: D(18), fontSize: PT(12), color: T.sub, valign: "top" }, font));
@@ -659,8 +705,11 @@
     $("outMenu").hidden = true;
     if (!doc || !layout) return;
     toast(`Making the ${name} file...`);
+    const was = showHidden;
+    if (was) { showHidden = false; render(); }   // hidden boxes never go into an export
     try { await fn(); toast(`Downloaded the ${name} file`); }
     catch (err) { console.error(err); toast(`Could not make the ${name} file`); }
+    finally { if (was) { showHidden = true; render(); } }
   }
   $("btnOut").addEventListener("click", (e) => { e.stopPropagation(); $("outMenu").hidden = !$("outMenu").hidden; });
   document.addEventListener("click", (e) => { if (!e.target.closest(".menu-wrap")) $("outMenu").hidden = true; });
