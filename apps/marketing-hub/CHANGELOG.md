@@ -1,5 +1,13 @@
 # Changelog
 
+## [v5.3.17] - 2026-11-26 - Login no longer hangs; readable bar text
+
+### Fixed
+- The login screen no longer stays on "Loading..." when the shared folder does not answer (for example when OneDrive is not running or a file is online only). After 8 seconds the user list appears anyway, with a message to check OneDrive and reload.
+
+### Changed
+- Names inside timeline bars are easier to read. On orange and other darker colors the text is now white; on light colors (yellow, light green, light blue) it stays dark. On a TBC bar with white text, the stripes are darker and sit behind the text.
+
 ## [v5.3.16] - 2026-11-25 - Duplicate campaigns and events
 
 ### Added

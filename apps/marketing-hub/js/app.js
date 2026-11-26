@@ -119,8 +119,15 @@
     document.getElementById("login-error").classList.add("hidden");
   }
 
+  // Reading the shared OneDrive folder can hang when OneDrive is not running or a file is online
+  // only. Never let that block the login screen: give up waiting after a few seconds.
+  const TIMED_OUT = Symbol("timeout");
+  function withTimeout(promise, ms) {
+    return Promise.race([promise, new Promise((res) => setTimeout(() => { console.warn("[Marketing Hub] shared folder did not answer within " + ms / 1000 + " s"); res(TIMED_OUT); }, ms))]);
+  }
   async function loadAndShowLogin() {
     clearLoginError();
+    let folderSlow = false;
     try {
       S.setSyncStatus("saving", "Loading...");
       const data = await API.load();
@@ -173,14 +180,18 @@
       }
       // Pick up passwords changed on other computers, if the browser already has folder access.
       if (window.MB_DATA && window.MB_DATA.syncPasswords) {
-        try { await window.MB_DATA.syncPasswords({ auto: true }); } catch (e) { console.warn(e); }
+        try {
+          const r = await withTimeout(window.MB_DATA.syncPasswords({ auto: true }), 8000);
+          if (r === TIMED_OUT) folderSlow = true;
+        } catch (e) { console.warn(e); }
       }
 
       S.setSyncStatus("saved", "Loaded");
       S.setLastUpdated(data.meta && data.meta.lastUpdated);
       setTimeout(() => S.setSyncStatus("", "Saved locally"), 1000);
 
-      await renderLoginShared(data);
+      if ((await withTimeout(renderLoginShared(data), 8000)) === TIMED_OUT) folderSlow = true;
+      if (folderSlow) showLoginError("The shared folder is not answering, so you may not see the latest users or passwords. Check that OneDrive is running and the team folder is available on this computer, then reload the page.");
 
       const userSel = document.getElementById("login-user");
       const users = (data.settings.users || []).filter((u) => u.active !== false);

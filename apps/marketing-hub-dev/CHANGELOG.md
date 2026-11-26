@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.17] - 2026-11-26 - Login no longer hangs; readable bar text
 
 ### Fixed
 - The login screen no longer stays on "Loading..." when the shared folder does not answer (for example when OneDrive is not running or a file is online only). After 8 seconds the user list appears anyway, with a message to check OneDrive and reload.

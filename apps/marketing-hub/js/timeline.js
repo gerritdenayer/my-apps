@@ -62,8 +62,11 @@
     #tab-timeline .tl-track{position:absolute;top:0;height:100%}
     #tab-timeline .tl-bar{position:absolute;top:6px;height:18px;border-radius:5px;cursor:pointer;display:flex;align-items:center;padding:0 7px;font-size:11px;color:var(--fg-11130f);overflow:hidden;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.18)}
     #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid var(--bd-333333)}
-    #tab-timeline .tl-tbc{opacity:.8;outline:1.5px dashed var(--bd-555555);outline-offset:1px}
-    #tab-timeline .tl-tbc::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--bg-ffffff) 60%,transparent) 0 4px,transparent 4px 8px)}
+    #tab-timeline .tl-tbc{opacity:.85;outline:1.5px dashed var(--bd-555555);outline-offset:1px;isolation:isolate}
+    #tab-timeline .tl-tbc::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--bg-ffffff) 60%,transparent) 0 4px,transparent 4px 8px)}
+    #tab-timeline .tl-bar.tl-on-dark{color:var(--fg-ffffff);text-shadow:0 0 2px color-mix(in srgb,var(--fg-1a1a1a) 55%,transparent)}
+    #tab-timeline .tl-bar.tl-on-light{color:var(--fg-1a1a1a)}
+    #tab-timeline .tl-bar.tl-tbc.tl-on-dark::after{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg-1a1a1a) 22%,transparent) 0 4px,transparent 4px 8px)}
     #tab-timeline .tl-paid{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-534ab7);color:var(--fg-ffffff);margin-right:5px}
     #tab-timeline .tl-paid svg{width:10px;height:10px}
     #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px;margin-right:5px}
@@ -154,6 +157,14 @@
     return c?(c.name||"(unnamed campaign)"):"No campaign";
   }
   function catList(events,dim){ return uniq(events.map(e=>dimValue(e,dim))); }
+  // Text color on a bar: white on orange and darker colors, near-black on light ones (yellow, light
+  // green, light blue). Both stay the same in dark mode, because the bar colors do too.
+  function textOn(hex){
+    const m=/^#?([0-9a-f]{6})$/i.exec(hex||""); if(!m) return "";
+    const lin=c=>{ c/=255; return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4); };
+    const n=parseInt(m[1],16), L=0.2126*lin(n>>16)+0.7152*lin((n>>8)&255)+0.0722*lin(n&255);
+    return L<=0.36 ? "light" : "dark";
+  }
   function colorFor(events,e){
     const cats=catList(events,view.colorBy);
     const idx=cats.indexOf(dimValue(e,view.colorBy));
@@ -759,7 +770,7 @@
       const openRight = end > g.yb.end;  // ends after the visible window
       bar.className="tl-bar"+(openLeft?" open-left":"")+(openRight?" open-right":"")+(e.tbc?" tl-tbc":"");
       const left=xOf(s,g), w=Math.max(10,xOf(end,g)-left+g.px);
-      bar.style.left=left+"px"; bar.style.width=w+"px"; bar.style.background=col;
+      bar.style.left=left+"px"; bar.style.width=w+"px"; bar.style.background=col; bar.classList.add(textOn(col)==="light"?"tl-on-dark":"tl-on-light");
       bar.title=tip + (openLeft||openRight ? "\n(spans beyond the selected period)" : "");
       bar.onclick=()=>openCampaignDetail(e.id);
       track.appendChild(bar);
