@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Golfwedstrijd scoring</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4.3">
 </head>
 <body>
 
 <div class="sticky-header">
   <header>
     <div>
-      <h1>Golfwedstrijd scoring <span class="badge grijs" id="versieLabel" style="vertical-align:middle;"></span></h1>
+      <h1>Golfwedstrijd scoring <span class="badge grijs" id="versieLabel" style="vertical-align:middle;"></span> <span class="badge" id="backup-status" style="vertical-align:middle; display:none;"></span></h1>
       <div class="baannaam" id="baannaamLabel"></div>
       <div style="display:flex; align-items:center; gap:6px;">
         <div class="baannaam" id="huidige-wedstrijd-label"></div>
@@ -338,20 +338,38 @@
     </div>
 
     <div class="kaart">
-      <h2>GitHub back-up</h2>
-      <p class="uitleg">Stuurt de wedstrijdbestanden, spelerslijst en historiek van het huidige seizoen naar GitHub, zodat iemand op een andere computer de resultaten kan bekijken zonder zelf een map te moeten kiezen. Enkel nodig op de computer die scoort; op een kijk-computer kan je dit negeren, "Alle wedstrijden" en "Criterium" tonen daar automatisch de laatste back-up. Je moet hiervoor online zijn.</p>
-      <div id="github-pat-zone" style="margin-top:10px;">
-        <label for="in-github-pat">GitHub toegangscode (enkel op deze computer nodig, 1 keer)</label>
-        <input type="password" id="in-github-pat" autocomplete="off" placeholder="github_pat_...">
+      <h2>Online back-up (JSONBin)</h2>
+      <p class="uitleg">De app werkt gewoon offline. Zodra er netwerk is, gaan wijzigingen vanzelf naar een privé-opslag op JSONBin: de wedstrijdbestanden, spelerslijst en historiek van het huidige seizoen, plus de wedstrijd die nu open staat. Dit is een back-up, en zo kan iemand op een andere computer de resultaten bekijken. Ophalen gebeurt nooit automatisch, enkel met de knop hieronder.</p>
+      <p class="uitleg"><strong>Scoor-computer:</strong> bewaar de hoofdsleutel (X-Master-Key uit je JSONBin-account, bij API Keys) en klik 1 keer op "Online opslag aanmaken". <strong>Kijk-computer:</strong> plak de online opslag-ID en een leessleutel (een Access Key met enkel leesrechten).</p>
+      <div style="margin-top:10px;">
+        <label for="in-jsonbin-hoofdbin">Online opslag-ID (enkel nodig op een kijk-computer of een nieuwe laptop)</label>
+        <input type="text" id="in-jsonbin-hoofdbin" autocomplete="off" placeholder="bv. 6745a1b2e41b4d34e45c1234">
         <div class="rij-knoppen" style="margin-top:6px;">
-          <button class="knop secundair" onclick="bewaarGithubPatUI()">Code bewaren</button>
-          <button class="knop secundair" onclick="wisGithubPatUI()">Code verwijderen</button>
+          <button class="knop secundair" onclick="bewaarJsonbinHoofdbinUI()">ID bewaren</button>
+          <button class="knop secundair" onclick="wisJsonbinHoofdbinUI()">ID wissen</button>
         </div>
       </div>
-      <div id="github-status-zone" style="margin-top:12px;"><p class="uitleg">Bezig met ophalen...</p></div>
+      <div style="margin-top:10px;">
+        <label for="in-jsonbin-master">Hoofdsleutel (enkel op de scoor-computer)</label>
+        <input type="password" id="in-jsonbin-master" autocomplete="off" placeholder="$2a$10$...">
+        <div class="rij-knoppen" style="margin-top:6px;">
+          <button class="knop secundair" onclick="bewaarJsonbinMasterUI()">Sleutel bewaren</button>
+          <button class="knop secundair" onclick="wisJsonbinMasterUI()">Sleutel verwijderen</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label for="in-jsonbin-lees">Leessleutel (enkel op een kijk-computer)</label>
+        <input type="password" id="in-jsonbin-lees" autocomplete="off" placeholder="$2a$10$...">
+        <div class="rij-knoppen" style="margin-top:6px;">
+          <button class="knop secundair" onclick="bewaarJsonbinLeesUI()">Sleutel bewaren</button>
+          <button class="knop secundair" onclick="wisJsonbinLeesUI()">Sleutel verwijderen</button>
+        </div>
+      </div>
+      <div id="jsonbin-status-zone" style="margin-top:12px;"><p class="uitleg">Bezig met ophalen...</p></div>
       <div class="rij-knoppen" style="margin-top:10px;">
-        <button class="knop" id="github-backup-knop" onclick="maakGithubBackup()">Back-up maken</button>
-        <button class="knop secundair" id="github-ophalen-knop" onclick="haalGithubBackupOp()">Ophalen van GitHub</button>
+        <button class="knop" id="jsonbin-aanmaak-knop" onclick="maakOnlineOpslagAan()">Online opslag aanmaken</button>
+        <button class="knop" id="jsonbin-backup-knop" onclick="maakBackupNu()">Back-up nu maken</button>
+        <button class="knop secundair" id="jsonbin-ophalen-knop" onclick="haalOnlineBackupOp()">Ophalen van online back-up</button>
       </div>
     </div>
 
@@ -439,6 +457,6 @@
 
 <footer>Gegevens worden lokaal in je browser bewaard. Gebruik "Bewaar wedstrijd" om een JSON-bestand te bewaren als back-up.</footer>
 
-<script src="app.js"></script>
+<script src="app.js?v=4.3"></script>
 </body>
 </html>

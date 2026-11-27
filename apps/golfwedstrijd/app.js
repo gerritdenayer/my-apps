@@ -1,6 +1,6 @@
 /* ===================== Versie ===================== */
 /* Hoog dit op bij elke merkbare aanpassing, zodat je in de app kan zien welke versie live staat. */
-const APP_VERSIE = "v4.1";
+const APP_VERSIE = "v4.3";
 
 /* Klein potlood-icoontje voor de "Aanpassen"-knop in de ranglijst (i.p.v. tekst, past zo op elk scherm). */
 const AANPAS_ICOON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`;
@@ -8,106 +8,161 @@ const AANPAS_ICOON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="
 /* Klein spraakwolkje-icoontje voor de opmerking-knop in het wedstrijdoverzicht. */
 const OPMERKING_ICOON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
 
-/* ===================== GitHub back-up ===================== */
-/* Doel: de computer die scoort (potentieel offline) kan met 1 klik, zolang ze online is, de
-   wedstrijdbestanden/spelerslijst/historiek van het huidige seizoen wegschrijven naar deze
-   publieke GitHub-repository (via de Contents API, met een toegangscode die enkel op DIE
-   computer in localStorage staat). Een kijk-computer (bv. een bestuurslid) die de app opent
-   zonder zelf een map te kiezen, leest diezelfde gegevens gewoon terug via de gewone,
-   publieke GitHub Pages-URL (geen toegangscode nodig om te lezen). Zie laadAlleWedstrijdenRanglijst()
-   en laadCriteriumRanglijst() voor waar die terugval gebeurt, en maakGithubBackup()/
-   haalGithubBackupOp() voor de 2 knoppen in Instellingen. */
-const GITHUB_OWNER = "gerritdenayer";
-const GITHUB_REPO = "my-apps";
-const GITHUB_DATA_PAD = "apps/golfwedstrijd/data";
-const GITHUB_PAGES_BASIS = "https://gerritdenayer.github.io/my-apps/apps/golfwedstrijd/data";
-const GITHUB_PAT_SLEUTEL = "golf_github_pat";
-const GITHUB_LAATSTE_BACKUP_SLEUTEL = "golf_laatste_backup_lokaal";
+/* ===================== Online back-up (JSONBin) ===================== */
+/* Doel: de computer die scoort werkt gewoon offline (alles staat in de gekozen map en in
+   localStorage). Zodra er netwerk is, stuurt de app wijzigingen VANZELF door naar JSONBin,
+   enkel als back-up en zodat een kijk-computer (bv. een bestuurslid) de resultaten kan zien.
 
-function githubPatOphalen() {
-  return localStorage.getItem(GITHUB_PAT_SLEUTEL) || "";
+   Opbouw op JSONBin:
+   - 1 "hoofdopslag" (bin) met de lijst van seizoenen: { app, seizoenen: { "2026": "<bin-id>" } }
+   - per seizoen 1 bin met alles van dat seizoen: wedstrijdbestanden, spelers.json,
+     historiek.json en de wedstrijd die op dit moment open staat (lopendeWedstrijd).
+
+   Sleutels (staan enkel in localStorage van DEZE browser, nooit in de code of op GitHub):
+   - hoofdsleutel (X-Master-Key): enkel op de scoor-computer, mag lezen en schrijven.
+   - leessleutel (X-Access-Key met enkel leesrechten): voor kijk-computers.
+
+   Automatische back-up: de app vergelijkt elke minuut (en kort na elke wijziging) een
+   vingerafdruk van de lokale gegevens met die van de laatste geslaagde back-up. Enkel als er
+   iets veranderd is, wordt er 1 verzoek naar JSONBin gestuurd. Offline wacht de app gewoon en
+   stuurt alles door zodra het netwerk terug is. Ophalen gebeurt NOOIT automatisch, enkel met
+   de knop in Instellingen, zodat verse scores nooit per ongeluk overschreven worden. */
+const JSONBIN_BASIS = "https://api.jsonbin.io/v3";
+const JB_MASTER_SLEUTEL = "golf_jsonbin_master";
+const JB_LEES_SLEUTEL = "golf_jsonbin_lees";
+const JB_HOOFDBIN_SLEUTEL = "golf_jsonbin_hoofdbin";
+const JB_SEIZOENBIN_PREFIX = "golf_jsonbin_seizoen_";
+const BACKUP_HASH_PREFIX = "golf_backup_hash_";
+const BACKUP_GEKEND_PREFIX = "golf_backup_gekend_";
+const BACKUP_LAATSTE_TIJD_SLEUTEL = "golf_laatste_backup_lokaal";
+const AUTO_BACKUP_CONTROLE_MS = 60 * 1000;   // elke minuut kijken of er iets veranderd is
+const AUTO_BACKUP_VERTRAGING_MS = 20 * 1000; // na een wijziging even wachten, zodat een reeks scores samen vertrekt
+
+function jbMasterSleutel() { return localStorage.getItem(JB_MASTER_SLEUTEL) || ""; }
+function jbLeesSleutel() { return localStorage.getItem(JB_LEES_SLEUTEL) || ""; }
+function jbHoofdbinId() {
+  const id = localStorage.getItem(JB_HOOFDBIN_SLEUTEL) || "";
+  return /^[a-f0-9]{24}$/i.test(id) ? id : ""; // een ongeldige waarde (bv. per ongeluk een sleutel) telt niet
 }
 
-function tekstNaarBase64(tekst) {
-  return btoa(unescape(encodeURIComponent(tekst)));
+function jbHeaders(schrijven) {
+  const h = { "Content-Type": "application/json" };
+  const master = jbMasterSleutel();
+  if (master) h["X-Master-Key"] = master;
+  else if (!schrijven && jbLeesSleutel()) h["X-Access-Key"] = jbLeesSleutel();
+  return h;
 }
 
-/* Haalt (indien aanwezig) de sha van het bestaande bestand op en schrijft er dan 1 nieuwe
-   versie overheen (of maakt het aan als het nog niet bestaat). 1 bestand per aanroep, zodat
-   een mislukking op 1 bestand de andere niet blokkeert (zie maakGithubBackup()). */
-async function githubUpsertBestand(pad, inhoudTekst, pat) {
-  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${pad}`;
-  let sha;
-  let getResp;
-  try {
-    getResp = await fetch(url, { headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json" } });
-  } catch (e) {
-    throw new Error(`Kon GitHub niet bereiken, ben je online? (${e.message})`);
-  }
-  if (getResp.ok) {
-    const j = await getResp.json();
-    sha = j.sha;
-  } else if (getResp.status !== 404) {
-    throw new Error(`GitHub gaf fout ${getResp.status} bij het ophalen van ${pad}.`);
-  }
-  const putResp = await fetch(url, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${pat}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: `Back-up golfwedstrijd-app: ${pad}`,
-      content: tekstNaarBase64(inhoudTekst),
-      ...(sha ? { sha } : {})
-    })
-  });
-  if (!putResp.ok) {
-    let bericht = putResp.statusText;
-    try { const j = await putResp.json(); if (j.message) bericht = j.message; } catch (e) { /* negeren */ }
-    if (putResp.status === 401) bericht = "Toegangscode ongeldig of verlopen.";
-    if (putResp.status === 404) bericht = "Repository niet gevonden, of de toegangscode heeft er geen schrijftoegang toe.";
-    throw new Error(`Kon ${pad} niet wegschrijven naar GitHub (${putResp.status}): ${bericht}`);
-  }
-}
-
-/* Leest 1 JSON-bestand rechtstreeks van de publieke GitHub Pages-site (geen toegangscode
-   nodig, want "my-apps" is een publieke repository). Geeft null terug als het bestand niet
-   bestaat (nog geen back-up), en gooit enkel een fout bij een echt netwerk-/serverprobleem. */
-async function githubLeesJsonPublic(padOnderDataMap) {
-  const url = `${GITHUB_PAGES_BASIS}/${padOnderDataMap}?t=${Date.now()}`;
+async function jbFetch(pad, opties, omschrijving) {
   let resp;
   try {
-    resp = await fetch(url, { cache: "no-store" });
+    resp = await fetch(JSONBIN_BASIS + pad, { cache: "no-store", ...opties });
   } catch (e) {
-    throw new Error(`Kon GitHub Pages niet bereiken, ben je online? (${e.message})`);
+    const fout = new Error(`Kon JSONBin niet bereiken, ben je online? (${e.message})`);
+    fout.offline = true;
+    throw fout;
   }
-  if (resp.status === 404) return null;
-  if (!resp.ok) throw new Error(`GitHub Pages gaf fout ${resp.status} bij ${padOnderDataMap}.`);
-  try {
-    return await resp.json();
-  } catch (e) {
-    return null; // bestaat maar is geen geldige JSON (zou niet mogen gebeuren), behandel als "geen back-up"
+  if (!resp.ok) {
+    let bericht = resp.statusText;
+    try { const j = await resp.json(); if (j.message) bericht = j.message; } catch (e) { /* negeren */ }
+    if (resp.status === 401) bericht = "sleutel ontbreekt of is ongeldig.";
+    if (resp.status === 404) bericht = "opslag niet gevonden, controleer de opslag-ID.";
+    const fout = new Error(`JSONBin gaf fout ${resp.status} bij ${omschrijving}: ${bericht}`);
+    fout.status = resp.status;
+    throw fout;
   }
+  return resp.json();
 }
 
-/* Haalt de wedstrijdbestanden van 1 seizoen op van GitHub, in hetzelfde formaat als
-   verzamelWedstrijdData() (zonder handle, die is hier niet van toepassing: deze gegevens zijn
-   enkel-lezen). Gebruikt door laadAlleWedstrijdenRanglijst() als terugval wanneer er geen
-   lokale map gekozen is. */
-async function githubBestandenOphalen(seizoen) {
-  const index = await githubLeesJsonPublic(`${seizoen}/_index.json`);
-  if (!index) return { bestanden: [], laatsteBackup: null };
-  const tijd = index.laatsteBackup ? new Date(index.laatsteBackup).getTime() : Date.now();
-  const resultaten = [];
-  for (const naam of (index.wedstrijden || [])) {
-    const data = await githubLeesJsonPublic(`${seizoen}/${naam}`);
-    if (data && isWedstrijdData(data)) resultaten.push({ naam, data, wijzigdatum: tijd });
-  }
-  return { bestanden: resultaten, laatsteBackup: index.laatsteBackup || null };
+async function jbLeesBin(binId) {
+  return jbFetch(`/b/${encodeURIComponent(binId)}/latest`, { headers: { ...jbHeaders(false), "X-Bin-Meta": "false" } }, "lezen");
 }
 
-/* Zelfde als laadHistoriekBestand(map), maar dan van GitHub. */
-async function githubHistoriekOphalen(seizoen) {
-  const data = await githubLeesJsonPublic(`${seizoen}/${HISTORIEK_BESTAND}`);
-  return Array.isArray(data && data.wedstrijden) ? data.wedstrijden : [];
+async function jbSchrijfBin(binId, data) {
+  return jbFetch(`/b/${encodeURIComponent(binId)}`, { method: "PUT", headers: jbHeaders(true), body: JSON.stringify(data) }, "wegschrijven");
+}
+
+async function jbMaakBin(naam, data) {
+  const j = await jbFetch("/b", {
+    method: "POST",
+    headers: { ...jbHeaders(true), "X-Bin-Private": "true", "X-Bin-Name": naam },
+    body: JSON.stringify(data)
+  }, "aanmaken");
+  const id = (j.metadata && j.metadata.id) || j.id;
+  if (!id) throw new Error("JSONBin gaf geen opslag-ID terug.");
+  return id;
+}
+
+/* Geeft de bin-ID van een seizoen terug (eerst uit het geheugen van deze browser, anders uit
+   de hoofdopslag). Met maakAan=true wordt een ontbrekend seizoen meteen aangemaakt. */
+async function jbSeizoenBinId(seizoen, maakAan) {
+  const hoofd = jbHoofdbinId();
+  if (!hoofd) throw new Error("Nog geen online opslag ingesteld (zie Instellingen).");
+  const cacheSleutel = JB_SEIZOENBIN_PREFIX + hoofd + "_" + seizoen;
+  const gekend = localStorage.getItem(cacheSleutel);
+  if (gekend) return gekend;
+  const hoofdData = (await jbLeesBin(hoofd)) || {};
+  if (hoofdData.app !== "golfwedstrijd" || typeof hoofdData.seizoenen !== "object") {
+    // Beveiliging: nooit verder schrijven in een bin van een andere app (bv. golf-knockout).
+    throw new Error("Deze opslag-ID hoort niet bij de Golfwedstrijd-app. Wis de ID in Instellingen en klik op \"Online opslag aanmaken\".");
+  }
+  const seizoenen = hoofdData.seizoenen || {};
+  if (seizoenen[seizoen]) {
+    localStorage.setItem(cacheSleutel, seizoenen[seizoen]);
+    return seizoenen[seizoen];
+  }
+  if (!maakAan) return null;
+  const id = await jbMaakBin(`golfwedstrijd-${seizoen}`, { app: "golfwedstrijd", seizoen, laatsteBackup: null, wedstrijden: [] });
+  seizoenen[seizoen] = id;
+  await jbSchrijfBin(hoofd, { ...hoofdData, app: "golfwedstrijd", seizoenen });
+  localStorage.setItem(cacheSleutel, id);
+  return id;
+}
+
+/* Kleine, snelle vingerafdruk van een tekst (geen beveiliging, enkel om te zien of er iets
+   veranderd is sinds de vorige back-up). */
+function tekstVingerafdruk(tekst) {
+  let h = 2166136261;
+  for (let i = 0; i < tekst.length; i++) {
+    h ^= tekst.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16) + "_" + tekst.length;
+}
+
+/* Verzamelt alles wat in de back-up hoort. Zonder map (geen toegang of browser zonder
+   mapkeuze) bevat de inhoud enkel de lopende wedstrijd; zie autoBackup() voor hoe die dan
+   samengevoegd wordt met wat al online staat, zodat er nooit iets gewist wordt. */
+async function verzamelBackupInhoud(map) {
+  const inhoud = {
+    app: "golfwedstrijd",
+    seizoen: veiligeSeizoenNaam(STATE.seizoen),
+    lopendeWedstrijd: JSON.parse(JSON.stringify(STATE)),
+    wedstrijden: [],
+    spelers: null,
+    historiek: null
+  };
+  if (!map) return inhoud;
+  const bestanden = await verzamelWedstrijdData(map);
+  inhoud.wedstrijden = bestanden
+    .map(b => ({ naam: b.naam, wijzigdatum: b.wijzigdatum, data: b.data }))
+    .sort((a, b) => a.naam.localeCompare(b.naam));
+  for (const [veld, bestandsnaam] of [["spelers", LEDENLIJST_BESTAND], ["historiek", HISTORIEK_BESTAND]]) {
+    try {
+      const tekst = await (await (await map.getFileHandle(bestandsnaam)).getFile()).text();
+      inhoud[veld] = JSON.parse(tekst);
+    } catch (e) { /* bestaat nog niet of is onleesbaar, overslaan */ }
+  }
+  return inhoud;
+}
+
+/* Vingerafdruk zonder de wijzigdatums (die veranderen ook als een bestand met dezelfde
+   inhoud opnieuw bewaard wordt). */
+function backupVingerafdruk(inhoud, enkelLopend) {
+  const kern = enkelLopend
+    ? { lopendeWedstrijd: inhoud.lopendeWedstrijd }
+    : { ...inhoud, wedstrijden: inhoud.wedstrijden.map(w => ({ naam: w.naam, data: w.data })) };
+  return tekstVingerafdruk(JSON.stringify(kern));
 }
 
 function formatteerBackupTijd(iso) {
@@ -116,135 +171,298 @@ function formatteerBackupTijd(iso) {
   catch (e) { return iso; }
 }
 
-/* Toont in Instellingen of er een toegangscode ingesteld is, en wanneer vanop DEZE computer
-   voor het laatst een back-up gemaakt is (lokaal onthouden, los van wat er op GitHub staat). */
-function toonGithubStatus() {
-  const zone = document.getElementById("github-status-zone");
-  if (!zone) return;
-  const heeftPat = !!githubPatOphalen();
-  const lokaleTijd = localStorage.getItem(GITHUB_LAATSTE_BACKUP_SLEUTEL);
-  zone.innerHTML = `
-    <p class="uitleg">Toegangscode: ${heeftPat ? "ingesteld op deze computer" : '<span style="color:var(--danger);">nog niet ingesteld</span>'}.</p>
-    <p class="uitleg">Laatste back-up vanop deze computer: ${formatteerBackupTijd(lokaleTijd)}.</p>`;
+/* ---------- Status in de kop van de app ---------- */
+let _backupStatus = { type: "grijs", tekst: "" };
+
+function zetBackupStatus(type, tekst, uitleg) {
+  _backupStatus = { type, tekst };
+  const el = document.getElementById("backup-status");
+  if (!el) return;
+  el.className = "badge backup-" + type;
+  el.textContent = tekst;
+  el.title = uitleg || tekst;
+  el.style.display = tekst ? "inline-block" : "none";
 }
 
-function bewaarGithubPatUI() {
-  const veld = document.getElementById("in-github-pat");
-  const waarde = (veld.value || "").trim();
-  if (!waarde) { toonMelding("Vul eerst een toegangscode in.", "fout"); return; }
-  localStorage.setItem(GITHUB_PAT_SLEUTEL, waarde);
-  veld.value = "";
-  toonGithubStatus();
-  toonMelding("Toegangscode bewaard op deze computer.", "ok");
+function toonBackupStatusVoorLaatsteTijd() {
+  const t = localStorage.getItem(BACKUP_LAATSTE_TIJD_SLEUTEL);
+  const kort = t ? new Date(t).toLocaleTimeString("nl-BE", { hour: "2-digit", minute: "2-digit" }) : "";
+  zetBackupStatus("ok", t ? `Back-up OK ${kort}` : "Back-up OK", `Laatste online back-up: ${formatteerBackupTijd(t)}`);
 }
 
-function wisGithubPatUI() {
-  localStorage.removeItem(GITHUB_PAT_SLEUTEL);
-  const veld = document.getElementById("in-github-pat");
-  if (veld) veld.value = "";
-  toonGithubStatus();
-  toonMelding("Toegangscode verwijderd van deze computer.", "ok");
+/* ---------- Automatische back-up ---------- */
+let _backupBezig = false;
+let _backupOpnieuw = false;
+let _backupTimer = null;
+
+function planAutoBackup(vertragingMs) {
+  if (!jbMasterSleutel() || !jbHoofdbinId()) return;
+  clearTimeout(_backupTimer);
+  _backupTimer = setTimeout(() => autoBackup(false), vertragingMs === undefined ? AUTO_BACKUP_VERTRAGING_MS : vertragingMs);
 }
 
-/* Stuurt de wedstrijdbestanden, spelerslijst en historiek.json van het huidige seizoen naar
-   GitHub. Loopt 1 voor 1 door de bestanden (niet gelijktijdig), zodat een duidelijke fout op
-   1 bestand niet verborgen raakt tussen 10 gelijktijdige aanvragen. */
-async function maakGithubBackup() {
-  const pat = githubPatOphalen();
-  if (!pat) { toonMelding("Geen GitHub-toegangscode ingesteld. Vul die hierboven in en bewaar ze eerst.", "fout"); return; }
-  if (!window.showDirectoryPicker) { toonMelding("Je browser ondersteunt geen rechtstreekse mapkeuze, back-up is hier niet mogelijk.", "fout"); return; }
-
-  const knop = document.getElementById("github-backup-knop");
-  if (knop) { knop.disabled = true; knop.textContent = "Bezig met back-up maken..."; }
+/* handmatig=true: gestart met de knop "Back-up nu maken" (toont meldingen, stuurt ook als
+   er niets veranderd is, en vraagt bevestiging als dat online gegevens zou overschrijven). */
+async function autoBackup(handmatig) {
+  if (!jbMasterSleutel() || !jbHoofdbinId()) {
+    zetBackupStatus("grijs", "", "");
+    if (handmatig) toonMelding("Stel eerst de online opslag en de hoofdsleutel in.", "fout");
+    return;
+  }
+  if (_backupBezig) { _backupOpnieuw = true; return; }
+  _backupBezig = true;
   try {
-    const map = await krijgSeizoenMap();
-    if (!map) throw new Error("Geen wedstrijdmap gekozen.");
-    const seizoen = veiligeSeizoenNaam(STATE.seizoen);
-    const bestanden = await verzamelWedstrijdData(map);
-
-    let spelersTekst = null;
-    try { spelersTekst = await (await (await map.getFileHandle(LEDENLIJST_BESTAND)).getFile()).text(); }
-    catch (e) { /* nog geen spelers.json in deze map, overslaan */ }
-
-    let historiekTekst = null;
-    try { historiekTekst = await (await (await map.getFileHandle(HISTORIEK_BESTAND)).getFile()).text(); }
-    catch (e) { /* nog geen historiek.json in deze map, overslaan */ }
-
-    for (const b of bestanden) {
-      await githubUpsertBestand(`${GITHUB_DATA_PAD}/${seizoen}/${b.naam}`, JSON.stringify(b.data, null, 2), pat);
+    const map = window.showDirectoryPicker ? await probeerSeizoenMapStil() : null;
+    const enkelLopend = !map;
+    const inhoud = await verzamelBackupInhoud(map);
+    const seizoen = inhoud.seizoen;
+    const hashSleutel = BACKUP_HASH_PREFIX + jbHoofdbinId() + "_" + seizoen + (enkelLopend ? "_lopend" : "");
+    const vingerafdruk = backupVingerafdruk(inhoud, enkelLopend);
+    let mapWaarschuwing = "";
+    if (enkelLopend && window.showDirectoryPicker && await haalMapHandle()) {
+      mapWaarschuwing = " (geen toegang tot de map: enkel de open wedstrijd wordt bewaard, klik in Instellingen op \"Map kiezen / wijzigen\")";
     }
-    if (spelersTekst !== null) await githubUpsertBestand(`${GITHUB_DATA_PAD}/${seizoen}/${LEDENLIJST_BESTAND}`, spelersTekst, pat);
-    if (historiekTekst !== null) await githubUpsertBestand(`${GITHUB_DATA_PAD}/${seizoen}/${HISTORIEK_BESTAND}`, historiekTekst, pat);
 
-    const nu = new Date().toISOString();
-    await githubUpsertBestand(`${GITHUB_DATA_PAD}/${seizoen}/_index.json`, JSON.stringify({ laatsteBackup: nu, wedstrijden: bestanden.map(b => b.naam) }, null, 2), pat);
-    await githubUpsertBestand(`${GITHUB_DATA_PAD}/backup-meta.json`, JSON.stringify({ laatsteBackup: nu, seizoen }, null, 2), pat);
+    if (!handmatig && vingerafdruk === localStorage.getItem(hashSleutel)) {
+      if (mapWaarschuwing) zetBackupStatus("wacht", "Back-up: map?", "Laatste back-up OK" + mapWaarschuwing);
+      else toonBackupStatusVoorLaatsteTijd();
+      return;
+    }
+    if (!navigator.onLine) {
+      zetBackupStatus("wacht", "Back-up wacht (offline)", "Er zijn wijzigingen die nog niet online staan. Ze worden vanzelf doorgestuurd zodra er netwerk is.");
+      return;
+    }
 
-    localStorage.setItem(GITHUB_LAATSTE_BACKUP_SLEUTEL, nu);
-    toonGithubStatus();
-    toonMelding(`Back-up gemaakt: ${bestanden.length} wedstrijd${bestanden.length === 1 ? "" : "en"}, spelerslijst en historiek bijgewerkt op GitHub.`, "ok");
+    zetBackupStatus("bezig", "Back-up bezig...");
+    const binId = await jbSeizoenBinId(seizoen, true);
+    const gekendSleutel = BACKUP_GEKEND_PREFIX + binId;
+    let teVersturen = inhoud;
+
+    if (enkelLopend || !localStorage.getItem(gekendSleutel)) {
+      const online = (await jbLeesBin(binId)) || {};
+      const onlineAantal = (online.wedstrijden || []).length;
+      if (enkelLopend) {
+        // Enkel de lopende wedstrijd vervangen, de rest van wat online staat behouden.
+        teVersturen = { ...online, app: "golfwedstrijd", seizoen, lopendeWedstrijd: inhoud.lopendeWedstrijd };
+      } else if (onlineAantal > inhoud.wedstrijden.length) {
+        /* Eerste back-up vanaf deze computer, en online staan meer wedstrijden dan hier
+           (bv. een nieuwe laptop). Niet zomaar overschrijven. */
+        const uitleg = `Online staan ${onlineAantal} wedstrijden, op deze computer ${inhoud.wedstrijden.length}. Haal eerst de online back-up op (Instellingen), of maak bewust een nieuwe back-up.`;
+        if (!handmatig) {
+          zetBackupStatus("fout", "Back-up gepauzeerd", uitleg);
+          return;
+        }
+        if (!confirm(uitleg + "\n\nToch de online back-up vervangen door wat op deze computer staat?")) {
+          zetBackupStatus("fout", "Back-up gepauzeerd", uitleg);
+          return;
+        }
+      }
+    }
+
+    teVersturen = { ...teVersturen, versie: APP_VERSIE, laatsteBackup: new Date().toISOString() };
+    await jbSchrijfBin(binId, teVersturen);
+
+    localStorage.setItem(hashSleutel, vingerafdruk);
+    localStorage.setItem(gekendSleutel, "1");
+    localStorage.setItem(BACKUP_LAATSTE_TIJD_SLEUTEL, teVersturen.laatsteBackup);
+    if (mapWaarschuwing) zetBackupStatus("wacht", "Back-up: map?", "Open wedstrijd bewaard" + mapWaarschuwing);
+    else toonBackupStatusVoorLaatsteTijd();
+    toonOnlineBackupStatus();
+    if (handmatig) toonMelding(`Back-up gemaakt: ${inhoud.wedstrijden.length} wedstrijd${inhoud.wedstrijden.length === 1 ? "" : "en"}, spelerslijst, historiek en de open wedstrijd.`, "ok");
   } catch (e) {
-    if (e.name === "AbortError") return;
-    toonMelding("Back-up mislukt: " + e.message, "fout");
+    if (e.offline) {
+      zetBackupStatus("wacht", "Back-up wacht (offline)", "Er zijn wijzigingen die nog niet online staan. Ze worden vanzelf doorgestuurd zodra er netwerk is.");
+    } else {
+      zetBackupStatus("fout", "Back-up mislukt", e.message);
+    }
+    if (handmatig) toonMelding("Back-up mislukt: " + e.message, "fout");
   } finally {
-    if (knop) { knop.disabled = false; knop.textContent = "Back-up maken"; }
+    _backupBezig = false;
+    if (_backupOpnieuw) { _backupOpnieuw = false; planAutoBackup(2000); }
   }
 }
 
-/* Haalt de back-up van GitHub op en overschrijft daarmee de lokale bestanden van het huidige
-   seizoen op DEZE computer. Bedoeld voor herstel (nieuwe/vervangen laptop) of om een wijziging
-   die van een andere computer kwam terug te halen. Vraagt eerst bevestiging met de datum/tijd
-   van die back-up, zodat je nooit per ongeluk recenter lokaal werk overschrijft. Geen
-   toegangscode nodig (enkel-lezen van de publieke site). */
-async function haalGithubBackupOp() {
+function startAutoBackup() {
+  if (!jbHoofdbinId()) {
+    zetBackupStatus("grijs", "", "");
+  } else if (!jbMasterSleutel()) {
+    zetBackupStatus("grijs", "Kijk-computer", "Deze computer leest enkel de online back-up (geen hoofdsleutel ingesteld).");
+  }
+  window.addEventListener("online", () => planAutoBackup(1500));
+  window.addEventListener("offline", () => {
+    if (jbMasterSleutel() && jbHoofdbinId()) planAutoBackup(0);
+  });
+  setInterval(() => { if (!_backupBezig) autoBackup(false); }, AUTO_BACKUP_CONTROLE_MS);
+  planAutoBackup(3000);
+}
+
+/* ---------- Lezen voor kijk-computers (Ranglijst) ---------- */
+let _onlineCache = { sleutel: "", tijd: 0, data: null };
+
+async function leesOnlineSeizoen(seizoen) {
+  if (!jbHoofdbinId() || !(jbMasterSleutel() || jbLeesSleutel())) return null;
+  const sleutel = jbHoofdbinId() + "_" + seizoen;
+  if (_onlineCache.sleutel === sleutel && Date.now() - _onlineCache.tijd < 30000) return _onlineCache.data;
+  const binId = await jbSeizoenBinId(seizoen, false);
+  const data = binId ? await jbLeesBin(binId) : null;
+  _onlineCache = { sleutel, tijd: Date.now(), data };
+  return data;
+}
+
+/* Zelfde formaat als verzamelWedstrijdData() (zonder handle: deze gegevens zijn enkel-lezen). */
+async function onlineBestandenOphalen(seizoen) {
+  const data = await leesOnlineSeizoen(seizoen);
+  if (!data) return { bestanden: [], laatsteBackup: null };
+  const bestanden = (data.wedstrijden || [])
+    .filter(w => isWedstrijdData(w.data))
+    .map(w => ({ naam: w.naam, data: w.data, wijzigdatum: w.wijzigdatum || Date.parse(data.laatsteBackup) || Date.now() }))
+    .sort((a, b) => b.wijzigdatum - a.wijzigdatum);
+  return { bestanden, laatsteBackup: data.laatsteBackup || null };
+}
+
+async function onlineHistoriekOphalen(seizoen) {
+  const data = await leesOnlineSeizoen(seizoen);
+  const h = data && data.historiek;
+  return Array.isArray(h && h.wedstrijden) ? h.wedstrijden : [];
+}
+
+/* ---------- Instellingen ---------- */
+function toonOnlineBackupStatus() {
+  const zone = document.getElementById("jsonbin-status-zone");
+  if (!zone) return;
+  const hoofd = jbHoofdbinId();
+  const rol = jbMasterSleutel() ? "scoor-computer (hoofdsleutel ingesteld, back-up gebeurt automatisch)"
+    : jbLeesSleutel() ? "kijk-computer (enkel leessleutel)"
+    : '<span style="color:var(--danger);">nog geen sleutel ingesteld</span>';
+  zone.innerHTML = `
+    <p class="uitleg">Online opslag-ID: ${hoofd ? `<strong style="user-select:all;">${hoofd}</strong>` : '<span style="color:var(--danger);">nog niet ingesteld</span>'}</p>
+    <p class="uitleg">Deze computer: ${rol}.</p>
+    <p class="uitleg">Laatste back-up vanop deze computer: ${formatteerBackupTijd(localStorage.getItem(BACKUP_LAATSTE_TIJD_SLEUTEL))}.</p>`;
+  const aanmaakKnop = document.getElementById("jsonbin-aanmaak-knop");
+  if (aanmaakKnop) aanmaakKnop.style.display = hoofd ? "none" : "";
+}
+
+function bewaarJsonbinVeld(veldId, sleutel, omschrijving) {
+  const veld = document.getElementById(veldId);
+  const waarde = (veld.value || "").trim();
+  if (!waarde) { toonMelding(`Vul eerst de ${omschrijving} in.`, "fout"); return; }
+  localStorage.setItem(sleutel, waarde);
+  veld.value = "";
+  _onlineCache = { sleutel: "", tijd: 0, data: null };
+  toonOnlineBackupStatus();
+  toonMelding(`${omschrijving.charAt(0).toUpperCase() + omschrijving.slice(1)} bewaard op deze computer.`, "ok");
+  planAutoBackup(1000);
+}
+
+function wisJsonbinVeld(sleutel, omschrijving) {
+  localStorage.removeItem(sleutel);
+  _onlineCache = { sleutel: "", tijd: 0, data: null };
+  toonOnlineBackupStatus();
+  if (!jbMasterSleutel()) zetBackupStatus("grijs", jbHoofdbinId() ? "Kijk-computer" : "", "");
+  toonMelding(`${omschrijving.charAt(0).toUpperCase() + omschrijving.slice(1)} verwijderd van deze computer.`, "ok");
+}
+
+function bewaarJsonbinMasterUI() { bewaarJsonbinVeld("in-jsonbin-master", JB_MASTER_SLEUTEL, "hoofdsleutel"); }
+function wisJsonbinMasterUI() { wisJsonbinVeld(JB_MASTER_SLEUTEL, "hoofdsleutel"); }
+function bewaarJsonbinLeesUI() { bewaarJsonbinVeld("in-jsonbin-lees", JB_LEES_SLEUTEL, "leessleutel"); }
+function wisJsonbinLeesUI() { wisJsonbinVeld(JB_LEES_SLEUTEL, "leessleutel"); }
+function bewaarJsonbinHoofdbinUI() {
+  const veld = document.getElementById("in-jsonbin-hoofdbin");
+  // Enkel de ID zelf houden, ook als iemand een volledige link of aanhalingstekens plakt.
+  const ruw = (veld.value || "").trim().replace(/["']/g, "");
+  if (ruw.startsWith("$2")) {
+    veld.value = "";
+    toonMelding("Dit is een sleutel, geen opslag-ID. Plak de sleutel bij \"Hoofdsleutel\" of \"Leessleutel\".", "fout");
+    return;
+  }
+  const gevonden = ruw.match(/[a-f0-9]{24}/i);
+  if (!gevonden) {
+    toonMelding("Dit lijkt geen opslag-ID. Een ID is een reeks van 24 cijfers en letters (a tot f).", "fout");
+    return;
+  }
+  veld.value = gevonden[0];
+  bewaarJsonbinVeld("in-jsonbin-hoofdbin", JB_HOOFDBIN_SLEUTEL, "opslag-ID");
+}
+function wisJsonbinHoofdbinUI() {
+  if (!confirm("De online opslag-ID van deze computer wissen? De gegevens op JSONBin zelf blijven staan.")) return;
+  wisJsonbinVeld(JB_HOOFDBIN_SLEUTEL, "opslag-ID");
+  zetBackupStatus("grijs", "", "");
+}
+
+/* Maakt de hoofdopslag aan (1 keer, op de scoor-computer). De ID die je daarna ziet, plak je
+   op een kijk-computer in het veld "Online opslag-ID". */
+async function maakOnlineOpslagAan() {
+  if (!jbMasterSleutel()) { toonMelding("Bewaar eerst de hoofdsleutel (X-Master-Key).", "fout"); return; }
+  if (jbHoofdbinId() && !confirm("Er is al een online opslag ingesteld. Toch een nieuwe, lege aanmaken?")) return;
+  const knop = document.getElementById("jsonbin-aanmaak-knop");
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig met aanmaken..."; }
+  try {
+    const id = await jbMaakBin("golfwedstrijd-hoofd", { app: "golfwedstrijd", seizoenen: {} });
+    localStorage.setItem(JB_HOOFDBIN_SLEUTEL, id);
+    toonOnlineBackupStatus();
+    toonMelding("Online opslag aangemaakt. De eerste back-up start meteen.", "ok");
+    planAutoBackup(500);
+  } catch (e) {
+    toonMelding("Aanmaken mislukt: " + e.message, "fout");
+  } finally {
+    if (knop) { knop.disabled = false; knop.textContent = "Online opslag aanmaken"; }
+  }
+}
+
+async function maakBackupNu() {
+  const knop = document.getElementById("jsonbin-backup-knop");
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig met back-up maken..."; }
+  try { await autoBackup(true); }
+  finally { if (knop) { knop.disabled = false; knop.textContent = "Back-up nu maken"; } }
+}
+
+async function schrijfJsonNaarMap(map, naam, data) {
+  const fh = await map.getFileHandle(naam, { create: true });
+  const schrijfbaar = await fh.createWritable();
+  await schrijfbaar.write(JSON.stringify(data, null, 2));
+  await schrijfbaar.close();
+}
+
+/* Haalt de online back-up op en overschrijft daarmee de lokale bestanden van het huidige
+   seizoen op DEZE computer (bv. nieuwe laptop, of na een aanpassing aan de app). Vraagt eerst
+   bevestiging met het tijdstip van die back-up. Bestanden die enkel lokaal bestaan blijven
+   staan. De open wedstrijd wordt enkel teruggezet als je dat apart bevestigt. */
+async function haalOnlineBackupOp() {
   if (!window.showDirectoryPicker) { toonMelding("Je browser ondersteunt geen rechtstreekse mapkeuze.", "fout"); return; }
-  const knop = document.getElementById("github-ophalen-knop");
+  if (!jbHoofdbinId() || !(jbMasterSleutel() || jbLeesSleutel())) { toonMelding("Stel eerst de online opslag-ID en een sleutel in.", "fout"); return; }
+  const knop = document.getElementById("jsonbin-ophalen-knop");
   if (knop) { knop.disabled = true; knop.textContent = "Bezig met ophalen..."; }
   try {
     const seizoen = veiligeSeizoenNaam(STATE.seizoen);
-    const index = await githubLeesJsonPublic(`${seizoen}/_index.json`);
-    if (!index) throw new Error(`Geen back-up gevonden op GitHub voor seizoen ${seizoen}.`);
-    const remoteTijd = formatteerBackupTijd(index.laatsteBackup);
-    const bevestigd = confirm(`Back-up op GitHub van ${remoteTijd} ophalen, en daarmee de lokale bestanden van seizoen ${seizoen} op deze computer overschrijven?\n\nLokale wijzigingen die nog niet via "Back-up maken" naar GitHub gestuurd zijn, gaan dan verloren.`);
-    if (!bevestigd) return;
+    _onlineCache = { sleutel: "", tijd: 0, data: null };
+    const online = await leesOnlineSeizoen(seizoen);
+    if (!online || !online.laatsteBackup) throw new Error(`Geen online back-up gevonden voor seizoen ${seizoen}.`);
+    const wedstrijden = (online.wedstrijden || []).filter(w => isWedstrijdData(w.data));
+    if (!confirm(`Online back-up van ${formatteerBackupTijd(online.laatsteBackup)} ophalen (${wedstrijden.length} wedstrijd${wedstrijden.length === 1 ? "" : "en"}), en daarmee de lokale bestanden van seizoen ${seizoen} op deze computer overschrijven?\n\nLokale wijzigingen die nog niet online staan, gaan dan verloren.`)) return;
 
     const map = await krijgSeizoenMap();
     if (!map) throw new Error("Geen wedstrijdmap gekozen.");
+    for (const w of wedstrijden) await schrijfJsonNaarMap(map, w.naam, w.data);
+    if (online.spelers) await schrijfJsonNaarMap(map, LEDENLIJST_BESTAND, online.spelers);
+    if (online.historiek) await schrijfJsonNaarMap(map, HISTORIEK_BESTAND, online.historiek);
 
-    let aantal = 0;
-    for (const naam of (index.wedstrijden || [])) {
-      const data = await githubLeesJsonPublic(`${seizoen}/${naam}`);
-      if (data === null) continue;
-      const fh = await map.getFileHandle(naam, { create: true });
-      const schrijfbaar = await fh.createWritable();
-      await schrijfbaar.write(JSON.stringify(data, null, 2));
-      await schrijfbaar.close();
-      aantal++;
-    }
-    const spelers = await githubLeesJsonPublic(`${seizoen}/${LEDENLIJST_BESTAND}`);
-    if (spelers !== null) {
-      const fh = await map.getFileHandle(LEDENLIJST_BESTAND, { create: true });
-      const schrijfbaar = await fh.createWritable();
-      await schrijfbaar.write(JSON.stringify(spelers, null, 2));
-      await schrijfbaar.close();
-    }
-    const historiek = await githubLeesJsonPublic(`${seizoen}/${HISTORIEK_BESTAND}`);
-    if (historiek !== null) {
-      const fh = await map.getFileHandle(HISTORIEK_BESTAND, { create: true });
-      const schrijfbaar = await fh.createWritable();
-      await schrijfbaar.write(JSON.stringify(historiek, null, 2));
-      await schrijfbaar.close();
+    const lw = online.lopendeWedstrijd;
+    if (lw && Array.isArray(lw.spelers) && lw.spelers.length > 0 &&
+        confirm(`De online back-up bevat ook een open wedstrijd ("${lw.wedstrijdnaam || "wedstrijd"}", ${lw.wedstrijddatum || "?"}, ${lw.spelers.length} spelers).\n\nOok die terugzetten? Dat vervangt de wedstrijd die nu open staat op deze computer.`)) {
+      pasStatusToe(lw);
     }
 
-    localStorage.setItem(GITHUB_LAATSTE_BACKUP_SLEUTEL, index.laatsteBackup || new Date().toISOString());
-    toonGithubStatus();
+    localStorage.setItem(BACKUP_GEKEND_PREFIX + (await jbSeizoenBinId(seizoen, false)), "1");
+    localStorage.setItem(BACKUP_LAATSTE_TIJD_SLEUTEL, online.laatsteBackup);
     await verversBekendeSpelers();
-    toonMelding(`Back-up opgehaald: ${aantal} wedstrijd${aantal === 1 ? "" : "en"} teruggezet op deze computer.`, "ok");
+    toonOnlineBackupStatus();
+    planAutoBackup(1000); // eventuele lokale extra's (bestanden die enkel hier stonden) gaan zo terug online
+    toonMelding(`Back-up opgehaald: ${wedstrijden.length} wedstrijd${wedstrijden.length === 1 ? "" : "en"} teruggezet op deze computer.`, "ok");
   } catch (e) {
     if (e.name === "AbortError") return;
     toonMelding("Ophalen mislukt: " + e.message, "fout");
   } finally {
-    if (knop) { knop.disabled = false; knop.textContent = "Ophalen van GitHub"; }
+    if (knop) { knop.disabled = false; knop.textContent = "Ophalen van online back-up"; }
   }
 }
 
@@ -368,6 +586,8 @@ function laadStatus() {
 
 function bewaarStatus() {
   localStorage.setItem(OPSLAG_SLEUTEL, JSON.stringify(STATE));
+  // Elke wijziging (score, speler, ...) start na een korte pauze een automatische online back-up.
+  if (typeof planAutoBackup === "function") planAutoBackup();
 }
 
 /* ===================== Rekenlogica handicap ===================== */
@@ -2364,24 +2584,24 @@ async function laadAlleWedstrijdenRanglijst() {
   try {
     /* probeerSeizoenMapStil() vraagt NOOIT een mapkeuze-venster: als deze browser al
        toestemming heeft (de scoor-computer), gebruiken we die lokale map meteen. Zo niet
-       (bv. een bestuurslid dat enkel komt kijken), tonen we gewoon de laatste GitHub-back-up,
+       (bv. een bestuurslid dat enkel komt kijken), tonen we gewoon de laatste online back-up,
        zonder die persoon lastig te vallen met een onverwachte mapkeuze-popup. */
     const map = window.showDirectoryPicker ? await probeerSeizoenMapStil() : null;
-    let bestanden, viaGithub = false, backupTijd = null;
+    let bestanden, viaOnline = false, backupTijd = null;
     if (map) {
       bestanden = await verzamelWedstrijdData(map);
     } else {
-      const resultaat = await githubBestandenOphalen(seizoen);
+      const resultaat = await onlineBestandenOphalen(seizoen);
       bestanden = resultaat.bestanden;
       backupTijd = resultaat.laatsteBackup;
-      viaGithub = true;
+      viaOnline = true;
     }
     window._alleWedstrijdenData = bestanden;
-    window._alleWedstrijdenViaGithub = viaGithub;
+    window._alleWedstrijdenViaOnline = viaOnline;
     window._alleWedstrijdenBackupTijd = backupTijd;
     if (bestanden.length === 0) {
-      zone.innerHTML = viaGithub
-        ? `<p class="uitleg">Nog geen back-up gevonden op GitHub voor seizoen ${seizoen}.</p>${window.showDirectoryPicker ? '<button class="knop secundair" onclick="kiesWedstrijdMapHandmatig().then(laadAlleWedstrijdenRanglijst)">Zelf een map kiezen</button>' : ""}`
+      zone.innerHTML = viaOnline
+        ? `<p class="uitleg">Nog geen online back-up gevonden voor seizoen ${seizoen}.</p>${window.showDirectoryPicker ? '<button class="knop secundair" onclick="kiesWedstrijdMapHandmatig().then(laadAlleWedstrijdenRanglijst)">Zelf een map kiezen</button>' : ""}`
         : `<p class="uitleg">Nog geen bewaarde wedstrijden gevonden in deze map.</p>`;
       return;
     }
@@ -2394,14 +2614,14 @@ async function laadAlleWedstrijdenRanglijst() {
 }
 
 /* Klein lijntje boven de tabellen dat toont of de getoonde gegevens rechtstreeks uit de
-   lokale map komen (altijd de recentste stand) of van een GitHub-back-up (met het tijdstip
+   lokale map komen (altijd de recentste stand) of van de online back-up (met het tijdstip
    van die back-up erbij), zodat je op een kijk-computer meteen weet hoe vers de cijfers zijn. */
-function bronBannerHtml(viaGithub, backupTijd, modus) {
-  if (!viaGithub) return "";
+function bronBannerHtml(viaOnline, backupTijd, modus) {
+  if (!viaOnline) return "";
   const knop = window.showDirectoryPicker
     ? `<button class="knop secundair" style="margin-left:8px;" onclick="kiesWedstrijdMapHandmatig().then(() => kiesRanglijstModus('${modus}'))">Zelf een map kiezen</button>`
     : "";
-  return `<p class="uitleg" style="background:var(--bg); border:0.5px solid var(--border); border-radius:var(--radius); padding:8px 12px;">📡 Gegevens van de GitHub back-up van <strong>${formatteerBackupTijd(backupTijd)}</strong>. ${knop}</p>`;
+  return `<p class="uitleg" style="background:var(--bg); border:0.5px solid var(--border); border-radius:var(--radius); padding:8px 12px;">📡 Gegevens van de online back-up van <strong>${formatteerBackupTijd(backupTijd)}</strong>. ${knop}</p>`;
 }
 
 function renderAlleWedstrijdenScherm() {
@@ -2416,7 +2636,7 @@ function renderAlleWedstrijdenScherm() {
     </label>`).join("");
 
   zone.innerHTML = `
-    ${bronBannerHtml(window._alleWedstrijdenViaGithub, window._alleWedstrijdenBackupTijd, "alle")}
+    ${bronBannerHtml(window._alleWedstrijdenViaOnline, window._alleWedstrijdenBackupTijd, "alle")}
     <div style="background:var(--bg); border:0.5px solid var(--border); border-radius:var(--radius); padding:12px 14px; margin-bottom:14px;">
       <p class="uitleg" id="wedstrijd-keuze-teller" style="margin-top:0;">Kies welke wedstrijden meetellen (${window._geselecteerdeWedstrijden.size} van ${bestanden.length} geselecteerd):</p>
       <div style="display:flex; gap:8px; margin-bottom:10px;">
@@ -2646,19 +2866,19 @@ async function laadCriteriumRanglijst() {
   const seizoen = veiligeSeizoenNaam(STATE.seizoen);
   try {
     const map = window.showDirectoryPicker ? await probeerSeizoenMapStil() : null;
-    let bestanden, historiek, viaGithub = false, backupTijd = null;
+    let bestanden, historiek, viaOnline = false, backupTijd = null;
     if (map) {
       [bestanden, historiek] = await Promise.all([verzamelWedstrijdData(map), laadHistoriekBestand(map)]);
     } else {
-      const [resultaat, histResultaat] = await Promise.all([githubBestandenOphalen(seizoen), githubHistoriekOphalen(seizoen)]);
+      const [resultaat, histResultaat] = await Promise.all([onlineBestandenOphalen(seizoen), onlineHistoriekOphalen(seizoen)]);
       bestanden = resultaat.bestanden;
       backupTijd = resultaat.laatsteBackup;
       historiek = histResultaat;
-      viaGithub = true;
+      viaOnline = true;
     }
-    window._criteriumViaGithub = viaGithub;
+    window._criteriumViaOnline = viaOnline;
     window._criteriumBackupTijd = backupTijd;
-    if (bronZone) bronZone.innerHTML = bronBannerHtml(viaGithub, backupTijd, "criterium");
+    if (bronZone) bronZone.innerHTML = bronBannerHtml(viaOnline, backupTijd, "criterium");
     window._criteriumData = berekenCriteriumData(bestanden, historiek);
     renderCriteriumTabel();
   } catch (e) {
@@ -2809,7 +3029,7 @@ function importeerHistoriekDirect(event) {
 
 function renderInstellingen() {
   toonHuidigeMap();
-  toonGithubStatus();
+  toonOnlineBackupStatus();
   toonHuidigeSeizoen();
   renderCategorieTabel();
   renderTeeregelsTabel();
@@ -3833,4 +4053,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("in-naam").addEventListener("input", naamInvoerGewijzigd);
   renderSpelerlijst();
   verversBekendeSpelers();
+  startAutoBackup();
+  /* Offline cache: zo opent de app ook zonder netwerk (zie sw.js). */
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(e => console.warn("Offline cache niet beschikbaar:", e));
+  }
 });
