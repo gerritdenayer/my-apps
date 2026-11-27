@@ -175,6 +175,7 @@
         </div>
         <div>
           <label>&nbsp;</label>
+          <button id="ap-file" class="secondary" title="Fill the finance A&amp;P planning template (OBI EUR) with the budget lines of a year">A&amp;P planning file</button>
           <button id="add-activity" class="primary">+ New budget line</button>
         </div>
       </div>
@@ -212,6 +213,8 @@
     const srch = root.querySelector("#f-search").closest("div");
     if (fEnt) fEnt.closest("div").insertAdjacentElement("afterend", srch);
     const canEditBudget = !window.MB_AUTH || window.MB_AUTH.can("editBudget");
+    const apBtn = root.querySelector("#ap-file");
+    if (apBtn) apBtn.onclick = () => window.MB_APFILE ? window.MB_APFILE.open(view.year) : S.toast("Export not available.", "error");
     const addBtn = root.querySelector("#add-activity");
     if (canEditBudget) addBtn.onclick = () => openActivityModal(null);
     else addBtn.style.display = "none";
