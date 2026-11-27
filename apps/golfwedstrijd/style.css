@@ -112,7 +112,7 @@ label {
   margin-bottom: 4px;
 }
 
-input[type=text], input[type=number], select, textarea {
+input[type=text], input[type=password], input[type=number], select, textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border-strong);
@@ -377,3 +377,10 @@ footer {
   max-height: 80vh;
   overflow-y: auto;
 }
+
+/* Status van de online back-up in de kop */
+.badge.backup-ok { background: #dcfce7; color: #166534; }
+.badge.backup-wacht { background: #fef3c7; color: #92400e; }
+.badge.backup-bezig { background: var(--accent-bg); color: var(--accent); }
+.badge.backup-fout { background: var(--danger-bg); color: var(--danger); font-weight: 600; }
+.badge.backup-grijs { background: #e4edf3; color: var(--text-muted); }
