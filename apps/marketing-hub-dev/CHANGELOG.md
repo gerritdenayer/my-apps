@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v5.3.18] - 2026-11-27 - A&P planning file export
 
 ### Added
 - "A&P planning file" button on the Budget tab. It asks for a year and fills the finance template (OBI EUR A&P planning input) with one row per budget line of that year: name, M3 team, budget code, dates, A&P category, SVP, partner, and the forecast net in kEUR in the line's month. Cancelled lines are left out; description, worldwide initiative and Budget FR / International stay empty. The template's layout, drop-down lists and Reference sheet are kept as they are. A summary after the download lists lines left out (no M3 team) and lines whose A&P category is not in the template's list. The template lives in templates/TEMPLATE_OBI_EUR_AP.xlsx.
