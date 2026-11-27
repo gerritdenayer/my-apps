@@ -64,9 +64,9 @@
     #tab-timeline .tl-bar:hover{filter:brightness(1.08);outline:2px solid var(--bd-333333)}
     #tab-timeline .tl-tbc{opacity:.85;outline:1.5px dashed var(--bd-555555);outline-offset:1px;isolation:isolate}
     #tab-timeline .tl-tbc::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--bg-ffffff) 60%,transparent) 0 4px,transparent 4px 8px)}
-    #tab-timeline .tl-bar.tl-on-dark{color:var(--fg-ffffff);text-shadow:0 0 2px color-mix(in srgb,var(--fg-1a1a1a) 55%,transparent)}
-    #tab-timeline .tl-bar.tl-on-light{color:var(--fg-1a1a1a)}
-    #tab-timeline .tl-bar.tl-tbc.tl-on-dark::after{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg-1a1a1a) 22%,transparent) 0 4px,transparent 4px 8px)}
+    #tab-timeline .tl-bar.tl-on-dark{color:var(--fg-ffffff);text-shadow:0 0 2px color-mix(in srgb,var(--fg-141414) 55%,transparent)}
+    #tab-timeline .tl-bar.tl-on-light{color:var(--fg-141414)}
+    #tab-timeline .tl-bar.tl-tbc.tl-on-dark::after{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--fg-141414) 22%,transparent) 0 4px,transparent 4px 8px)}
     #tab-timeline .tl-paid{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-534ab7);color:var(--fg-ffffff);margin-right:5px}
     #tab-timeline .tl-paid svg{width:10px;height:10px}
     #tab-timeline .tl-eur{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;min-width:14px;border-radius:50%;background:var(--bg-3b6d11);color:var(--fg-ffffff);font-weight:700;font-size:10px;margin-right:5px}

@@ -1,5 +1,10 @@
 # Changelog
 
+## [v5.3.19] - 2026-11-27 - Dark mode text fix
+
+### Fixed
+- Dark mode: normal text was near-black on the dark background in many places (pop-ups, tables, menus) since v5.3.17. A color added for the timeline bars had taken over the name of the normal text color. Text is light again in dark mode; the timeline bars keep their dark or white text.
+
 ## [v5.3.18] - 2026-11-27 - A&P planning file export
 
 ### Added
